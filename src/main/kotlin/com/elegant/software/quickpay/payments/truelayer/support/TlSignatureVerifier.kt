@@ -7,8 +7,9 @@ import com.nimbusds.jose.proc.SecurityContext
 import com.nimbusds.jwt.SignedJWT
 import com.nimbusds.jwt.proc.DefaultJWTProcessor
 import java.net.URL
+import org.springframework.stereotype.Component
 
-//@Component
+@Component
 class TlSignatureVerifier(
     private val trueLayerProperties: TrueLayerProperties
 ) {

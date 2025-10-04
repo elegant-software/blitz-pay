@@ -12,6 +12,8 @@ import com.truelayer.java.payments.entities.*
 import com.truelayer.java.payments.entities.beneficiary.MerchantAccount
 import com.truelayer.java.payments.entities.paymentmethod.PaymentMethod
 import com.truelayer.java.payments.entities.providerselection.ProviderSelection
+import com.truelayer.java.payments.entities.schemeselection.preselected.SchemeSelection
+import org.apache.commons.lang3.concurrent.UncheckedFuture.map
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.stereotype.Component
@@ -49,15 +51,15 @@ class PaymentService(
             .paymentMethod(
                 PaymentMethod.bankTransfer()
                     .providerSelection(
-                        ProviderSelection.userSelected()
-                            .filter(
+                        ProviderSelection.preselected().providerId("mock-payments-gb-redirect").schemeSelection( SchemeSelection.preselected().schemeId("faster_payments_service").build())
+                            /*.filter(
                                 ProviderFilter.builder()
                                     .countries(Collections.singletonList(CountryCode.GB))
                                     .releaseChannel(ReleaseChannel.GENERAL_AVAILABILITY)
                                     .customerSegments(Collections.singletonList(CustomerSegment.RETAIL))
                                     .providerIds(Collections.singletonList("mock-payments-gb-redirect"))
                                     .build()
-                            )
+                            )*/
                             .build()
                     )
                     .beneficiary(
@@ -65,6 +67,7 @@ class PaymentService(
                             .merchantAccountId(trueLayerProperties.merchantAccountId)
                             .build()
                     )
+
                     .build()
             )
             .user(
@@ -72,7 +75,8 @@ class PaymentService(
                     .name("Andrea")
                     .email("andrea@truelayer.com")
                     .build()
-            )
+            ).metadata(mapOf("paymentRequestId" to paymentRequest.paymentRequestId.toString(),
+                "orderId" to paymentRequest.orderId))
             .build()
 
         log.info("[DEBUG_LOG] Prepared TrueLayer CreatePaymentRequest: {}", paymentRequest)

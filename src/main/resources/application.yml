@@ -7,6 +7,7 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: update
     show-sql: true
@@ -49,3 +50,6 @@ truelayer:
   environment: ${TRUELAYER_ENV:sandbox}
   httpLogs: ${TRUELAYER_HTTP_LOGS:false}
   merchantAccountId: ${TRUELAYER_MERCHANT_ACCOUNT_ID}
+  webhooks:
+    environment: sandbox ** # "sandbox" or "live" */
+    maxSkew: PT60M    #  ** Max accepted age of the webhook timestamp header, e.g. PT5M */
