@@ -30,7 +30,12 @@ class TrueLayerPaymentStarterTests {
 
     // Optional: if your PaymentGateway returns a String, stub it (not strictly required for this test)
     private fun stubGateway() {
-        whenever(gateway.startPayment(any())).thenReturn("tl-payment-123")
+        val mockResult = PaymentResult(
+            paymentRequestId = java.util.UUID.randomUUID(),
+            orderId = "order-42",
+            paymentId = "tl-payment-123"
+        )
+        whenever(gateway.startPayment(any())).thenReturn(mockResult)
     }
 
     @Test
@@ -38,6 +43,7 @@ class TrueLayerPaymentStarterTests {
         stubGateway()
 
         val event = PaymentRequested(
+            paymentRequestId = java.util.UUID.randomUUID(),
             orderId = "order-42",
             amountMinorUnits = 12_34,     // e.g., 12.34 in minor units
             currency = "EUR",
