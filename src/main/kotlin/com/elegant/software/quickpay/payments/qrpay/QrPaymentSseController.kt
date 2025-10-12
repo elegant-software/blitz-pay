@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Flux
-import reactor.core.publisher.SignalType
 import java.time.Duration
 import java.util.UUID
 
@@ -34,6 +33,9 @@ class QrPaymentSseController(private val bus: PaymentUpdateBus) {
                     .id(update.paymentRequestId.toString())
                     .build()
             }
-            .doFinally { signal -> if (signal == SignalType.ON_COMPLETE) bus.complete(paymentRequestId) }
+            .doFinally { signal -> 
+                logger.debug { "SSE stream ended with signal $signal for paymentRequestId: $paymentRequestId" }
+                bus.complete(paymentRequestId) 
+            }
     }
 }
