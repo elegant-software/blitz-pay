@@ -27,7 +27,7 @@ class QrPaymentSseController(private val bus: PaymentUpdateBus) {
         logger.info { "SSE client connected for paymentRequestId: $paymentRequestId" }
         return bus.sink(paymentRequestId)
             .asFlux()
-            .timeout(Duration.ofMinutes(5))     // auto-close idle streams
+            .timeout(Duration.ofMinutes(5), Flux.empty())     // auto-close idle streams gracefully
             .map { update ->
                 ServerSentEvent.builder(update)
                     .event("payment")
