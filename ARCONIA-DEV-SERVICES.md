@@ -17,13 +17,27 @@ Instead of adding the Arconia library directly (which may have dependency confli
 
 ### Running the Application with Dev Services
 
-Instead of running the main application directly, you can run the `TestApplication` which will automatically start and configure a PostgreSQL container:
+There are several ways to run the application with dev services:
+
+#### Option 1: Using the provided script (Recommended)
 
 ```bash
-./gradlew bootTestRun
+./run-with-dev-services.sh
 ```
 
-Or run the `TestApplication.kt` main function directly from your IDE.
+This script sets up dummy environment variables and runs the application with dev services enabled.
+
+#### Option 2: Using Gradle directly
+
+```bash
+./gradlew bootRun -PmainClass=com.elegant.software.quickpay.TestApplicationKt
+```
+
+Make sure to set the required TrueLayer environment variables first.
+
+#### Option 3: Run from your IDE
+
+Open `src/test/kotlin/com/elegant/software/quickpay/TestApplication.kt` and run the `main` function directly.
 
 ### Benefits
 
@@ -50,6 +64,35 @@ The PostgreSQL container is configured with:
 - Auto-configuration: Handled by Spring Boot's `@ServiceConnection`
 
 No additional configuration is required in `application.yml` when running with dev services.
+
+## Adding More Dev Services
+
+The Arconia pattern makes it easy to add more development services. Here's how you can extend the `DevServicesConfiguration`:
+
+### Example: Adding Redis Dev Service
+
+```kotlin
+@Bean
+@ServiceConnection
+fun redisContainer(): GenericContainer<*> {
+    return GenericContainer(DockerImageName.parse("redis:7-alpine"))
+        .withExposedPorts(6379)
+        .withReuse(true)
+}
+```
+
+### Example: Adding Kafka Dev Service
+
+```kotlin
+@Bean
+@ServiceConnection
+fun kafkaContainer(): KafkaContainer {
+    return KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.0"))
+        .withReuse(true)
+}
+```
+
+Simply add the appropriate Testcontainers dependency and create a bean with `@ServiceConnection`. Spring Boot will handle the rest!
 
 ## Testing
 

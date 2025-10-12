@@ -21,10 +21,16 @@ See [ARCONIA-DEV-SERVICES.md](ARCONIA-DEV-SERVICES.md) for detailed documentatio
 Run the application with automatically configured PostgreSQL:
 
 ```bash
-./gradlew bootTestRun
+# Using the provided script
+./run-with-dev-services.sh
+
+# Or using Gradle directly  
+./gradlew bootRun -PmainClass=com.elegant.software.quickpay.TestApplicationKt
+
+# Or run TestApplication.kt from your IDE
 ```
 
-Or run `src/test/kotlin/com/elegant/software/quickpay/TestApplication.kt` from your IDE.
+No database setup required! The PostgreSQL container will start automatically.
 
 ## Building
 
