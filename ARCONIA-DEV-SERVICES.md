@@ -19,25 +19,27 @@ Instead of adding the Arconia library directly (which may have dependency confli
 
 There are several ways to run the application with dev services:
 
-#### Option 1: Using the provided script (Recommended)
+#### Option 1: Run from your IDE (Recommended)
+
+Open `src/test/kotlin/com/elegant/software/quickpay/TestApplication.kt` and run the `main()` function directly from your IDE. This is the easiest and most reliable method.
+
+#### Option 2: Verify with the integration test
+
+```bash
+./gradlew test --tests '*ArconiaDevServicesIntegrationTest'
+```
+
+This runs the integration test that starts the dev services and verifies they work correctly.
+
+#### Option 3: Use the provided script
 
 ```bash
 ./run-with-dev-services.sh
 ```
 
-This script sets up dummy environment variables and runs the application with dev services enabled.
+This script sets up environment variables and provides guidance on running the application.
 
-#### Option 2: Using Gradle directly
-
-```bash
-./gradlew bootRun -PmainClass=com.elegant.software.quickpay.TestApplicationKt
-```
-
-Make sure to set the required TrueLayer environment variables first.
-
-#### Option 3: Run from your IDE
-
-Open `src/test/kotlin/com/elegant/software/quickpay/TestApplication.kt` and run the `main` function directly.
+**Note:** Since `TestApplication.kt` is in the test source set, running it via Gradle's `bootRun` requires special configuration. The IDE approach is simpler and recommended for development.
 
 ### Benefits
 
@@ -65,6 +67,16 @@ The PostgreSQL container is configured with:
 
 No additional configuration is required in `application.yml` when running with dev services.
 
+### Container Reuse
+
+Container reuse (`withReuse(true)`) requires enabling the Testcontainers reuse feature globally. Create a file `~/.testcontainers.properties` with:
+
+```properties
+testcontainers.reuse.enable=true
+```
+
+This allows containers to be reused across multiple runs, significantly speeding up startup times. Without this property, containers will be recreated on each run.
+
 ## Adding More Dev Services
 
 The Arconia pattern makes it easy to add more development services. Here's how you can extend the `DevServicesConfiguration`:
@@ -88,11 +100,13 @@ fun redisContainer(): GenericContainer<*> {
 @ServiceConnection
 fun kafkaContainer(): KafkaContainer {
     return KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.0"))
-        .withReuse(true)
+        .withReuse(true)  // Requires testcontainers.reuse.enable=true in ~/.testcontainers.properties
 }
 ```
 
 Simply add the appropriate Testcontainers dependency and create a bean with `@ServiceConnection`. Spring Boot will handle the rest!
+
+**Note:** Container reuse only works when the container configuration remains the same. Different images, ports, or environment variables will create a new container.
 
 ## Testing
 

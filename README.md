@@ -18,16 +18,11 @@ See [ARCONIA-DEV-SERVICES.md](ARCONIA-DEV-SERVICES.md) for detailed documentatio
 
 ### Quick Start with Dev Services
 
-Run the application with automatically configured PostgreSQL:
+**Recommended:** Open `src/test/kotlin/com/elegant/software/quickpay/TestApplication.kt` in your IDE and run the `main()` function.
 
+Or verify dev services work with:
 ```bash
-# Using the provided script
-./run-with-dev-services.sh
-
-# Or using Gradle directly  
-./gradlew bootRun -PmainClass=com.elegant.software.quickpay.TestApplicationKt
-
-# Or run TestApplication.kt from your IDE
+./gradlew test --tests '*ArconiaDevServicesIntegrationTest'
 ```
 
 No database setup required! The PostgreSQL container will start automatically.
