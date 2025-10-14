@@ -51,7 +51,7 @@ dependencies {
     testImplementation(platform("org.testcontainers:testcontainers-bom:1.20.3"))
 	testImplementation("org.testcontainers:junit-jupiter:1.19.7")
 	testImplementation("org.testcontainers:postgresql:1.19.7")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:6.1.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")
 
