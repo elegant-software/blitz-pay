@@ -55,6 +55,10 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")
 
+    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.google.zxing:javase:3.5.3")
+    implementation("com.truelayer:truelayer-signing:0.2.6")
+
 }
 
 dependencyManagement {
