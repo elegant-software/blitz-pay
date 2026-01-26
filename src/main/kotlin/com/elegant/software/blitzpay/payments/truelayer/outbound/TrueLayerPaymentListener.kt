@@ -1,8 +1,8 @@
 @file:ApplicationModule(displayName = "outbound")
 
-package com.elegant.software.quickpay.payments.truelayer.outbound
+package com.elegant.software.blitzpay.payments.truelayer.outbound
 
-import com.elegant.software.quickpay.payments.truelayer.api.PaymentRequested
+import com.elegant.software.blitzpay.payments.truelayer.api.PaymentRequested
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.event.EventListener
 import org.springframework.modulith.ApplicationModule

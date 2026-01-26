@@ -1,5 +1,5 @@
 // src/main/kotlin/com/example/tl/JwksService.kt
-package com.elegant.software.quickpay.payments.truelayer.support
+package com.elegant.software.blitzpay.payments.truelayer.support
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.http.MediaType

@@ -1,4 +1,4 @@
-package com.elegant.software.quickpay.payments.truelayer.api
+package com.elegant.software.blitzpay.payments.truelayer.api
 import com.truelayer.java.payments.entities.paymentdetail.Status
 import org.springframework.modulith.NamedInterface
 import java.net.URI

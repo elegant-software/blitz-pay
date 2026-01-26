@@ -1,4 +1,4 @@
-package com.elegant.software.quickpay.payments.truelayer.support
+package com.elegant.software.blitzpay.payments.truelayer.support
 
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.JWKSet
@@ -8,10 +8,10 @@ import com.nimbusds.jose.proc.JWSVerificationKeySelector
 import com.nimbusds.jose.proc.SecurityContext
 import com.nimbusds.jwt.SignedJWT
 import com.nimbusds.jwt.proc.DefaultJWTProcessor
+import org.springframework.stereotype.Component
 import java.net.URL
 import java.time.Duration
 import java.time.Instant
-import org.springframework.stereotype.Component
 
 @Component
 class TlSignatureVerifier(

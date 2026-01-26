@@ -1,8 +1,8 @@
-package com.elegant.software.quickpay.payments.truelayer.outbound
+package com.elegant.software.blitzpay.payments.truelayer.outbound
 
-import com.elegant.software.quickpay.payments.truelayer.api.PaymentRequested
-import com.elegant.software.quickpay.payments.truelayer.api.PaymentResult
-import com.elegant.software.quickpay.payments.truelayer.support.TrueLayerProperties
+import com.elegant.software.blitzpay.payments.truelayer.api.PaymentRequested
+import com.elegant.software.blitzpay.payments.truelayer.api.PaymentResult
+import com.elegant.software.blitzpay.payments.truelayer.support.TrueLayerProperties
 import com.truelayer.java.TrueLayerClient
 import com.truelayer.java.entities.CurrencyCode
 import com.truelayer.java.entities.ProviderFilter

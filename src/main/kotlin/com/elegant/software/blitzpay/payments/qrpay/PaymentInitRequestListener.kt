@@ -1,10 +1,10 @@
 @file:ApplicationModule(displayName = "outbound")
 
-package com.elegant.software.quickpay.payments.qrpay
+package com.elegant.software.blitzpay.payments.qrpay
 
 import TlWebhookEnvelope
-import com.elegant.software.quickpay.payments.support.PaymentUpdateBus
-import com.elegant.software.quickpay.payments.truelayer.api.PaymentResult
+import com.elegant.software.blitzpay.payments.support.PaymentUpdateBus
+import com.elegant.software.blitzpay.payments.truelayer.api.PaymentResult
 import mu.KotlinLogging
 import org.springframework.context.event.EventListener
 import org.springframework.modulith.ApplicationModule

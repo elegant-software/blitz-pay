@@ -1,6 +1,6 @@
-package com.elegant.software.quickpay.payments.support
+package com.elegant.software.blitzpay.payments.support
 
-import com.elegant.software.quickpay.payments.truelayer.api.PaymentResult
+import com.elegant.software.blitzpay.payments.truelayer.api.PaymentResult
 import org.springframework.stereotype.Component
 import reactor.core.publisher.Sinks
 import java.util.UUID

@@ -1,9 +1,9 @@
-package com.elegant.software.quickpay.payments
+package com.elegant.software.blitzpay.payments
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
-@SpringBootApplication
+@SpringBootApplication (scanBasePackages = ["com.elegant.software.blitzpay"] )
 class QuickpayApplication
 
 fun main(args: Array<String>) {

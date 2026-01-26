@@ -1,4 +1,4 @@
-package com.elegant.software.quickpay.payments.support.config
+package com.elegant.software.blitzpay.payments.support.config
 
 
 import org.springdoc.core.models.GroupedOpenApi
@@ -11,7 +11,7 @@ class SupportOpenApiConfig {
     fun supportApi(): GroupedOpenApi =
         GroupedOpenApi.builder()
             .group("support")
-            .packagesToScan("com.elegant.software.quickpay.payments.support")
+            .packagesToScan("com.elegant.software.blitzpay.payments.support")
             .pathsToMatch("/support/**")
             .build()
 }

@@ -1,7 +1,7 @@
-package com.elegant.software.quickpay.payments.qrpay
+package com.elegant.software.blitzpay.payments.qrpay
 
-import com.elegant.software.quickpay.payments.support.PaymentUpdateBus
-import com.elegant.software.quickpay.payments.truelayer.api.PaymentResult
+import com.elegant.software.blitzpay.payments.support.PaymentUpdateBus
+import com.elegant.software.blitzpay.payments.truelayer.api.PaymentResult
 import mu.KotlinLogging
 import org.springframework.http.MediaType
 import org.springframework.http.codec.ServerSentEvent

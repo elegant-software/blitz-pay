@@ -1,4 +1,4 @@
-package com.elegant.software.quickpay.payments.truelayer.support
+package com.elegant.software.blitzpay.payments.truelayer.support
 
 import com.truelayer.java.ClientCredentials
 import com.truelayer.java.Environment

@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.elegant.software.quickpay.payments
+package com.elegant.software.blitzpay.payments
 
+import com.elegant.software.blitzpay.payments.QuickpayApplication
 import mu.KotlinLogging
 import org.junit.jupiter.api.Test
 import org.springframework.modulith.core.ApplicationModules

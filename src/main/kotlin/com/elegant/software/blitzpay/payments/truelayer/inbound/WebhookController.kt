@@ -1,11 +1,11 @@
 
-package com.elegant.software.quickpay.payments.truelayer.inbound
+package com.elegant.software.blitzpay.payments.truelayer.inbound
 
 
 import TlWebhookEnvelope
 
-import com.elegant.software.quickpay.payments.truelayer.support.JwksService
-import com.elegant.software.quickpay.payments.truelayer.support.TlWebhookProperties
+import com.elegant.software.blitzpay.payments.truelayer.support.JwksService
+import com.elegant.software.blitzpay.payments.truelayer.support.TlWebhookProperties
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.truelayer.signing.Verifier

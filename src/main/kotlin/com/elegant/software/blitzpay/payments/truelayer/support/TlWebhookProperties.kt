@@ -1,5 +1,5 @@
 
-package com.elegant.software.quickpay.payments.truelayer.support
+package com.elegant.software.blitzpay.payments.truelayer.support
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 

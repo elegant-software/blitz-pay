@@ -1,4 +1,4 @@
-package com.elegant.software.quickpay.config
+package com.elegant.software.blitzpay.config
 
 import org.springdoc.core.models.GroupedOpenApi
 import org.springframework.context.annotation.Bean
@@ -9,10 +9,10 @@ class OpenApiConfig {
     @Bean
     fun paymentsGroup(): GroupedOpenApi =
         GroupedOpenApi.builder()
-            .group("payments")
+            // Use a group name that matches the @Tag on the controller
+            .group("Payments")
             // adjust to your controllers’ paths
-            .pathsToMatch("" +
-                    "/payments/**")
+            .pathsToMatch("/payments/**")
             .build()
 
     @Bean

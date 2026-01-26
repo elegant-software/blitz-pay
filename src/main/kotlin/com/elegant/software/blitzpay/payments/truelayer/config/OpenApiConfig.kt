@@ -1,4 +1,4 @@
-package com.elegant.software.quickpay.payments.truelayer.config
+package com.elegant.software.blitzpay.payments.truelayer.config
 
 
 import org.springdoc.core.models.GroupedOpenApi
@@ -12,7 +12,7 @@ class TruelayerOpenApiConfig {
         GroupedOpenApi.builder()
             .group("truelayer")
             // scan only the truelayer package (keeps module boundaries intact)
-            .packagesToScan("com.elegant.software.quickpay.payments.truelayer")
+            .packagesToScan("com.elegant.software.blitzpay.payments.truelayer")
             // the webhook controller is mounted at /webhooks/truelayer
             .pathsToMatch("/webhooks/truelayer/**")
             .build()
