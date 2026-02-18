@@ -1,4 +1,4 @@
-package de.elegantsoftware.blitzpay.merchant
+package com.elegant.software.blitzpay.merchant
 
 import org.springframework.data.jpa.repository.JpaRepository
 
