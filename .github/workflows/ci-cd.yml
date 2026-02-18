@@ -26,6 +26,4 @@ jobs:
     name: Run Tests
     uses: ./.github/workflows/test.yml
     with:
-      java-version: ${{ vars.JAVA_VERSION }}
-      java-distribution: ${{ vars.JAVA_DISTRIBUTION }}
-
+      gradle-args: '--info --stacktrace'

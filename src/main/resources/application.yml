@@ -2,10 +2,10 @@ spring:
   application:
     name: quickpay
   datasource:
-    url: '${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/quickpay_db}'
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/quickpay_db}
     driver-class-name: org.postgresql.Driver
-    username: '${SPRING_DATASOURCE_USERNAME:postgres}'
-    password: '${SPRING_DATASOURCE_PASSWORD:postgres}'
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
   jpa:
     open-in-view: false
     hibernate:
@@ -25,59 +25,31 @@ spring:
     virtual:
       enabled: true
 
-qr:
-  expiry:
-    minutes: 15
-    cleanup-interval: 300000
-  truelayer:
-    deep-link-base: 'https://payment.truelayer.com/quickpay'
-    redirect-uri: 'http://10.0.2.2:8080/api/qr-payments/callback'
-  server:
-    base-url: 'http://localhost:8080'  # For backend internal use
-
 server:
-  address: 0.0.0.0  # This is correct! Listen on all interfaces
-  port: 8080
   tomcat:
     max-threads: 50
-
 management:
   endpoints:
     web:
       exposure:
-        include: 'metrics,health'
+        include: metrics,health
   endpoint:
     metrics:
       enabled: true
-
 springdoc:
   show-actuator: true
-
 truelayer:
-  apiBase: '${TRUELAYER_API_BASE:https://api.truelayer-sandbox.com}'
-  accessToken: '${TRUELAYER_ACCESS_TOKEN:dummy-access-token}'
-  webhookJku: '${TRUELAYER_WEBHOOK_JKU:http://localhost:8080/.well-known/jwks.json}'
-  clientId: '${TRUELAYER_CLIENT_ID}'
-  clientSecret: '${TRUELAYER_CLIENT_SECRET}'
-  keyId: '${TRUELAYER_KEY_ID}'
-  privateKeyPath: '${TRUELAYER_PRIVATE_KEY_PATH}'
-  environment: '${TRUELAYER_ENV:sandbox}'
-  httpLogs: '${TRUELAYER_HTTP_LOGS:false}'
-  merchantAccountId: '${TRUELAYER_MERCHANT_ACCOUNT_ID}'
-  redirectUri: '${TRUELAYER_REDIRECT_URI:http://localhost:8080/return}'
+  apiBase: ${TRUELAYER_API_BASE:https://api.truelayer-sandbox.com}
+  accessToken: ${TRUELAYER_ACCESS_TOKEN:dummy-access-token}
+  webhookJku: ${TRUELAYER_WEBHOOK_JKU:http://localhost:8080/.well-known/jwks.json}
+  # SDK configuration
+  clientId: ${TRUELAYER_CLIENT_ID}
+  clientSecret: ${TRUELAYER_CLIENT_SECRET}
+  keyId: ${TRUELAYER_KEY_ID}
+  privateKeyPath: ${TRUELAYER_PRIVATE_KEY_PATH}
+  environment: ${TRUELAYER_ENV:sandbox}
+  httpLogs: ${TRUELAYER_HTTP_LOGS:false}
+  merchantAccountId: ${TRUELAYER_MERCHANT_ACCOUNT_ID}
   webhooks:
-    environment: sandbox
-    maxSkew: PT60M
-
-# LOGGING MUST BE AT ROOT LEVEL, not under qr.server!
-logging:
-  level:
-    com.elegant.software.quickpay: DEBUG
-    org.springframework.web: DEBUG
-    org.springframework.security: DEBUG
-    com.elegant.software.quickpay.api.inbound: TRACE
-    com.elegant.software.quickpay.payments.truelayer.inbound: TRACE
-  pattern:
-    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n'
-  file:
-    name: logs/quickpay.log
+    environment: sandbox ** # "sandbox" or "live" */
+    maxSkew: PT60M    #  ** Max accepted age of the webhook timestamp header, e.g. PT5M */
