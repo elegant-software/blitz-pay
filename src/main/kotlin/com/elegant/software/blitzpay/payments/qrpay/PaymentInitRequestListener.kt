@@ -21,7 +21,7 @@ class PaymentInitRequestListener(
 
     @EventListener
     fun on(e: PaymentResult) {
-        LOG.info("Pyment result received {}", e)
+        LOG.info("Payment result received {}", e)
         paymentUpdateBus.emit(e.paymentRequestId, e)
     }
 
