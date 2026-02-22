@@ -4,4 +4,4 @@ pluginManagement {
 		gradlePluginPortal()
 	}
 }
-rootProject.name = "blitzpay"
+rootProject.name = "blitz-pay"

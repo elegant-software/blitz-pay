@@ -2,6 +2,77 @@
 
 This directory contains reusable GitHub Actions workflows for the BlitzPay application.
 
+---
+
+## Release Management
+
+BlitzPay uses a fully automated release management system built on GitHub Actions and shell scripts — no external versioning libraries.
+
+### Auto-Labeling (`auto-label.yml`)
+
+Triggered on every `pull_request` event (opened / synchronize / reopened).
+
+The workflow inspects the files changed in the PR and the PR title/branch name, then applies one or more labels automatically using the `gh` CLI. All label metadata is read from **`.github/labels.yml`** — edit that file to add, remove, or reconfigure labels without touching the workflow.
+
+**Labeling rules (configured in `.github/labels.yml`):**
+
+| Label | Color | Trigger |
+|---|---|---|
+| `feature` | `#0E8A16` | Any file under `src/main/kotlin/**` |
+| `bug-fix` | `#D93F0B` | PR title or branch contains `fix`, `bug`, or `hotfix` |
+| `documentation` | `#0075CA` | `*.md` files or `docs/**` |
+| `infrastructure` | `#E4E669` | `Dockerfile`, `docker-compose.yml`, `k8s/**`, `.github/**` |
+| `dependencies` | `#0366D6` | `build.gradle.kts`, `settings.gradle.kts`, `gradle.properties`, `gradle/**` |
+| `tests` | `#BFD4F2` | `src/test/**` |
+| `config` | `#C5DEF5` | `src/main/resources/**` |
+| `breaking-change` | `#B60205` | PR title or body contains `BREAKING CHANGE` or `!:` |
+
+- Multiple labels are applied when multiple patterns match.
+- Labels are created automatically if they do not already exist.
+
+> **Customisation:** To change a label's color, icon, title, description or matching patterns, edit `.github/labels.yml`. No workflow changes are needed.
+
+### Semantic Versioning (`.github/scripts/semver.sh`)
+
+A standalone bash script that implements [Semantic Versioning](https://semver.org/) from scratch.
+
+**How it works:**
+
+1. Reads the latest Git tag (`v*`) to determine the current version (defaults to `0.0.0` if no tags exist).
+2. Reads the `PR_LABELS` environment variable and looks up each label's `bump` value in **`.github/labels.yml`** to determine the bump type:
+   - `breaking-change` → **MAJOR** bump (`1.2.3` → `2.0.0`)
+   - `feature` → **MINOR** bump (`1.2.3` → `1.3.0`)
+   - `bug-fix`, `tests`, `config`, `dependencies`, `documentation`, `infrastructure` → **PATCH** bump (`1.2.3` → `1.2.4`)
+3. When multiple labels exist the **highest priority** wins (MAJOR > MINOR > PATCH).
+4. For the very first release (no prior tags): features start at `0.1.0`, patches at `0.0.1`.
+5. Outputs `new_version` and `bump_type` via `$GITHUB_OUTPUT`.
+
+> **Customisation:** Change a label's version bump type by updating its `bump` field in `.github/labels.yml`.
+
+### Release Notes Generation (`release.yml`)
+
+Triggered when a PR is **merged into `main`**.
+
+**Steps:**
+
+1. Collects PR labels from the merged PR.
+2. Runs `semver.sh` to compute the next version.
+3. Generates Markdown release notes grouped by label category. Section headings (icon + title) are read dynamically from **`.github/labels.yml`** in the order labels appear there:
+   - 💥 Breaking Changes
+   - 🚀 Features
+   - 🐛 Bug Fixes
+   - 📚 Documentation
+   - 🏗️ Infrastructure
+   - 📦 Dependencies
+   - ✅ Tests
+   - ⚙️ Configuration
+4. Includes metadata: date, PR link, contributor, and a Full Changelog diff link.
+5. Updates the `version` property in `build.gradle.kts` and pushes a `chore: release vX.Y.Z [skip ci]` commit.
+6. Creates an annotated Git tag (`vX.Y.Z`).
+7. Creates a GitHub Release with the generated notes.
+
+---
+
 ## Workflows
 
 ### 1. Test Workflow (`test.yml`)
