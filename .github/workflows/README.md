@@ -12,9 +12,9 @@ BlitzPay uses a fully automated release management system built on GitHub Action
 
 Triggered on every `pull_request` event (opened / synchronize / reopened).
 
-The workflow inspects the files changed in the PR and the PR title/branch name, then applies one or more labels automatically using the `gh` CLI.
+The workflow inspects the files changed in the PR and the PR title/branch name, then applies one or more labels automatically using the `gh` CLI. All label metadata is read from **`.github/labels.yml`** — edit that file to add, remove, or reconfigure labels without touching the workflow.
 
-**Labeling rules:**
+**Labeling rules (configured in `.github/labels.yml`):**
 
 | Label | Color | Trigger |
 |---|---|---|
@@ -30,6 +30,8 @@ The workflow inspects the files changed in the PR and the PR title/branch name, 
 - Multiple labels are applied when multiple patterns match.
 - Labels are created automatically if they do not already exist.
 
+> **Customisation:** To change a label's color, icon, title, description or matching patterns, edit `.github/labels.yml`. No workflow changes are needed.
+
 ### Semantic Versioning (`.github/scripts/semver.sh`)
 
 A standalone bash script that implements [Semantic Versioning](https://semver.org/) from scratch.
@@ -37,13 +39,15 @@ A standalone bash script that implements [Semantic Versioning](https://semver.or
 **How it works:**
 
 1. Reads the latest Git tag (`v*`) to determine the current version (defaults to `0.0.0` if no tags exist).
-2. Reads the `PR_LABELS` environment variable to determine the bump type:
+2. Reads the `PR_LABELS` environment variable and looks up each label's `bump` value in **`.github/labels.yml`** to determine the bump type:
    - `breaking-change` → **MAJOR** bump (`1.2.3` → `2.0.0`)
    - `feature` → **MINOR** bump (`1.2.3` → `1.3.0`)
    - `bug-fix`, `tests`, `config`, `dependencies`, `documentation`, `infrastructure` → **PATCH** bump (`1.2.3` → `1.2.4`)
 3. When multiple labels exist the **highest priority** wins (MAJOR > MINOR > PATCH).
 4. For the very first release (no prior tags): features start at `0.1.0`, patches at `0.0.1`.
 5. Outputs `new_version` and `bump_type` via `$GITHUB_OUTPUT`.
+
+> **Customisation:** Change a label's version bump type by updating its `bump` field in `.github/labels.yml`.
 
 ### Release Notes Generation (`release.yml`)
 
@@ -53,7 +57,7 @@ Triggered when a PR is **merged into `main`**.
 
 1. Collects PR labels from the merged PR.
 2. Runs `semver.sh` to compute the next version.
-3. Generates Markdown release notes grouped by label category:
+3. Generates Markdown release notes grouped by label category. Section headings (icon + title) are read dynamically from **`.github/labels.yml`** in the order labels appear there:
    - 💥 Breaking Changes
    - 🚀 Features
    - 🐛 Bug Fixes

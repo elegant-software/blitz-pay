@@ -30,12 +30,24 @@ jobs:
         run: |
           set -euo pipefail
 
+          LABELS_CONFIG=".github/labels.yml"
+
+          # ----------------------------------------------------------------
+          # Parse labels.yml into a JSON array for easy shell consumption
+          # ----------------------------------------------------------------
+          labels_json=$(python3 - <<'PYEOF'
+import json, yaml, sys
+with open(".github/labels.yml") as f:
+    data = yaml.safe_load(f)
+print(json.dumps(data["labels"]))
+PYEOF
+)
+
           # ----------------------------------------------------------------
           # Helper: ensure a label exists in the repo (create if absent)
           # ----------------------------------------------------------------
           ensure_label() {
             local name="$1" color="$2" description="$3"
-            # Check whether label already exists
             if ! gh label list --repo "$REPO" --json name --jq '.[].name' \
                 | grep -qxF "$name"; then
               gh label create "$name" \
@@ -46,16 +58,18 @@ jobs:
           }
 
           # ----------------------------------------------------------------
-          # Define all managed labels
+          # Create all managed labels from labels.yml (if they don't exist)
           # ----------------------------------------------------------------
-          ensure_label "feature"         "#0E8A16" "New feature or enhancement"
-          ensure_label "bug-fix"         "#D93F0B" "Bug fix or hotfix"
-          ensure_label "documentation"   "#0075CA" "Documentation changes"
-          ensure_label "infrastructure"  "#E4E669" "Infrastructure / CI / Docker / Kubernetes changes"
-          ensure_label "dependencies"    "#0366D6" "Dependency updates"
-          ensure_label "tests"           "#BFD4F2" "Test additions or changes"
-          ensure_label "config"          "#C5DEF5" "Configuration / resource changes"
-          ensure_label "breaking-change" "#B60205" "Breaking change"
+          while IFS= read -r entry; do
+            name=$(echo "$entry"  | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['name'])")
+            color=$(echo "$entry" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['color'])")
+            desc=$(echo "$entry"  | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('description',''))")
+            ensure_label "$name" "$color" "$desc"
+          done < <(echo "$labels_json" | python3 -c "
+import sys, json
+for item in json.load(sys.stdin):
+    print(json.dumps(item))
+")
 
           # ----------------------------------------------------------------
           # Collect changed files in this PR
@@ -66,60 +80,74 @@ jobs:
           echo "Changed files:"
           echo "$changed_files"
 
+          lower_title="${PR_TITLE,,}"
+          lower_branch="${PR_HEAD_BRANCH,,}"
+          combined_title_branch="$lower_title $lower_branch"
+          combined_body="${PR_TITLE} ${PR_BODY:-}"
+
           labels_to_apply=()
 
           # ----------------------------------------------------------------
-          # File-path based rules
+          # Match each label's patterns against PR data (read from labels.yml)
           # ----------------------------------------------------------------
+          while IFS= read -r entry; do
+            label_name=$(echo "$entry" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['name'])")
+            matched=false
 
-          # feature: new Kotlin source files added
-          if echo "$changed_files" | grep -qE '^src/main/kotlin/'; then
-            labels_to_apply+=("feature")
-          fi
+            # file_patterns: match against changed file paths
+            while IFS= read -r pattern; do
+              [[ -z "$pattern" ]] && continue
+              if echo "$changed_files" | grep -qE "$pattern"; then
+                matched=true
+                break
+              fi
+            done < <(echo "$entry" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+for p in d.get('file_patterns', []):
+    print(p)
+")
 
-          # documentation: markdown or docs/
-          if echo "$changed_files" | grep -qE '(\.md$|^docs/)'; then
-            labels_to_apply+=("documentation")
-          fi
+            # title_patterns: match against lowercased PR title + branch
+            if ! $matched; then
+              while IFS= read -r pattern; do
+                [[ -z "$pattern" ]] && continue
+                if echo "$combined_title_branch" | grep -qE "$pattern"; then
+                  matched=true
+                  break
+                fi
+              done < <(echo "$entry" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+for p in d.get('title_patterns', []):
+    print(p)
+")
+            fi
 
-          # infrastructure: Dockerfile, docker-compose, k8s/, .github/
-          if echo "$changed_files" | grep -qE \
-              '^(Dockerfile|docker-compose\.yml|k8s/|\.github/)'; then
-            labels_to_apply+=("infrastructure")
-          fi
+            # body_patterns: match against PR title + body (case-sensitive)
+            if ! $matched; then
+              while IFS= read -r pattern; do
+                [[ -z "$pattern" ]] && continue
+                if echo "$combined_body" | grep -qE "$pattern"; then
+                  matched=true
+                  break
+                fi
+              done < <(echo "$entry" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+for p in d.get('body_patterns', []):
+    print(p)
+")
+            fi
 
-          # dependencies: Gradle build files
-          if echo "$changed_files" | grep -qE \
-              '^(build\.gradle\.kts|settings\.gradle\.kts|gradle\.properties|gradle/)'; then
-            labels_to_apply+=("dependencies")
-          fi
-
-          # tests: test source files
-          if echo "$changed_files" | grep -qE '^src/test/'; then
-            labels_to_apply+=("tests")
-          fi
-
-          # config: application resources
-          if echo "$changed_files" | grep -qE '^src/main/resources/'; then
-            labels_to_apply+=("config")
-          fi
-
-          # ----------------------------------------------------------------
-          # Title / branch / body based rules
-          # ----------------------------------------------------------------
-          lower_title="${PR_TITLE,,}"
-          lower_branch="${PR_HEAD_BRANCH,,}"
-
-          # bug-fix: branch or title contains fix/bug/hotfix
-          if echo "$lower_title $lower_branch" | grep -qE '(fix|bug|hotfix)'; then
-            labels_to_apply+=("bug-fix")
-          fi
-
-          # breaking-change: title or body contains "BREAKING CHANGE" or "!:"
-          combined_text="$PR_TITLE ${PR_BODY:-}"
-          if echo "$combined_text" | grep -qE '(BREAKING CHANGE|!:)'; then
-            labels_to_apply+=("breaking-change")
-          fi
+            if $matched; then
+              labels_to_apply+=("$label_name")
+            fi
+          done < <(echo "$labels_json" | python3 -c "
+import sys, json
+for item in json.load(sys.stdin):
+    print(json.dumps(item))
+")
 
           # ----------------------------------------------------------------
           # Apply all collected labels (deduplicated)
@@ -129,8 +157,8 @@ jobs:
             exit 0
           fi
 
-          # Build comma-separated unique label list
           unique_labels=$(printf '%s\n' "${labels_to_apply[@]}" | sort -u | tr '\n' ',' | sed 's/,$//')
           echo "Applying labels: $unique_labels"
 
           gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$unique_labels"
+

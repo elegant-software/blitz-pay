@@ -74,68 +74,47 @@ jobs:
           # Find previous tag for changelog diff link
           prev_tag=$(git tag --list 'v[0-9]*' --sort=-version:refname | head -n1 || true)
 
-          # Categorise this PR into sections based on its labels
-          features=""
-          bug_fixes=""
-          documentation=""
-          infrastructure=""
-          dependencies=""
-          tests=""
-          config=""
-          breaking_changes=""
-
           pr_entry="- ${PR_TITLE} ([#${PR_NUMBER}](${pr_url})) — @${PR_AUTHOR}"
 
-          # Assign to section(s) based on labels
-          if echo "$PR_LABELS" | grep -qw "breaking-change"; then
-            breaking_changes="$pr_entry"
-          fi
-          if echo "$PR_LABELS" | grep -qw "feature"; then
-            features="$pr_entry"
-          fi
-          if echo "$PR_LABELS" | grep -qw "bug-fix"; then
-            bug_fixes="$pr_entry"
-          fi
-          if echo "$PR_LABELS" | grep -qw "documentation"; then
-            documentation="$pr_entry"
-          fi
-          if echo "$PR_LABELS" | grep -qw "infrastructure"; then
-            infrastructure="$pr_entry"
-          fi
-          if echo "$PR_LABELS" | grep -qw "dependencies"; then
-            dependencies="$pr_entry"
-          fi
-          if echo "$PR_LABELS" | grep -qw "tests"; then
-            tests="$pr_entry"
-          fi
-          if echo "$PR_LABELS" | grep -qw "config"; then
-            config="$pr_entry"
-          fi
-
-          # If no section was matched, put it under the bump-type default
-          any_assigned=false
-          for var in "$breaking_changes" "$features" "$bug_fixes" "$documentation" "$infrastructure" "$dependencies" "$tests" "$config"; do
-            [[ -n "$var" ]] && { any_assigned=true; break; }
-          done
-          if ! $any_assigned; then
-            case "$BUMP_TYPE" in
-              major) breaking_changes="$pr_entry" ;;
-              minor) features="$pr_entry" ;;
-              *)     bug_fixes="$pr_entry" ;;
-            esac
-          fi
-
-          # Build the markdown body
+          # ------------------------------------------------------------------
+          # Build release notes sections dynamically from labels.yml
+          # ------------------------------------------------------------------
+          # Priority order for display is preserved from labels.yml
           notes="## What's Changed\n\n"
+          any_section=false
 
-          [[ -n "$breaking_changes" ]] && notes+="### 💥 Breaking Changes\n${breaking_changes}\n\n"
-          [[ -n "$features"         ]] && notes+="### 🚀 Features\n${features}\n\n"
-          [[ -n "$bug_fixes"        ]] && notes+="### 🐛 Bug Fixes\n${bug_fixes}\n\n"
-          [[ -n "$documentation"    ]] && notes+="### 📚 Documentation\n${documentation}\n\n"
-          [[ -n "$infrastructure"   ]] && notes+="### 🏗️ Infrastructure\n${infrastructure}\n\n"
-          [[ -n "$dependencies"     ]] && notes+="### 📦 Dependencies\n${dependencies}\n\n"
-          [[ -n "$tests"            ]] && notes+="### ✅ Tests\n${tests}\n\n"
-          [[ -n "$config"           ]] && notes+="### ⚙️ Configuration\n${config}\n\n"
+          while IFS=$'\t' read -r label_name icon title; do
+            [[ -z "$label_name" ]] && continue
+            if echo "$PR_LABELS" | grep -qw "$label_name"; then
+              notes+="### ${icon} ${title}\n${pr_entry}\n\n"
+              any_section=true
+            fi
+          done < <(python3 - <<'PYEOF'
+import yaml, sys
+with open(".github/labels.yml") as f:
+    data = yaml.safe_load(f)
+for label in data["labels"]:
+    print(f"{label['name']}\t{label['icon']}\t{label['title']}")
+PYEOF
+)
+
+          # Fallback: no label matched — use bump type to pick a section
+          if ! $any_section; then
+            fallback=$(python3 - <<'PYEOF'
+import yaml, sys, os
+with open(".github/labels.yml") as f:
+    data = yaml.safe_load(f)
+bump = os.environ.get("BUMP_TYPE", "patch")
+for label in data["labels"]:
+    if label.get("bump") == bump:
+        print(f"{label['icon']}\t{label['title']}")
+        break
+PYEOF
+)
+            fb_icon=$(echo "$fallback" | cut -f1)
+            fb_title=$(echo "$fallback" | cut -f2)
+            notes+="### ${fb_icon} ${fb_title}\n${pr_entry}\n\n"
+          fi
 
           notes+="---\n\n"
           notes+="**Date:** ${date_str}  \n"
@@ -148,7 +127,6 @@ jobs:
             notes+="**Full Changelog:** [v${NEW_VERSION}](${REPO_URL}/releases/tag/v${NEW_VERSION})\n"
           fi
 
-          # Write to a temp file (avoids shell quoting issues with gh release create)
           printf '%b' "$notes" > /tmp/release_notes.md
           echo "Release notes written to /tmp/release_notes.md"
           cat /tmp/release_notes.md

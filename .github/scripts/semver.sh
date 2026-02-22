@@ -2,9 +2,12 @@
 # semver.sh — Custom semantic versioning per https://semver.org/
 # Usage: Called by GitHub Actions release workflow.
 # Environment variables consumed:
-#   PR_LABELS  — space- or newline-separated list of labels on the merged PR
+#   PR_LABELS     — space- or newline-separated list of labels on the merged PR
+#   LABELS_CONFIG — path to labels.yml (default: .github/labels.yml)
 #   GITHUB_OUTPUT — file path provided by the runner for step outputs
 set -euo pipefail
+
+LABELS_CONFIG="${LABELS_CONFIG:-.github/labels.yml}"
 
 # ---------------------------------------------------------------------------
 # 1. Read the current (latest) version from git tags
@@ -42,22 +45,37 @@ for part in "$major" "$minor" "$patch"; do
 done
 
 # ---------------------------------------------------------------------------
-# 3. Determine bump type from PR labels (highest priority wins)
+# 3. Determine bump type from PR labels using labels.yml
+#    Priority: major > minor > patch
 # ---------------------------------------------------------------------------
 bump_type="patch"   # default
 
 # PR_LABELS may contain newlines or spaces; normalise to space-separated
 labels_normalised=$(echo "${PR_LABELS:-}" | tr '\n' ' ')
 
-if echo "$labels_normalised" | grep -qw "breaking-change"; then
-  bump_type="major"
-elif echo "$labels_normalised" | grep -qw "feature"; then
-  bump_type="minor"
-elif echo "$labels_normalised" | grep -qwE "bug-fix|tests|config|dependencies|documentation|infrastructure"; then
-  bump_type="patch"
-fi
-
 echo "Labels: ${labels_normalised:-<none>}"
+
+# Read bump mappings from labels.yml (name<TAB>bump per line)
+bump_mappings=$(python3 - "$LABELS_CONFIG" <<'PYEOF'
+import yaml, sys
+config_path = sys.argv[1]
+with open(config_path) as f:
+    data = yaml.safe_load(f)
+priority = {"major": 3, "minor": 2, "patch": 1}
+# Output sorted highest-priority first so we can stop at first match
+entries = sorted(data["labels"], key=lambda l: priority.get(l.get("bump","patch"), 1), reverse=True)
+for label in entries:
+    print(f"{label['name']}\t{label.get('bump','patch')}")
+PYEOF
+)
+
+while IFS=$'\t' read -r label_name label_bump; do
+  if echo "$labels_normalised" | grep -qw "$label_name"; then
+    bump_type="$label_bump"
+    break   # already sorted highest-priority first
+  fi
+done <<< "$bump_mappings"
+
 echo "Bump type: $bump_type"
 
 # ---------------------------------------------------------------------------
