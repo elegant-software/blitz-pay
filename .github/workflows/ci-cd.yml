@@ -1,0 +1,32 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment for deployment'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+        default: 'dev'
+
+jobs:
+  test:
+    name: Run Tests
+    permissions:
+      checks: write
+      contents: read
+    uses: ./.github/workflows/test.yml
+    with:
+      gradle-args: '--info --stacktrace'
