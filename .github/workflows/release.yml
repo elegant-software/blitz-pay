@@ -1,0 +1,152 @@
+name: Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    # Only run when the PR was actually merged (not just closed)
+    if: github.event.pull_request.merged == true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ------------------------------------------------------------------
+      # 1. Collect PR labels
+      # ------------------------------------------------------------------
+      - name: Collect PR labels
+        id: pr_labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          labels=$(gh pr view "$PR_NUMBER" --repo "$REPO" \
+            --json labels --jq '.labels[].name' | tr '\n' ' ')
+          echo "labels=${labels}" >> "$GITHUB_OUTPUT"
+          echo "PR labels: ${labels}"
+
+      # ------------------------------------------------------------------
+      # 2. Calculate next semantic version
+      # ------------------------------------------------------------------
+      - name: Calculate next version
+        id: semver
+        env:
+          PR_LABELS: ${{ steps.pr_labels.outputs.labels }}
+        run: |
+          chmod +x .github/scripts/semver.sh
+          .github/scripts/semver.sh
+
+      # ------------------------------------------------------------------
+      # 3. Generate release notes
+      # ------------------------------------------------------------------
+      - name: Generate release notes
+        id: release_notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_LABELS: ${{ steps.pr_labels.outputs.labels }}
+          NEW_VERSION: ${{ steps.semver.outputs.new_version }}
+          BUMP_TYPE: ${{ steps.semver.outputs.bump_type }}
+          REPO: ${{ github.repository }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          pr_url="${REPO_URL}/pull/${PR_NUMBER}"
+          date_str=$(date -u '+%Y-%m-%d')
+
+          # Find previous tag for changelog diff link
+          prev_tag=$(git tag --list 'v[0-9]*' --sort=-version:refname | head -n1 || true)
+
+          pr_entry="- ${PR_TITLE} ([#${PR_NUMBER}](${pr_url})) — @${PR_AUTHOR}"
+
+          # ------------------------------------------------------------------
+          # Build release notes sections dynamically from labels.yml
+          # ------------------------------------------------------------------
+          # Priority order for display is preserved from labels.yml
+          notes="## What's Changed\n\n"
+          any_section=false
+
+          while IFS=$'\t' read -r label_name icon title; do
+            [[ -z "$label_name" ]] && continue
+            if echo "$PR_LABELS" | grep -qw "$label_name"; then
+              notes+="### ${icon} ${title}\n${pr_entry}\n\n"
+              any_section=true
+            fi
+          done < <(python3 -c $'import yaml\nwith open(".github/labels.yml") as f:\n    data = yaml.safe_load(f)\nfor label in data["labels"]:\n    print(f"{label[\"name\"]}\t{label[\"icon\"]}\t{label[\"title\"]}")')
+
+          # Fallback: no label matched — use bump type to pick a section
+          if ! $any_section; then
+            fallback=$(python3 -c $'import yaml, os\nwith open(".github/labels.yml") as f:\n    data = yaml.safe_load(f)\nbump = os.environ.get("BUMP_TYPE", "patch")\nfor label in data["labels"]:\n    if label.get("bump") == bump:\n        print(f"{label[\"icon\"]}\t{label[\"title\"]}")\n        break')
+            fb_icon=$(echo "$fallback" | cut -f1)
+            fb_title=$(echo "$fallback" | cut -f2)
+            notes+="### ${fb_icon} ${fb_title}\n${pr_entry}\n\n"
+          fi
+
+          notes+="---\n\n"
+          notes+="**Date:** ${date_str}  \n"
+          notes+="**PR:** [#${PR_NUMBER}](${pr_url})  \n"
+          notes+="**Contributor:** @${PR_AUTHOR}  \n\n"
+
+          if [[ -n "$prev_tag" ]]; then
+            notes+="**Full Changelog:** [${prev_tag}...v${NEW_VERSION}](${REPO_URL}/compare/${prev_tag}...v${NEW_VERSION})\n"
+          else
+            notes+="**Full Changelog:** [v${NEW_VERSION}](${REPO_URL}/releases/tag/v${NEW_VERSION})\n"
+          fi
+
+          printf '%b' "$notes" > /tmp/release_notes.md
+          echo "Release notes written to /tmp/release_notes.md"
+          cat /tmp/release_notes.md
+
+      # ------------------------------------------------------------------
+      # 4. Update build.gradle.kts version and create git tag
+      # ------------------------------------------------------------------
+      - name: Update build.gradle.kts version and tag
+        env:
+          NEW_VERSION: ${{ steps.semver.outputs.new_version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Update the project version in build.gradle.kts
+          sed -i "s/^version = .*/version = \"${NEW_VERSION}\"/" build.gradle.kts
+          git add build.gradle.kts
+          git commit -m "chore: release v${NEW_VERSION} [skip ci]"
+          git push origin HEAD:main
+
+          # Create annotated tag
+          git tag -a "v${NEW_VERSION}" -m "Release v${NEW_VERSION}"
+          git push origin "v${NEW_VERSION}"
+
+      # ------------------------------------------------------------------
+      # 5. Create GitHub Release
+      # ------------------------------------------------------------------
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_VERSION: ${{ steps.semver.outputs.new_version }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh release create "v${NEW_VERSION}" \
+            --repo "$REPO" \
+            --title "v${NEW_VERSION}" \
+            --notes-file /tmp/release_notes.md

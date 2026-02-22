@@ -10,7 +10,7 @@ class SupportOpenApiConfig {
     @Bean
     fun supportApi(): GroupedOpenApi =
         GroupedOpenApi.builder()
-            .group("support")
+            .group("Support")
             .packagesToScan("com.elegant.software.blitzpay.payments.support")
             .pathsToMatch("/support/**")
             .build()

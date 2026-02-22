@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "com.elegant.software.blitzpay"
-version = "0.0.1-SNAPSHOT"
+version = "0.1.0"
 description = "BlitzPay"
 
 java {
@@ -33,12 +33,18 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
     implementation("org.springframework.modulith:spring-modulith-starter-core")
     implementation("org.springframework.modulith:spring-modulith-starter-jpa")
-    implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:3.0.1")
+    implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:${property("springdocVersion")}")
     // TrueLayer Java SDK
-    implementation("com.truelayer:truelayer-java:17.4.0")
-    implementation("com.truelayer:truelayer-signing:0.2.6") // official signing lib
-    implementation("io.github.microutils:kotlin-logging-jvm:3.0.5") //Idiomatic kotlin logging
-    implementation("com.nimbusds:nimbus-jose-jwt:10.7") // Required for signature verification
+    implementation("com.truelayer:truelayer-java:${property("truelayerJavaVersion")}")
+    implementation("com.truelayer:truelayer-signing:${property("truelayerSigningVersion")}") // official signing lib
+    implementation("io.github.microutils:kotlin-logging-jvm:${property("kotlinLoggingVersion")}") //Idiomatic kotlin logging
+    implementation("com.nimbusds:nimbus-jose-jwt:${property("nimbusJoseJwtVersion")}") // Required for signature verification
+    // Mustang Project – EU-standard ZUGFeRD / Factur-X invoice generation
+    implementation("org.mustangproject:library:${property("mustangVersion")}")
+    // Thymeleaf templating engine for invoice PDF rendering
+    implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
+    // Flying Saucer – converts Thymeleaf-rendered HTML to PDF
+    implementation("org.xhtmlrenderer:flying-saucer-pdf:${property("flyingSaucerVersion")}")
 
 
     runtimeOnly("org.postgresql:postgresql")
@@ -55,7 +61,7 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-postgresql")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:6.2.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:${property("mockitoKotlinVersion")}")
 
 }
 
