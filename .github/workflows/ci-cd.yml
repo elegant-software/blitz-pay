@@ -24,6 +24,9 @@ on:
 jobs:
   test:
     name: Run Tests
+    permissions:
+      checks: write
+      contents: read
     uses: ./.github/workflows/test.yml
     with:
       gradle-args: '--info --stacktrace'
