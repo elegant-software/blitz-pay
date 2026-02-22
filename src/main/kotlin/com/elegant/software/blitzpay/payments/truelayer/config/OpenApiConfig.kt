@@ -10,7 +10,7 @@ class TruelayerOpenApiConfig {
     @Bean
     fun truelayerApi(): GroupedOpenApi =
         GroupedOpenApi.builder()
-            .group("truelayer")
+            .group("TrueLayer")
             // scan only the truelayer package (keeps module boundaries intact)
             .packagesToScan("com.elegant.software.blitzpay.payments.truelayer")
             // the webhook controller is mounted at /webhooks/truelayer
