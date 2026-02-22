@@ -21,6 +21,30 @@ class QrCodeController(
     }
 
     /**
+     * Create a QR payment from a JSON request body.
+     */
+    @PostMapping
+    fun createQrPayment(@RequestBody request: QrPaymentRequest): ResponseEntity<Any> {
+        logger.info { "=== CREATE QR PAYMENT REQUEST RECEIVED ===" }
+        logger.info { "  merchant: ${request.merchant}, amount: ${request.amount}, currency: ${request.currency}" }
+
+        return try {
+            val response = qrPaymentService.initiateQrPayment(request)
+            logger.info { "✅ QR payment created: ${response.paymentRequestId}" }
+            ResponseEntity.status(HttpStatus.CREATED).body(response)
+        } catch (e: Exception) {
+            logger.error(e) { "❌ Failed to create QR payment" }
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(
+                    mapOf(
+                        "error" to "Failed to create QR payment",
+                        "message" to e.message
+                    )
+                )
+        }
+    }
+
+    /**
      * Quick endpoint for mobile apps (simple parameters) - MUST BE FIRST!
      */
     @GetMapping("/quick")
@@ -126,32 +150,34 @@ class QrCodeController(
     }
 
     /**
-     * Echo endpoint for debugging
+     * Callback endpoint for TrueLayer payment redirect after user completes payment.
      */
-    @GetMapping("/echo")
-    fun echo(
-        @RequestParam message: String = "hello"
-    ): ResponseEntity<Map<String, Any>> {
-        logger.info { "Echo called with message: $message" }
-        return ResponseEntity.ok(
-            mapOf(
-                "echo" to message,
-                "timestamp" to System.currentTimeMillis()
+    @GetMapping("/callback")
+    fun paymentCallback(
+        @RequestParam(name = "payment_id", required = false) paymentId: String?,
+        @RequestParam(required = false) error: String?,
+        @RequestParam(name = "error_description", required = false) errorDescription: String?
+    ): ResponseEntity<Map<String, Any?>> {
+        logger.info { "Payment callback received: payment_id=$paymentId, error=$error" }
+
+        return if (error != null) {
+            logger.warn { "Payment callback error: $error - $errorDescription" }
+            ResponseEntity.ok(
+                mapOf(
+                    "status" to "error",
+                    "error" to error,
+                    "message" to (errorDescription ?: "Payment was not completed")
+                )
             )
-        )
-    }
-
-    /**
-     * Test log levels
-     */
-    @GetMapping("/test/log")
-    fun testLog(): String {
-        logger.trace { "This is TRACE log" }
-        logger.debug { "This is DEBUG log" }
-        logger.info { "This is INFO log" }
-        logger.warn { "This is WARN log" }
-        logger.error { "This is ERROR log" }
-
-        return "Check your console logs!"
+        } else {
+            logger.info { "Payment callback success for payment_id=$paymentId" }
+            ResponseEntity.ok(
+                mapOf(
+                    "status" to "success",
+                    "payment_id" to paymentId,
+                    "message" to "Payment completed successfully"
+                )
+            )
+        }
     }
 }

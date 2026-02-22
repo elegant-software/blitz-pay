@@ -3,6 +3,7 @@ package com.elegant.software.quickpay.truelayer.outbound
 import com.elegant.software.quickpay.support.PaymentUpdateBus
 import com.elegant.software.quickpay.truelayer.api.*
 import com.elegant.software.quickpay.truelayer.support.QrCodeGenerator
+import com.elegant.software.quickpay.truelayer.support.QrCodeProperties
 import com.elegant.software.quickpay.truelayer.support.TrueLayerProperties
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.truelayer.signing.Signer
@@ -25,7 +26,8 @@ class QrPaymentService(
     private val paymentUpdateBus: PaymentUpdateBus,
     private val trueLayerTokenService: TrueLayerTokenService,
     private val webClient: WebClient,
-    private val trueLayerProperties: TrueLayerProperties
+    private val trueLayerProperties: TrueLayerProperties,
+    private val qrCodeProperties: QrCodeProperties
 ) {
     private val logger = KotlinLogging.logger {}
     private val qrPayments = ConcurrentHashMap<UUID, QrPaymentResponse>()
@@ -239,7 +241,7 @@ class QrPaymentService(
                     name = item,
                     priceInMinor = totalAmountInMinor,
                     quantity = 1,
-                    url = "https://your-coffee-shop.com/menu/${item.toLowerCase().replace(" ", "-")}"
+                    url = "https://your-coffee-shop.com/menu/${item.lowercase().replace(" ", "-")}"
                 )
             )
         } else {
@@ -256,7 +258,7 @@ class QrPaymentService(
                         name = itemName,
                         priceInMinor = pricePerItem,
                         quantity = quantity,
-                        url = "https://your-coffee-shop.com/menu/${itemName.toLowerCase().replace(" ", "-")}"
+                        url = "https://your-coffee-shop.com/menu/${itemName.lowercase().replace(" ", "-")}"
                     )
                 )
 
@@ -285,7 +287,7 @@ class QrPaymentService(
         }
 
         // Otherwise use predefined prices
-        val unitPrice = when (itemName.toLowerCase()) {
+        val unitPrice = when (itemName.lowercase()) {
             "latte" -> 400L // £4.00
             "cappuccino" -> 350L // £3.50
             "espresso" -> 250L // £2.50
@@ -326,8 +328,7 @@ class QrPaymentService(
     }
 
     private fun getBaseUrl(): String {
-        // This should come from configuration
-        return "https://your-backend.com" // Replace with actual base URL
+        return qrCodeProperties.server.baseUrl
     }
 
     private fun createErrorResponse(
