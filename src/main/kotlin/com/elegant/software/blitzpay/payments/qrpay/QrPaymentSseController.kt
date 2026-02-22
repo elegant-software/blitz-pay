@@ -14,7 +14,7 @@ import java.time.Duration
 import java.util.UUID
 
 @RestController
-@RequestMapping("/qr-payments")
+@RequestMapping("/v1/qr-payments", version = "1")
 class QrPaymentSseController(private val bus: PaymentUpdateBus) {
     private val logger = KotlinLogging.logger {}
 

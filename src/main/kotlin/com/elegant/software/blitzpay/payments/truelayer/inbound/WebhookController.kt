@@ -20,7 +20,7 @@ import java.time.format.DateTimeParseException
 
 
 @RestController
-@RequestMapping("/webhooks/truelayer")
+@RequestMapping("/v1/webhooks/truelayer", version = "1")
 class TlWebhookController(
     private val jwksService: JwksService,
     private val props: TlWebhookProperties,
@@ -51,7 +51,7 @@ class TlWebhookController(
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
         }
 
-        val path = "/webhooks/truelayer" // must match exactly
+        val path = "/v1/webhooks/truelayer" // must match exactly
         // Verify JKU is an allowed TrueLayer origin then fetch JWKS
         val jkuFromSig = try { Verifier.extractJku(signature) } catch (ex: Exception) {
             LOG.warn("Unauthorized: Failed to extract JKU from signature: ${'$'}{ex.message}")
