@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blitzpay
+  labels:
+    app: blitzpay
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: blitzpay
+  template:
+    metadata:
+      labels:
+        app: blitzpay
+    spec:
+      containers:
+      - name: blitzpay
+        image: ghcr.io/medimohammadise/blitzpay:latest
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "prod"
+        envFrom:
+        - configMapRef:
+            name: blitzpay-config
+        - secretRef:
+            name: blitzpay-secrets
+            optional: true
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blitzpay
+  labels:
+    app: blitzpay
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: blitzpay
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: blitzpay-config
+data:
+  SPRING_PROFILES_ACTIVE: "prod"
+  # Add other non-sensitive configuration here
+---
+# Secret should be created separately with actual values
+# Example:
+# apiVersion: v1
+# kind: Secret
+# metadata:
+#   name: blitzpay-secrets
+# type: Opaque
+# stringData:
+#   DATABASE_URL: "jdbc:postgresql://postgres:5432/quickpay_db"
+#   TRUELAYER_CLIENT_ID: "your-client-id"
+#   TRUELAYER_CLIENT_SECRET: "your-client-secret"
