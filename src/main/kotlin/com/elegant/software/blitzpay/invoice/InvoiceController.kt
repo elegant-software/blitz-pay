@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @Tag(name = "Invoices", description = "EU-standard ZUGFeRD / Factur-X invoice generation")
 @RestController
-@RequestMapping("/invoices")
+@RequestMapping("/v1/invoices", version = "1")
 class InvoiceController(private val invoiceService: InvoiceService) {
 
     @Operation(summary = "Generate ZUGFeRD XML invoice", description = "Returns a ZUGFeRD 2.0 / Factur-X compliant XML document. Send Accept: application/xml.")

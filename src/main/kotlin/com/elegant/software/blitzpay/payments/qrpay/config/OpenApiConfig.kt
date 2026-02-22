@@ -12,9 +12,9 @@ class QrpayOpenApiConfig {
     @Bean
     fun qrpayApi(): GroupedOpenApi =
         GroupedOpenApi.builder()
-            .group("QRPay")
+            .group("QRPay V1")
             .packagesToScan("com.elegant.software.blitzpay.payments.qrpay")
-            .pathsToMatch("/payments/**", "/qr-payments/**")
+            .pathsToMatch("/v1/payments/**", "/v1/qr-payments/**")
             .addOpenApiCustomizer { openApi: OpenAPI ->
                 openApi.info = Info().title("BlitzPay — Payments API").version("v1")
             }

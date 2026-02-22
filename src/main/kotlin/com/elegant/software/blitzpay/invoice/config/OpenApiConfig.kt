@@ -12,9 +12,9 @@ class InvoiceOpenApiConfig {
     @Bean
     fun invoiceApi(): GroupedOpenApi =
         GroupedOpenApi.builder()
-            .group("Invoice")
+            .group("Invoice V1")
             .packagesToScan(InvoiceController::class.java.packageName)
-            .pathsToMatch("/invoices/**")
+            .pathsToMatch("/v1/invoices/**")
             .addOpenApiCustomizer { openApi: OpenAPI ->
                 openApi.info = Info().title("BlitzPay — Invoice API").version("v1")
             }

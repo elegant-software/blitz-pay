@@ -60,7 +60,7 @@ class InvoiceControllerTest {
         whenever(invoiceService.generateXml(any<InvoiceData>())).thenReturn(xmlBytes)
 
         webTestClient.post()
-            .uri("/invoices")
+            .uri("/v1/invoices")
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_XML)
             .bodyValue(sampleInvoiceJson)
@@ -78,7 +78,7 @@ class InvoiceControllerTest {
         whenever(invoiceService.generatePdf(any<InvoiceData>())).thenReturn(pdfBytes)
 
         webTestClient.post()
-            .uri("/invoices")
+            .uri("/v1/invoices")
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_PDF)
             .bodyValue(sampleInvoiceJson)
@@ -91,5 +91,22 @@ class InvoiceControllerTest {
                 val body = result.responseBody!!
                 assert(body.isNotEmpty()) { "PDF response body must not be empty" }
             }
+    }
+
+    @Test
+    fun `POST v1 invoices path routes to version 1 handler`() {
+        val xmlBytes = "<CrossIndustryInvoice>test</CrossIndustryInvoice>".toByteArray()
+        whenever(invoiceService.generateXml(any<InvoiceData>())).thenReturn(xmlBytes)
+
+        webTestClient.post()
+            .uri("/v1/invoices")
+            .contentType(MediaType.APPLICATION_JSON)
+            .accept(MediaType.APPLICATION_XML)
+            .bodyValue(sampleInvoiceJson)
+            .exchange()
+            .expectStatus().isOk
+            .expectHeader().contentType(MediaType.APPLICATION_XML)
+            .expectBody()
+            .xpath("/CrossIndustryInvoice").exists()
     }
 }
