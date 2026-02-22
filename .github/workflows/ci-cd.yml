@@ -24,8 +24,9 @@ on:
 jobs:
   test:
     name: Run Tests
+    permissions:
+      checks: write
+      contents: read
     uses: ./.github/workflows/test.yml
     with:
-      java-version: ${{ vars.JAVA_VERSION }}
-      java-distribution: ${{ vars.JAVA_DISTRIBUTION }}
-
+      gradle-args: '--info --stacktrace'
