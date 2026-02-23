@@ -8,6 +8,9 @@
 #   title         - Human-readable section heading in release notes
 #   description   - Label description shown on GitHub
 #   bump          - Semver bump triggered by this label: major | minor | patch
+#   priority      - (optional) Priority for release notes. Higher = more important.
+#                   Only the highest-priority label appears in release notes.
+#                   Labels without priority are secondary (shown only if no primary label matched).
 #   file_patterns - (optional) List of regex patterns matched against changed file paths
 #   title_patterns- (optional) List of regex patterns matched against PR title + branch name (case-insensitive)
 #   body_patterns - (optional) List of regex patterns matched against PR title + body (case-sensitive)
@@ -19,6 +22,7 @@ labels:
     title: "Breaking Changes"
     description: "Breaking change"
     bump: major
+    priority: 100
     body_patterns:
       - "(BREAKING CHANGE|!:)"
 
@@ -28,6 +32,7 @@ labels:
     title: "Features"
     description: "New feature or enhancement"
     bump: minor
+    priority: 90
     file_patterns:
       - "^src/main/kotlin/"
 
@@ -37,6 +42,7 @@ labels:
     title: "Bug Fixes"
     description: "Bug fix or hotfix"
     bump: patch
+    priority: 80
     title_patterns:
       - "(fix|bug|hotfix)"
 
