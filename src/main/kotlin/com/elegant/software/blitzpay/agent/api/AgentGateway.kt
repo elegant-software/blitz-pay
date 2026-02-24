@@ -10,6 +10,26 @@ import org.springframework.modulith.NamedInterface
 @NamedInterface("AgentGateway")
 
 /**
+ * Service interface for agent operations.
+ */
+interface AgentService {
+    /**
+     * Lists all registered agents.
+     */
+    fun listAgents(): List<AgentInfo>
+    
+    /**
+     * Gets details about a specific agent.
+     */
+    fun getAgent(name: String): AgentInfo?
+    
+    /**
+     * Gets the status of an agent process.
+     */
+    fun getAgentProcess(processId: String): AgentProcessInfo?
+}
+
+/**
  * Summary information about a registered agent.
  */
 data class AgentInfo(
