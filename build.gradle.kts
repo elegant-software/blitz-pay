@@ -19,6 +19,7 @@ java {
 repositories {
     mavenCentral()
     maven { url = uri("https://repo.spring.io/snapshot") }
+    maven { url = uri("https://repo.embabel.com/artifactory/libs-release") }
 }
 
 extra["springModulithVersion"] = "2.0.1"
@@ -45,6 +46,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
     // Flying Saucer – converts Thymeleaf-rendered HTML to PDF
     implementation("org.xhtmlrenderer:flying-saucer-pdf:${property("flyingSaucerVersion")}")
+    // Embabel Agent Framework for AI-powered invoice agents
+    implementation("com.embabel.agent:embabel-agent-starter:${property("embabelAgentVersion")}")
+    implementation("com.embabel.agent:embabel-agent-starter-openai:${property("embabelAgentVersion")}")
 
 
     runtimeOnly("org.postgresql:postgresql")
@@ -62,6 +66,7 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-postgresql")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("org.mockito.kotlin:mockito-kotlin:${property("mockitoKotlinVersion")}")
+    testImplementation("com.embabel.agent:embabel-agent-test:${property("embabelAgentVersion")}")
 
 }
 

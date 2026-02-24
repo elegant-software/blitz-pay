@@ -44,6 +44,8 @@ springdoc:
         url: /v3/api-docs/Invoice
       - name: QRPay
         url: /v3/api-docs/QRPay
+      - name: Agents
+        url: /v3/api-docs/Agents
 truelayer:
   apiBase: ${TRUELAYER_API_BASE:https://api.truelayer-sandbox.com}
   accessToken: ${TRUELAYER_ACCESS_TOKEN:dummy-access-token}

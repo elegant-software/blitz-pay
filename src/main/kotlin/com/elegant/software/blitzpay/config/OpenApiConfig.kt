@@ -9,10 +9,15 @@ class OpenApiConfig {
     @Bean
     fun paymentsGroup(): GroupedOpenApi =
         GroupedOpenApi.builder()
-            // Use a group name that matches the @Tag on the controller
             .group("General")
-            // adjust to your controllers’ paths
             .pathsToMatch("/v1/payments/**")
+            .build()
+
+    @Bean
+    fun agentsGroup(): GroupedOpenApi =
+        GroupedOpenApi.builder()
+            .group("Agents")
+            .pathsToMatch("/v1/agents/**")
             .build()
 
     @Bean
