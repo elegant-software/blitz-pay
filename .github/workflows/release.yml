@@ -149,4 +149,6 @@ jobs:
           gh release create "v${NEW_VERSION}" \
             --repo "$REPO" \
             --title "v${NEW_VERSION}" \
-            --notes-file /tmp/release_notes.md
+            --notes-file /tmp/release_notes.md \
+            --draft \
+            --latest=false
