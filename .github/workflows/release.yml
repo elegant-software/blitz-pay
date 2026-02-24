@@ -77,22 +77,22 @@ jobs:
           pr_entry="- ${PR_TITLE} ([#${PR_NUMBER}](${pr_url})) — @${PR_AUTHOR}"
 
           # ------------------------------------------------------------------
-          # Build release notes sections dynamically from labels.yml
+          # Build release notes with only ONE primary label section.
+          # Labels with a "priority" field are considered primary labels.
+          # The highest-priority matching label is used for the section header.
+          # If no primary label matches, fall back to secondary labels or bump type.
           # ------------------------------------------------------------------
-          # Priority order for display is preserved from labels.yml
           notes="## What's Changed\n\n"
-          any_section=false
+          
+          # Find the highest-priority primary label that matches PR labels
+          primary_label=$(python3 -c $'import yaml, os\npr_labels = os.environ.get("PR_LABELS", "").split()\nwith open(".github/labels.yml") as f:\n    data = yaml.safe_load(f)\nprimary_matches = []\nsecondary_matches = []\nfor label in data["labels"]:\n    if label["name"] in pr_labels:\n        if "priority" in label:\n            primary_matches.append(label)\n        else:\n            secondary_matches.append(label)\nif primary_matches:\n    best = max(primary_matches, key=lambda l: l.get("priority", 0))\n    print(f"{best[\"name\"]}\t{best[\"icon\"]}\t{best[\"title\"]}")\nelif secondary_matches:\n    best = secondary_matches[0]\n    print(f"{best[\"name\"]}\t{best[\"icon\"]}\t{best[\"title\"]}")\nelse:\n    print("")')
 
-          while IFS=$'\t' read -r label_name icon title; do
-            [[ -z "$label_name" ]] && continue
-            if echo "$PR_LABELS" | grep -qw "$label_name"; then
-              notes+="### ${icon} ${title}\n${pr_entry}\n\n"
-              any_section=true
-            fi
-          done < <(python3 -c $'import yaml\nwith open(".github/labels.yml") as f:\n    data = yaml.safe_load(f)\nfor label in data["labels"]:\n    print(f"{label[\"name\"]}\t{label[\"icon\"]}\t{label[\"title\"]}")')
-
-          # Fallback: no label matched — use bump type to pick a section
-          if ! $any_section; then
+          if [[ -n "$primary_label" ]]; then
+            icon=$(echo "$primary_label" | cut -f2)
+            title=$(echo "$primary_label" | cut -f3)
+            notes+="### ${icon} ${title}\n${pr_entry}\n\n"
+          else
+            # Fallback: no label matched — use bump type to pick a section
             fallback=$(python3 -c $'import yaml, os\nwith open(".github/labels.yml") as f:\n    data = yaml.safe_load(f)\nbump = os.environ.get("BUMP_TYPE", "patch")\nfor label in data["labels"]:\n    if label.get("bump") == bump:\n        print(f"{label[\"icon\"]}\t{label[\"title\"]}")\n        break')
             fb_icon=$(echo "$fallback" | cut -f1)
             fb_title=$(echo "$fallback" | cut -f2)
