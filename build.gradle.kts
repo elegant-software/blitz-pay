@@ -10,9 +10,13 @@ group = "com.elegant.software.blitzpay"
 version = "0.2.2"
 description = "BlitzPay"
 
+val targetJavaVersion = providers.gradleProperty("javaVersion")
+    .map(String::toInt)
+    .orElse(25)
+
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
+        languageVersion = JavaLanguageVersion.of(targetJavaVersion.get())
     }
 }
 
@@ -73,7 +77,11 @@ dependencyManagement {
 
 kotlin {
     compilerOptions {
-        freeCompilerArgs.addAll("-Xjsr305=strict", "-Xannotation-default-target=param-property","-jvm-target=25",)
+        freeCompilerArgs.addAll(
+            "-Xjsr305=strict",
+            "-Xannotation-default-target=param-property",
+            "-jvm-target=${targetJavaVersion.get()}",
+        )
     }
 }
 

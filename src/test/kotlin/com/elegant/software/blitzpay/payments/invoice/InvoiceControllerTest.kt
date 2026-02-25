@@ -3,6 +3,7 @@ package com.elegant.software.blitzpay.payments.invoice
 import com.elegant.software.blitzpay.invoice.InvoiceController
 import com.elegant.software.blitzpay.invoice.api.InvoiceData
 import com.elegant.software.blitzpay.invoice.api.InvoiceService
+import com.elegant.software.blitzpay.support.TestFixtureLoader
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
@@ -21,38 +22,7 @@ class InvoiceControllerTest {
     @MockitoBean
     private lateinit var invoiceService: InvoiceService
 
-    private val sampleInvoiceJson = """
-    {
-        "invoiceNumber": "INV-2026-001",
-        "issueDate": "2026-02-18",
-        "dueDate": "2026-03-18",
-        "seller": {
-            "name": "BlitzPay GmbH",
-            "street": "Musterstrasse 1",
-            "zip": "10115",
-            "city": "Berlin",
-            "country": "DE",
-            "vatId": "DE123456789"
-        },
-        "buyer": {
-            "name": "Kunde AG",
-            "street": "Beispielweg 42",
-            "zip": "80331",
-            "city": "Munich",
-            "country": "DE",
-            "vatId": "DE987654321"
-        },
-        "lineItems": [
-            {
-                "description": "Software License",
-                "quantity": 2,
-                "unitPrice": 150.00,
-                "vatPercent": 19
-            }
-        ],
-        "currency": "EUR"
-    }
-    """.trimIndent()
+    private val expectations = TestFixtureLoader.fixture.expectations
 
     @Test
     fun `POST invoices with Accept xml returns XML content`() {
@@ -63,13 +33,13 @@ class InvoiceControllerTest {
             .uri("/v1/invoices")
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_XML)
-            .bodyValue(sampleInvoiceJson)
+            .bodyValue(TestFixtureLoader.invoiceRequestJson())
             .exchange()
             .expectStatus().isOk
             .expectHeader().contentType(MediaType.APPLICATION_XML)
-            .expectHeader().valueEquals("Content-Disposition", "attachment; filename=\"invoice-INV-2026-001.xml\"")
+            .expectHeader().valueEquals("Content-Disposition", "attachment; filename=\"invoice-${expectations.invoiceNumber}.xml\"")
             .expectBody()
-            .xpath("/CrossIndustryInvoice").exists()
+            .xpath("/${expectations.xmlRootElement}").exists()
     }
 
     @Test
@@ -81,11 +51,11 @@ class InvoiceControllerTest {
             .uri("/v1/invoices")
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_PDF)
-            .bodyValue(sampleInvoiceJson)
+            .bodyValue(TestFixtureLoader.invoiceRequestJson())
             .exchange()
             .expectStatus().isOk
             .expectHeader().contentType(MediaType.APPLICATION_PDF)
-            .expectHeader().valueEquals("Content-Disposition", "attachment; filename=\"invoice-INV-2026-001.pdf\"")
+            .expectHeader().valueEquals("Content-Disposition", "attachment; filename=\"invoice-${expectations.invoiceNumber}.pdf\"")
             .expectBody()
             .consumeWith { result ->
                 val body = result.responseBody!!
@@ -102,11 +72,11 @@ class InvoiceControllerTest {
             .uri("/v1/invoices")
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_XML)
-            .bodyValue(sampleInvoiceJson)
+            .bodyValue(TestFixtureLoader.invoiceRequestJson())
             .exchange()
             .expectStatus().isOk
             .expectHeader().contentType(MediaType.APPLICATION_XML)
             .expectBody()
-            .xpath("/CrossIndustryInvoice").exists()
+            .xpath("/${expectations.xmlRootElement}").exists()
     }
 }
