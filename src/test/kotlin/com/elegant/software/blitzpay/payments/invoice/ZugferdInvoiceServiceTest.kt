@@ -1,18 +1,14 @@
 package com.elegant.software.blitzpay.payments.invoice
 
 import com.elegant.software.blitzpay.invoice.ZugferdInvoiceService
-import com.elegant.software.blitzpay.invoice.api.BankAccountData
 import com.elegant.software.blitzpay.invoice.api.InvoiceData
-import com.elegant.software.blitzpay.invoice.api.InvoiceLineItem
-import com.elegant.software.blitzpay.invoice.api.TradePartyData
+import com.elegant.software.blitzpay.support.TestFixtureLoader
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.thymeleaf.spring6.SpringTemplateEngine
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver
-import java.math.BigDecimal
-import java.time.LocalDate
 
 /**
  * Unit tests for [ZugferdInvoiceService].
@@ -24,42 +20,9 @@ class ZugferdInvoiceServiceTest {
 
     private lateinit var invoiceService: ZugferdInvoiceService
 
-    private val sampleInvoice = InvoiceData(
-        invoiceNumber = "INV-2026-001",
-        issueDate = LocalDate.of(2026, 2, 18),
-        dueDate = LocalDate.of(2026, 3, 18),
-        seller = TradePartyData(
-            name = "BlitzPay GmbH",
-            street = "Musterstrasse 1",
-            zip = "10115",
-            city = "Berlin",
-            country = "DE",
-            vatId = "DE123456789"
-        ),
-        buyer = TradePartyData(
-            name = "Kunde AG",
-            street = "Beispielweg 42",
-            zip = "80331",
-            city = "Munich",
-            country = "DE",
-            vatId = "DE987654321"
-        ),
-        lineItems = listOf(
-            InvoiceLineItem(
-                description = "Software License",
-                quantity = BigDecimal("2"),
-                unitPrice = BigDecimal("150.00"),
-                vatPercent = BigDecimal("19")
-            ),
-            InvoiceLineItem(
-                description = "Consulting Service",
-                quantity = BigDecimal("5"),
-                unitPrice = BigDecimal("200.00"),
-                vatPercent = BigDecimal("19")
-            )
-        ),
-        currency = "EUR"
-    )
+    private val sampleInvoice: InvoiceData = TestFixtureLoader.invoiceData()
+    private val scenario = TestFixtureLoader.invoiceScenario()
+    private val expectations = scenario.expectations
 
     @BeforeEach
     fun setUp() {
@@ -81,10 +44,11 @@ class ZugferdInvoiceServiceTest {
         assertTrue(xml.isNotEmpty(), "XML output must not be empty")
 
         val xmlString = String(xml, Charsets.UTF_8)
-        assertTrue(xmlString.contains("CrossIndustryInvoice"), "XML must contain CrossIndustryInvoice root element")
-        assertTrue(xmlString.contains("INV-2026-001"), "XML must contain the invoice number")
-        assertTrue(xmlString.contains("BlitzPay GmbH"), "XML must contain the seller name")
-        assertTrue(xmlString.contains("Kunde AG"), "XML must contain the buyer name")
+        assertTrue(xmlString.contains(expectations.xmlRootElement), "XML must contain CrossIndustryInvoice root element")
+        assertTrue(xmlString.contains(expectations.invoiceNumber), "XML must contain the invoice number")
+        assertTrue(xmlString.contains(expectations.sellerName), "XML must contain the seller name")
+        assertTrue(xmlString.contains(expectations.buyerName), "XML must contain the buyer name")
+        assertTrue(scenario.tags.contains("canonical"), "XML test must use the canonical invoice scenario")
     }
 
     @Test
@@ -92,8 +56,8 @@ class ZugferdInvoiceServiceTest {
         val xml = invoiceService.generateXml(sampleInvoice)
         val xmlString = String(xml, Charsets.UTF_8)
 
-        assertTrue(xmlString.contains("Software License"), "XML must contain first line item description")
-        assertTrue(xmlString.contains("Consulting Service"), "XML must contain second line item description")
+        assertTrue(xmlString.contains(expectations.firstLineItemDescription), "XML must contain first line item description")
+        assertTrue(xmlString.contains(expectations.secondLineItemDescription), "XML must contain second line item description")
     }
 
     @Test
@@ -124,29 +88,20 @@ class ZugferdInvoiceServiceTest {
     fun `toMustangInvoice maps data correctly`() {
         val invoice = invoiceService.toMustangInvoice(sampleInvoice)
 
-        assertTrue(invoice.number == "INV-2026-001")
-        assertTrue(invoice.sender.name == "BlitzPay GmbH")
-        assertTrue(invoice.recipient.name == "Kunde AG")
-        assertTrue(invoice.currency == "EUR")
+        assertTrue(invoice.number == expectations.invoiceNumber)
+        assertTrue(invoice.sender.name == expectations.sellerName)
+        assertTrue(invoice.recipient.name == expectations.buyerName)
+        assertTrue(invoice.currency == expectations.currency)
     }
 
     @Test
     fun `generateXml with single line item`() {
-        val singleItemInvoice = sampleInvoice.copy(
-            lineItems = listOf(
-                InvoiceLineItem(
-                    description = "Single Item",
-                    quantity = BigDecimal("1"),
-                    unitPrice = BigDecimal("99.99"),
-                    vatPercent = BigDecimal("19")
-                )
-            )
-        )
+        val singleItemInvoice = TestFixtureLoader.singleLineItem()
         val xml = invoiceService.generateXml(singleItemInvoice)
         val xmlString = String(xml, Charsets.UTF_8)
 
-        assertTrue(xmlString.contains("Single Item"), "XML must contain the line item description")
-        assertTrue(xmlString.contains("CrossIndustryInvoice"), "XML must be a valid ZUGFeRD document")
+        assertTrue(xmlString.contains(expectations.singleLineItemDescription), "XML must contain the line item description")
+        assertTrue(xmlString.contains(expectations.xmlRootElement), "XML must be a valid ZUGFeRD document")
     }
 
     @Test
@@ -161,36 +116,26 @@ class ZugferdInvoiceServiceTest {
 
     @Test
     fun `renderHtml includes bank account details`() {
-        val invoiceWithBank = sampleInvoice.copy(
-            bankAccount = BankAccountData(
-                bankName = "Deutsche Bank",
-                iban = "DE89 3704 0044 0532 0130 00",
-                bic = "DEUTDEDB"
-            )
-        )
+        val invoiceWithBank = TestFixtureLoader.withBankAccount()
         val html = invoiceService.renderHtml(invoiceWithBank)
 
-        assertTrue(html.contains("Deutsche Bank"), "HTML must contain bank name")
-        assertTrue(html.contains("DE89 3704 0044 0532 0130 00"), "HTML must contain IBAN")
-        assertTrue(html.contains("DEUTDEDB"), "HTML must contain BIC")
+        assertTrue(html.contains(expectations.bankName), "HTML must contain bank name")
+        assertTrue(html.contains(expectations.iban), "HTML must contain IBAN")
+        assertTrue(html.contains(expectations.bic), "HTML must contain BIC")
         assertTrue(html.contains("Payment Details"), "HTML must contain payment details section")
     }
 
     @Test
     fun `renderHtml includes footer text`() {
-        val invoiceWithFooter = sampleInvoice.copy(
-            footerText = "Thank you for your business!"
-        )
+        val invoiceWithFooter = TestFixtureLoader.withFooter()
         val html = invoiceService.renderHtml(invoiceWithFooter)
 
-        assertTrue(html.contains("Thank you for your business!"), "HTML must contain footer text")
+        assertTrue(html.contains(expectations.footerText), "HTML must contain footer text")
     }
 
     @Test
     fun `renderHtml includes logo when provided`() {
-        val invoiceWithLogo = sampleInvoice.copy(
-            logoBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-        )
+        val invoiceWithLogo = TestFixtureLoader.withLogo()
         val html = invoiceService.renderHtml(invoiceWithLogo)
 
         assertTrue(html.contains("data:image/png;base64,"), "HTML must contain base64 logo data URI")
@@ -206,13 +151,8 @@ class ZugferdInvoiceServiceTest {
 
     @Test
     fun `generatePdf with bank account and footer produces valid PDF`() {
-        val fullInvoice = sampleInvoice.copy(
-            bankAccount = BankAccountData(
-                bankName = "Deutsche Bank",
-                iban = "DE89 3704 0044 0532 0130 00",
-                bic = "DEUTDEDB"
-            ),
-            footerText = "Thank you for your business!"
+        val fullInvoice = TestFixtureLoader.withBankAccount().copy(
+            footerText = expectations.footerText
         )
         val pdf = invoiceService.generatePdf(fullInvoice)
 

@@ -38,3 +38,11 @@ out/
 
 ### Kotlin ###
 .kotlin
+*.class
+*.jar
+*.log
+.env*
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp

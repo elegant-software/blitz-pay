@@ -1,0 +1,64 @@
+{
+  "scenarioId": "invoice-canonical",
+  "description": "Canonical invoice scenario shared across controller and service tests.",
+  "domain": "invoice",
+  "tags": [
+    "canonical",
+    "happy-path",
+    "document-rendering"
+  ],
+  "inputData": {
+    "invoiceNumber": "INV-2026-001",
+    "issueDate": "2026-02-18",
+    "dueDate": "2026-03-18",
+    "seller": {
+      "name": "BlitzPay GmbH",
+      "street": "Musterstrasse 1",
+      "zip": "10115",
+      "city": "Berlin",
+      "country": "DE",
+      "vatId": "DE123456789"
+    },
+    "buyer": {
+      "name": "Kunde AG",
+      "street": "Beispielweg 42",
+      "zip": "80331",
+      "city": "Munich",
+      "country": "DE",
+      "vatId": "DE987654321"
+    },
+    "lineItems": [
+      {
+        "description": "Software License",
+        "quantity": 2,
+        "unitPrice": 150.00,
+        "vatPercent": 19
+      },
+      {
+        "description": "Consulting Service",
+        "quantity": 5,
+        "unitPrice": 200.00,
+        "vatPercent": 19
+      }
+    ],
+    "currency": "EUR"
+  },
+  "expectations": {
+    "xmlRootElement": "CrossIndustryInvoice",
+    "invoiceNumber": "INV-2026-001",
+    "sellerName": "BlitzPay GmbH",
+    "buyerName": "Kunde AG",
+    "firstLineItemDescription": "Software License",
+    "secondLineItemDescription": "Consulting Service",
+    "currency": "EUR",
+    "bankName": "Deutsche Bank",
+    "iban": "DE89 3704 0044 0532 0130 00",
+    "bic": "DEUTDEDB",
+    "footerText": "Thank you for your business!",
+    "logoBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+    "singleLineItemDescription": "Single Item",
+    "singleLineItemQuantity": "1",
+    "singleLineItemUnitPrice": "99.99",
+    "singleLineItemVatPercent": "19"
+  }
+}

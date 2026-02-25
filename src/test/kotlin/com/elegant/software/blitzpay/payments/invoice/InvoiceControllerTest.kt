@@ -3,8 +3,13 @@ package com.elegant.software.blitzpay.payments.invoice
 import com.elegant.software.blitzpay.invoice.InvoiceController
 import com.elegant.software.blitzpay.invoice.api.InvoiceData
 import com.elegant.software.blitzpay.invoice.api.InvoiceService
+import com.elegant.software.blitzpay.support.TestFixtureLoader
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest
@@ -21,92 +26,71 @@ class InvoiceControllerTest {
     @MockitoBean
     private lateinit var invoiceService: InvoiceService
 
-    private val sampleInvoiceJson = """
-    {
-        "invoiceNumber": "INV-2026-001",
-        "issueDate": "2026-02-18",
-        "dueDate": "2026-03-18",
-        "seller": {
-            "name": "BlitzPay GmbH",
-            "street": "Musterstrasse 1",
-            "zip": "10115",
-            "city": "Berlin",
-            "country": "DE",
-            "vatId": "DE123456789"
-        },
-        "buyer": {
-            "name": "Kunde AG",
-            "street": "Beispielweg 42",
-            "zip": "80331",
-            "city": "Munich",
-            "country": "DE",
-            "vatId": "DE987654321"
-        },
-        "lineItems": [
-            {
-                "description": "Software License",
-                "quantity": 2,
-                "unitPrice": 150.00,
-                "vatPercent": 19
-            }
-        ],
-        "currency": "EUR"
-    }
-    """.trimIndent()
+    private val scenario = TestFixtureLoader.invoiceScenario()
+    private val expectations = scenario.expectations
 
     @Test
     fun `POST invoices with Accept xml returns XML content`() {
         val xmlBytes = "<CrossIndustryInvoice>test</CrossIndustryInvoice>".toByteArray()
-        whenever(invoiceService.generateXml(any<InvoiceData>())).thenReturn(xmlBytes)
+        whenever(invoiceService.generateXml(eq(TestFixtureLoader.invoiceData()))).thenReturn(xmlBytes)
 
         webTestClient.post()
             .uri("/v1/invoices")
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_XML)
-            .bodyValue(sampleInvoiceJson)
+            .bodyValue(TestFixtureLoader.invoiceRequestJson())
             .exchange()
             .expectStatus().isOk
             .expectHeader().contentType(MediaType.APPLICATION_XML)
-            .expectHeader().valueEquals("Content-Disposition", "attachment; filename=\"invoice-INV-2026-001.xml\"")
+            .expectHeader().valueEquals("Content-Disposition", "attachment; filename=\"invoice-${expectations.invoiceNumber}.xml\"")
             .expectBody()
-            .xpath("/CrossIndustryInvoice").exists()
+            .xpath("/${expectations.xmlRootElement}").exists()
+
+        val requestCaptor = argumentCaptor<InvoiceData>()
+        verify(invoiceService).generateXml(requestCaptor.capture())
+        assertEquals(scenario.scenarioId, TestFixtureLoader.invoiceScenario().scenarioId)
+        assertEquals(expectations.invoiceNumber, requestCaptor.firstValue.invoiceNumber)
     }
 
     @Test
     fun `POST invoices with Accept pdf returns PDF content`() {
         val pdfBytes = "%PDF-1.4 fake content".toByteArray()
-        whenever(invoiceService.generatePdf(any<InvoiceData>())).thenReturn(pdfBytes)
+        whenever(invoiceService.generatePdf(eq(TestFixtureLoader.invoiceData()))).thenReturn(pdfBytes)
 
         webTestClient.post()
             .uri("/v1/invoices")
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_PDF)
-            .bodyValue(sampleInvoiceJson)
+            .bodyValue(TestFixtureLoader.invoiceRequestJson())
             .exchange()
             .expectStatus().isOk
             .expectHeader().contentType(MediaType.APPLICATION_PDF)
-            .expectHeader().valueEquals("Content-Disposition", "attachment; filename=\"invoice-INV-2026-001.pdf\"")
+            .expectHeader().valueEquals("Content-Disposition", "attachment; filename=\"invoice-${expectations.invoiceNumber}.pdf\"")
             .expectBody()
             .consumeWith { result ->
                 val body = result.responseBody!!
                 assert(body.isNotEmpty()) { "PDF response body must not be empty" }
             }
+
+        val requestCaptor = argumentCaptor<InvoiceData>()
+        verify(invoiceService).generatePdf(requestCaptor.capture())
+        assertEquals(expectations.invoiceNumber, requestCaptor.firstValue.invoiceNumber)
     }
 
     @Test
     fun `POST v1 invoices path routes to version 1 handler`() {
         val xmlBytes = "<CrossIndustryInvoice>test</CrossIndustryInvoice>".toByteArray()
-        whenever(invoiceService.generateXml(any<InvoiceData>())).thenReturn(xmlBytes)
+        whenever(invoiceService.generateXml(eq(TestFixtureLoader.invoiceData()))).thenReturn(xmlBytes)
 
         webTestClient.post()
             .uri("/v1/invoices")
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_XML)
-            .bodyValue(sampleInvoiceJson)
+            .bodyValue(TestFixtureLoader.invoiceRequestJson())
             .exchange()
             .expectStatus().isOk
             .expectHeader().contentType(MediaType.APPLICATION_XML)
             .expectBody()
-            .xpath("/CrossIndustryInvoice").exists()
+            .xpath("/${expectations.xmlRootElement}").exists()
     }
 }
