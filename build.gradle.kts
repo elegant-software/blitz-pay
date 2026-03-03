@@ -1,4 +1,5 @@
 plugins {
+    id("com.skillsjars.gradle-plugin") version "0.0.2"
     kotlin("jvm") version "2.3.0"
     kotlin("plugin.spring") version "2.3.0"
     id("org.springframework.boot") version "4.0.2"
@@ -17,6 +18,7 @@ java {
 }
 
 repositories {
+    mavenLocal()
     mavenCentral()
     maven { url = uri("https://repo.spring.io/snapshot") }
 }
@@ -24,6 +26,7 @@ repositories {
 extra["springModulithVersion"] = "2.0.1"
 
 dependencies {
+    runtimeOnly("com.skillsjars:dr-jskill:0.0.1-SNAPSHOT")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
