@@ -41,6 +41,7 @@ springdoc:
     path: /api-docs
   show-actuator: true
   swagger-ui:
+    urlsPrimaryName: Invoice
     urls:
       - name: Invoice
         url: /api-docs/Invoice

@@ -12,7 +12,7 @@ class OpenApiConfig {
             // Use a group name that matches the @Tag on the controller
             .group("General")
             // adjust to your controllers’ paths
-            .pathsToMatch("/v1/payments/**")
+            .pathsToMatch("/{version}/payments/**")
             .build()
 
     @Bean

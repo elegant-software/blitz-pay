@@ -14,6 +14,6 @@ class TruelayerOpenApiConfig {
             // scan only the truelayer package (keeps module boundaries intact)
             .packagesToScan("com.elegant.software.blitzpay.payments.truelayer")
             // the webhook controller is mounted at /v1/webhooks/truelayer
-            .pathsToMatch("/v1/webhooks/truelayer/**")
+            .pathsToMatch("/{version}/webhooks/truelayer/**")
             .build()
 }

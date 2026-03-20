@@ -14,7 +14,7 @@ class InvoiceOpenApiConfig {
         GroupedOpenApi.builder()
             .group("Invoice")
             .packagesToScan(InvoiceController::class.java.packageName)
-            .pathsToMatch("/v1/invoices/**")
+            .pathsToMatch("/{version}/invoices/**")
             .addOpenApiCustomizer { openApi: OpenAPI ->
                 openApi.info = Info().title("BlitzPay — Invoice API").version("v1")
             }

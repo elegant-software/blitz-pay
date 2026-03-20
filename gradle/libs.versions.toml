@@ -1,0 +1,35 @@
+[versions]
+skillsjars-plugin = "0.0.2"
+kotlin = "2.3.20"
+kotlin-jpa = "2.3.20"
+spring-boot = "4.0.4"
+spring-dependency-management = "1.1.7"
+dr-jskill = "2026_02_19-a951a5e"
+spring-modulith = "2.1.0-M3"
+springdoc = "3.0.2"
+truelayer-java = "17.5.1"
+truelayer-signing = "0.2.6"
+kotlin-logging = "3.0.5"
+nimbus-jose-jwt = "10.8"
+mustang = "2.22.0"
+flying-saucer = "10.1.0"
+mockito-kotlin = "6.3.0"
+
+[libraries]
+dr-jskill = { module = "com.skillsjars:jdubois__dr-jskill", version.ref = "dr-jskill" }
+springdoc-openapi-starter-webflux-ui = { module = "org.springdoc:springdoc-openapi-starter-webflux-ui", version.ref = "springdoc" }
+truelayer-java = { module = "com.truelayer:truelayer-java", version.ref = "truelayer-java" }
+truelayer-signing = { module = "com.truelayer:truelayer-signing", version.ref = "truelayer-signing" }
+kotlin-logging-jvm = { module = "io.github.microutils:kotlin-logging-jvm", version.ref = "kotlin-logging" }
+nimbus-jose-jwt = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimbus-jose-jwt" }
+mustang-library = { module = "org.mustangproject:library", version.ref = "mustang" }
+flying-saucer-pdf = { module = "org.xhtmlrenderer:flying-saucer-pdf", version.ref = "flying-saucer" }
+mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockito-kotlin" }
+
+[plugins]
+skillsjars = { id = "com.skillsjars.gradle-plugin", version.ref = "skillsjars-plugin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
+kotlin-jpa = { id = "org.jetbrains.kotlin.plugin.jpa", version.ref = "kotlin-jpa" }
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }

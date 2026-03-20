@@ -1,10 +1,10 @@
 plugins {
-    id("com.skillsjars.gradle-plugin") version "0.0.2"
-    kotlin("jvm") version "2.3.0"
-    kotlin("plugin.spring") version "2.3.0"
-    id("org.springframework.boot") version "4.0.2"
-    id("io.spring.dependency-management") version "1.1.7"
-    kotlin("plugin.jpa") version "2.2.21"
+    alias(libs.plugins.skillsjars)
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.spring)
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.kotlin.jpa)
 }
 
 group = "com.elegant.software.blitzpay"
@@ -17,16 +17,29 @@ java {
     }
 }
 
+val mavenProxyUrl = providers.gradleProperty("mavenProxyUrl").orNull
+val skillsJarsRepositoryUrl = providers.gradleProperty("skillsJarsRepositoryUrl").orNull
+
 repositories {
     mavenLocal()
-    mavenCentral()
+
+    if (mavenProxyUrl != null) {
+        maven { url = uri(mavenProxyUrl) }
+    } else {
+        mavenCentral()
+    }
+
     maven { url = uri("https://repo.spring.io/snapshot") }
+
+    if (skillsJarsRepositoryUrl != null) {
+        maven { url = uri(skillsJarsRepositoryUrl) }
+    }
 }
 
-extra["springModulithVersion"] = "2.0.1"
-
 dependencies {
-    runtimeOnly("com.skillsjars:dr-jskill:0.0.1-SNAPSHOT")
+    if (providers.gradleProperty("includeSkillsJars").map(String::toBoolean).orElse(false).get()) {
+        runtimeOnly(libs.dr.jskill)
+    }
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-webflux")
@@ -36,19 +49,18 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
     implementation("org.springframework.modulith:spring-modulith-starter-core")
     implementation("org.springframework.modulith:spring-modulith-starter-jpa")
-    implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:${property("springdocVersion")}")
+    implementation(libs.springdoc.openapi.starter.webflux.ui)
     // TrueLayer Java SDK
-    implementation("com.truelayer:truelayer-java:${property("truelayerJavaVersion")}")
-    implementation("com.truelayer:truelayer-signing:${property("truelayerSigningVersion")}") // official signing lib
-    implementation("io.github.microutils:kotlin-logging-jvm:${property("kotlinLoggingVersion")}") //Idiomatic kotlin logging
-    implementation("com.nimbusds:nimbus-jose-jwt:${property("nimbusJoseJwtVersion")}") // Required for signature verification
+    implementation(libs.truelayer.java)
+    implementation(libs.truelayer.signing) // official signing lib
+    implementation(libs.kotlin.logging.jvm) //Idiomatic kotlin logging
+    implementation(libs.nimbus.jose.jwt) // Required for signature verification
     // Mustang Project – EU-standard ZUGFeRD / Factur-X invoice generation
-    implementation("org.mustangproject:library:${property("mustangVersion")}")
+    implementation(libs.mustang.library)
     // Thymeleaf templating engine for invoice PDF rendering
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
     // Flying Saucer – converts Thymeleaf-rendered HTML to PDF
-    implementation("org.xhtmlrenderer:flying-saucer-pdf:${property("flyingSaucerVersion")}")
-
+    implementation(libs.flying.saucer.pdf)
 
     runtimeOnly("org.postgresql:postgresql")
     runtimeOnly("org.springframework.modulith:spring-modulith-actuator")
@@ -64,19 +76,18 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-postgresql")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:${property("mockitoKotlinVersion")}")
-
+    testImplementation(libs.mockito.kotlin)
 }
 
 dependencyManagement {
     imports {
-        mavenBom("org.springframework.modulith:spring-modulith-bom:${property("springModulithVersion")}")
+        mavenBom("org.springframework.modulith:spring-modulith-bom:${libs.versions.spring.modulith.get()}")
     }
 }
 
 kotlin {
     compilerOptions {
-        freeCompilerArgs.addAll("-Xjsr305=strict", "-Xannotation-default-target=param-property","-jvm-target=25",)
+        freeCompilerArgs.addAll("-Xjsr305=strict", "-Xannotation-default-target=param-property", "-jvm-target=25")
     }
 }
 

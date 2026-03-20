@@ -1,5 +1,9 @@
 # BlitzPay
 
+## Documentation
+
+- API versioning guide: [reference/API_VERSIONING_GUIDE.md](reference/API_VERSIONING_GUIDE.md)
+
 ## Generating key pairs
 
 For instructions on generating the key pairs used by this project (public/private keys and signing requests), see the official TrueLayer documentation:
