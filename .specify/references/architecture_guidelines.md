@@ -14,6 +14,10 @@ This document defines the baseline architecture expectations for BlitzPay module
 - API group names SHOULD be concise and avoid spaces to keep URLs stable.
 - For implementation patterns (per-module grouping, version path rewriting, `@ConfigurationProperties`): see `reference/spring-boot-best-practices.md`.
 
+## API Versioning
+- Every module that exposes HTTP endpoints MUST use Spring Boot path-based API versioning.
+- Public API paths MUST include the version segment in the request path (for example `/v1/...`).
+- Modules MUST keep versioning behavior consistent with the application's path-based version resolver configuration.
+
 ## Ownership and Changes
 - Any change that affects module boundaries or exposed APIs MUST be reflected in this document.
-
