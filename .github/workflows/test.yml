@@ -13,7 +13,7 @@ jobs:
   test:
     permissions:
       contents: read
-    uses: medimohammadise/elegant-ci-cd-pipeline/.github/workflows/back-end-gradle-test.yml@45ad664
+    uses: medimohammadise/elegant-ci-cd-pipeline/.github/workflows/back-end-gradle-test.yml@003-gradle-test-workflow
     with:
       gradle-args: ${{ inputs.gradle-args }}
       unit-test-task: test
