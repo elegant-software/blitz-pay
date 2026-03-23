@@ -19,6 +19,13 @@ java {
 
 val mavenProxyUrl = providers.gradleProperty("mavenProxyUrl").orNull
 val skillsJarsRepositoryUrl = providers.gradleProperty("skillsJarsRepositoryUrl").orNull
+val sourceSets = the<org.gradle.api.tasks.SourceSetContainer>()
+val contractTestSourceSet = sourceSets.create("contractTest") {
+    java.setSrcDirs(listOf("src/contractTest/kotlin"))
+    resources.setSrcDirs(listOf("src/contractTest/resources"))
+    compileClasspath += sourceSets["main"].output + configurations["testCompileClasspath"]
+    runtimeClasspath += output + compileClasspath + configurations["testRuntimeClasspath"]
+}
 
 repositories {
     mavenLocal()
@@ -85,6 +92,14 @@ dependencyManagement {
     }
 }
 
+configurations.named("contractTestImplementation") {
+    extendsFrom(configurations.testImplementation.get())
+}
+
+configurations.named("contractTestRuntimeOnly") {
+    extendsFrom(configurations.testRuntimeOnly.get())
+}
+
 kotlin {
     compilerOptions {
         freeCompilerArgs.addAll("-Xjsr305=strict", "-Xannotation-default-target=param-property", "-jvm-target=25")
@@ -99,4 +114,17 @@ allOpen {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+tasks.register<Test>("contractTest") {
+    description = "Runs Boot 4-compatible contract tests."
+    group = "verification"
+    testClassesDirs = contractTestSourceSet.output.classesDirs
+    classpath = contractTestSourceSet.runtimeClasspath
+    shouldRunAfter(tasks.named("test"))
+    useJUnitPlatform()
+}
+
+tasks.named("check") {
+    dependsOn("contractTest")
 }

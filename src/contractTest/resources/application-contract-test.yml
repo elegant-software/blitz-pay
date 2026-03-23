@@ -1,0 +1,23 @@
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
+      - org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration
+      - org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration
+      - org.springframework.modulith.events.jpa.JpaEventPublicationAutoConfiguration
+      - org.springframework.modulith.events.config.EventPublicationAutoConfiguration
+
+truelayer:
+  apiBase: https://api.truelayer-sandbox.test
+  accessToken: contract-test-access-token
+  webhookJku: https://webhooks.truelayer-sandbox.test/.well-known/jwks
+  clientId: contract-test-client-id
+  clientSecret: contract-test-client-secret
+  keyId: contract-test-key-id
+  privateKeyPath: contract-test-private-key-unused.pem
+  environment: sandbox
+  httpLogs: false
+  merchantAccountId: contract-test-merchant-account-id
+  webhooks:
+    environment: sandbox
+    maxSkew: PT60M

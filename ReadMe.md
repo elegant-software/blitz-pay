@@ -4,6 +4,16 @@
 
 - API versioning guide: [reference/API_VERSIONING_GUIDE.md](reference/API_VERSIONING_GUIDE.md)
 
+## Contract Tests
+
+`./gradlew contractTest` runs the API contract suite against a dedicated `contract-test` Spring profile.
+
+Important notes:
+- The contract suite is intentionally isolated from production infrastructure.
+- The `contract-test` profile excludes datasource, JPA, and Modulith event persistence auto-configuration.
+- Outbound TrueLayer beans are mocked, so contract tests do not require credentials and do not call external APIs.
+- On Spring Boot 4, these tests are implemented as handwritten `WebTestClient` tests under `src/contractTest/kotlin` rather than Spring Cloud Contract-generated verifier tests.
+
 ## Generating key pairs
 
 For instructions on generating the key pairs used by this project (public/private keys and signing requests), see the official TrueLayer documentation:
