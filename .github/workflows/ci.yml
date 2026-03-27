@@ -15,7 +15,9 @@ on:
         required: false
         type: string
         default: ""
-
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 env:
   ORG_GRADLE_PROJECT_javaVersion: ${{ vars.JAVA_VERSION }}
 
