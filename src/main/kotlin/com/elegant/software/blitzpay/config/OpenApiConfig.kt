@@ -5,14 +5,16 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-class OpenApiConfig {
+class OpenApiConfig(private val apiVersionProperties: ApiVersionProperties) {
+
     @Bean
     fun paymentsGroup(): GroupedOpenApi =
         GroupedOpenApi.builder()
-            // Use a group name that matches the @Tag on the controller
             .group("General")
-            // adjust to your controllers’ paths
             .pathsToMatch("/{version}/payments/**")
+            .addOpenApiCustomizer { openApi ->
+                openApi.paths = rewriteVersionPaths(openApi.paths, apiVersionProperties.versions.payments)
+            }
             .build()
 
     @Bean

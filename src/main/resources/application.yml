@@ -55,6 +55,14 @@ springdoc:
         url: /api-docs/General
       - name: Actuator
         url: /api-docs/Actuator
+api:
+  default-version: 1
+  versions:
+    invoice: 1
+    qrpay: 1
+    truelayer: 1
+    payments: 1
+
 truelayer:
   apiBase: ${TRUELAYER_API_BASE:https://api.truelayer-sandbox.com}
   accessToken: ${TRUELAYER_ACCESS_TOKEN:dummy-access-token}

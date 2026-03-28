@@ -1,19 +1,22 @@
 package com.elegant.software.blitzpay.payments.truelayer.config
 
-
+import com.elegant.software.blitzpay.config.ApiVersionProperties
+import com.elegant.software.blitzpay.config.rewriteVersionPaths
 import org.springdoc.core.models.GroupedOpenApi
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-class TruelayerOpenApiConfig {
+class TruelayerOpenApiConfig(private val apiVersionProperties: ApiVersionProperties) {
+
     @Bean
     fun truelayerApi(): GroupedOpenApi =
         GroupedOpenApi.builder()
             .group("TrueLayer")
-            // scan only the truelayer package (keeps module boundaries intact)
             .packagesToScan("com.elegant.software.blitzpay.payments.truelayer")
-            // the webhook controller is mounted at /v1/webhooks/truelayer
             .pathsToMatch("/{version}/webhooks/truelayer/**")
+            .addOpenApiCustomizer { openApi ->
+                openApi.paths = rewriteVersionPaths(openApi.paths, apiVersionProperties.versions.truelayer)
+            }
             .build()
 }

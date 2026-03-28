@@ -7,13 +7,15 @@ import org.springframework.web.reactive.config.ApiVersionConfigurer
 import org.springframework.web.reactive.config.WebFluxConfigurer
 
 @Configuration
-class WebFluxVersioningConfig : WebFluxConfigurer {
+class WebFluxVersioningConfig(
+    private val apiVersionProperties: ApiVersionProperties
+) : WebFluxConfigurer {
 
     override fun configureApiVersioning(configurer: ApiVersionConfigurer) {
         configurer
             .useVersionResolver(PathOnlyApiVersionResolver())
             .setVersionRequired(false)
-            .setDefaultVersion("1")
+            .setDefaultVersion(apiVersionProperties.defaultVersion)
             .detectSupportedVersions(true)
     }
 }
