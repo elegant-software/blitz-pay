@@ -20,11 +20,11 @@ concurrency:
   cancel-in-progress: true
 env:
   ORG_GRADLE_PROJECT_javaVersion: ${{ vars.JAVA_VERSION }}
-
+permissions:
+  contents: read
+  actions: write
 jobs:
   test:
-      permissions:
-        contents: read
       uses: medimohammadise/elegant-ci-cd-pipeline/.github/workflows/backend-gradle-test.yml@main
       with:
         gradle-args: ${{ inputs.gradle-args }}
@@ -37,6 +37,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      actions: write
       checks: write
     uses: medimohammadise/elegant-ci-cd-pipeline/.github/workflows/backend-qa-qodana-code-quality.yml@main
     secrets: inherit
@@ -45,6 +46,7 @@ jobs:
     name: dependency track & SBOM upload
     needs: test
     permissions:
+      actions: write
       contents: read
     uses: medimohammadise/elegant-ci-cd-pipeline/.github/workflows/backnd-qa-dependency-track-upload.yml@main
     secrets: inherit
