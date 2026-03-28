@@ -1,8 +1,24 @@
 # BlitzPay
 
+<!-- Build & Test -->
+[![CI](https://github.com/medimohammadise/blitz-pay/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/medimohammadise/blitz-pay/actions/workflows/ci.yml)
+[![CD](https://github.com/medimohammadise/blitz-pay/actions/workflows/cd.yml/badge.svg?branch=main)](https://github.com/medimohammadise/blitz-pay/actions/workflows/cd.yml)
+[![Deploy](https://github.com/medimohammadise/blitz-pay/actions/workflows/deploy.yml/badge.svg?event=workflow_dispatch)](https://github.com/medimohammadise/blitz-pay/actions/workflows/deploy.yml)
+
+<!-- PR Automation & Release -->
+[![Auto-Label Pull Requests](https://github.com/medimohammadise/blitz-pay/actions/workflows/auto-label.yml/badge.svg?event=pull_request)](https://github.com/medimohammadise/blitz-pay/actions/workflows/auto-label.yml)
+[![Release Notes](https://github.com/medimohammadise/blitz-pay/actions/workflows/release-notes.yml/badge.svg?event=pull_request)](https://github.com/medimohammadise/blitz-pay/actions/workflows/release-notes.yml)
+[![Latest Release](https://img.shields.io/github/v/release/medimohammadise/blitz-pay)](https://github.com/medimohammadise/blitz-pay/releases)
+
+<!-- Stack -->
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.3.20-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.4-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Java](https://img.shields.io/badge/Java-25-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org)
+
 ## Documentation
 
-- API versioning guide: [reference/API_VERSIONING_GUIDE.md](reference/API_VERSIONING_GUIDE.md)
+- API versioning guide: [reference/api-versioning-guide.md](reference/api-versioning-guide.md)
 
 ## Contract Tests
 
@@ -83,7 +99,3 @@ Security and repo hygiene notes
 
 - Prefer storing secrets in a secure vault or CI secret manager for production deployments.
 
-If you'd like, I can also:
-- add a `.env.example` file (non-sensitive) to the repo,
-- add `.gitignore` entries for the private key and `.env`, or
-- create a small Gradle task or startup script that loads the `.env` file securely.

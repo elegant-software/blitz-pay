@@ -1,301 +1,173 @@
 # GitHub Actions Workflows
 
-This directory contains reusable GitHub Actions workflows for the BlitzPay application.
+All workflows in this project are **thin delegators** — they define triggers and permissions locally, then call reusable workflows from the shared pipeline library at [`medimohammadise/elegant-ci-cd-pipeline`](https://github.com/medimohammadise/elegant-ci-cd-pipeline) pinned to `@main`.
+
+> **For agents:** Do not add inline build/test/deploy logic here. Any change to what CI/CD _does_ belongs in `elegant-ci-cd-pipeline`. Changes here are limited to triggers, permissions, inputs, and secrets forwarding.
 
 ---
 
-## Release Management
+## Workflow Overview
 
-BlitzPay uses a fully automated release management system built on GitHub Actions and shell scripts — no external versioning libraries.
-
-### Auto-Labeling (`auto-label.yml`)
-
-Triggered on every `pull_request` event (opened / synchronize / reopened).
-
-The workflow inspects the files changed in the PR and the PR title/branch name, then applies one or more labels automatically using the `gh` CLI. All label metadata is read from **`.github/labels.yml`** — edit that file to add, remove, or reconfigure labels without touching the workflow.
-
-**Labeling rules (configured in `.github/labels.yml`):**
-
-| Label | Color | Trigger |
+| File | Trigger | Purpose |
 |---|---|---|
-| `feature` | `#0E8A16` | Any file under `src/main/kotlin/**` |
-| `bug-fix` | `#D93F0B` | PR title or branch contains `fix`, `bug`, or `hotfix` |
-| `documentation` | `#0075CA` | `*.md` files or `docs/**` |
-| `infrastructure` | `#E4E669` | `Dockerfile`, `docker-compose.yml`, `k8s/**`, `.github/**` |
-| `dependencies` | `#0366D6` | `build.gradle.kts`, `settings.gradle.kts`, `gradle.properties`, `gradle/**` |
-| `tests` | `#BFD4F2` | `src/test/**` |
-| `config` | `#C5DEF5` | `src/main/resources/**` |
-| `breaking-change` | `#B60205` | PR title or body contains `BREAKING CHANGE` or `!:` |
-
-- Multiple labels are applied when multiple patterns match.
-- Labels are created automatically if they do not already exist.
-
-> **Customisation:** To change a label's color, icon, title, description or matching patterns, edit `.github/labels.yml`. No workflow changes are needed.
-
-### Semantic Versioning (`.github/scripts/semver.sh`)
-
-A standalone bash script that implements [Semantic Versioning](https://semver.org/) from scratch.
-
-**How it works:**
-
-1. Reads the latest Git tag (`v*`) to determine the current version (defaults to `0.0.0` if no tags exist).
-2. Reads the `PR_LABELS` environment variable and looks up each label's `bump` value in **`.github/labels.yml`** to determine the bump type:
-   - `breaking-change` → **MAJOR** bump (`1.2.3` → `2.0.0`)
-   - `feature` → **MINOR** bump (`1.2.3` → `1.3.0`)
-   - `bug-fix`, `tests`, `config`, `dependencies`, `documentation`, `infrastructure` → **PATCH** bump (`1.2.3` → `1.2.4`)
-3. When multiple labels exist the **highest priority** wins (MAJOR > MINOR > PATCH).
-4. For the very first release (no prior tags): features start at `0.1.0`, patches at `0.0.1`.
-5. Outputs `new_version` and `bump_type` via `$GITHUB_OUTPUT`.
-
-> **Customisation:** Change a label's version bump type by updating its `bump` field in `.github/labels.yml`.
-
-### Release Notes Generation (`release.yml`)
-
-Triggered when a PR is **merged into `main`**.
-
-**Steps:**
-
-1. Collects PR labels from the merged PR.
-2. Runs `semver.sh` to compute the next version.
-3. Generates Markdown release notes grouped by label category. Section headings (icon + title) are read dynamically from **`.github/labels.yml`** in the order labels appear there:
-   - 💥 Breaking Changes
-   - 🚀 Features
-   - 🐛 Bug Fixes
-   - 📚 Documentation
-   - 🏗️ Infrastructure
-   - 📦 Dependencies
-   - ✅ Tests
-   - ⚙️ Configuration
-4. Includes metadata: date, PR link, contributor, and a Full Changelog diff link.
-5. Updates the `version` property in `build.gradle.kts` and pushes a `chore: release vX.Y.Z [skip ci]` commit.
-6. Creates an annotated Git tag (`vX.Y.Z`).
-7. Creates a GitHub Release with the generated notes.
+| `ci.yml` | `push`/`PR` → `main`, `develop` | Run tests + Qodana + SBOM upload |
+| `cd.yml` | GitHub Release published/pre-released | Build Docker image and push to registry |
+| `deploy.yml` | `workflow_dispatch` | Deploy a specific image tag to staging or production via Helm |
+| `auto-label.yml` | PR opened/synchronize/reopened | Auto-apply labels based on `.github/labels.yml` |
+| `release-notes.yml` | PR merged into `main` | Bump semver, generate release notes, create GitHub Release |
+| `cleanup-release-tags.yml` | Daily `02:15` + `workflow_dispatch` | Delete old releases and tags |
+| `cleanup-github-workflows.yml` | Daily `02:15` + `workflow_dispatch` | Delete old/failed workflow runs |
 
 ---
 
-## Workflows
+## Workflows in Detail
 
-### 1. Test Workflow (`test.yml`)
+### CI Pipeline (`ci.yml`)
 
-A reusable workflow for running application tests with PostgreSQL database.
+**Triggers:** `push` and `pull_request` on `main` and `develop`. Also callable via `workflow_call` (used by `cd.yml`).
 
-**Features:**
-- Runs tests with PostgreSQL service container
-- Configurable Java version
-- Publishes test reports
-- Uploads test results as artifacts
+**Concurrency:** Cancels in-progress runs for the same branch/PR on new pushes.
 
-**Usage:**
-```yaml
-jobs:
-  test:
-    uses: ./.github/workflows/test.yml
-    with:
-      java-version: '21'
-      gradle-args: '--info'
-```
+**Jobs (in order):**
+1. `test` — delegates to `backend-gradle-test.yml`; runs `./gradlew test` (unit tests only; integration test task set to `help` = no-op).
+2. `qodana_code_quality` — runs after `test`; delegates to `backend-qa-qodana-code-quality.yml`; posts results to PR checks.
+3. `sbom-upload` — runs after `test`; uploads SBOM to Dependency-Track via `backnd-qa-dependency-track-upload.yml`.
 
-**Inputs:**
-- `java-version` (optional, default: '21'): Java version to use
-- `gradle-args` (optional): Additional Gradle arguments
+**Repository variable used:** `JAVA_VERSION` (`vars.JAVA_VERSION`) — set this at the repo level to control the JDK.
 
-### 2. Build Workflow (`build.yml`)
+---
 
-A reusable workflow for building the application and creating Docker images.
+### CD Pipeline (`cd.yml`)
 
-**Features:**
-- Builds application with Gradle
-- Creates and pushes Docker images to GitHub Container Registry
-- Supports multi-platform builds
-- Generates artifact attestation
-- Uses Docker layer caching
+**Trigger:** GitHub Release events — `published` or `prereleased`. This means a release must first be created by `release-notes.yml` before a Docker image is built.
 
-**Usage:**
-```yaml
-jobs:
-  build:
-    uses: ./.github/workflows/build.yml
-    with:
-      java-version: '21'
-      image-name: 'blitzpay'
-      image-tag: 'latest'
-    secrets: inherit
-```
+**Jobs:**
+1. `build` — calls `ci.yml` locally (runs full test suite).
+2. `release` — delegates to `backend-build.yml`; builds and pushes the Docker image to the configured registry.
+
+**Key inputs forwarded:**
+- `image-name`: `blitzpay`
+- `image-tag`: `${{ github.ref_name }}` (the release tag, e.g. `v1.2.3`)
+- `registry`: `${{ vars.CONTAINER_REGISTRY }}`
+
+**Required repository variable:** `CONTAINER_REGISTRY` — e.g. `ghcr.io/medimohammadise`.
+
+---
+
+### Deploy to Kubernetes (`deploy.yml`)
+
+**Trigger:** Manual only (`workflow_dispatch`).
 
 **Inputs:**
-- `java-version` (optional, default: '21'): Java version to use
-- `image-name` (optional, default: 'blitzpay'): Docker image name
-- `image-tag` (optional, default: 'latest'): Docker image tag
-- `registry` (optional, default: 'ghcr.io'): Container registry
-- `gradle-args` (optional): Additional Gradle arguments
+| Input | Required | Description |
+|---|---|---|
+| `image-tag` | Yes | Docker image tag to deploy (e.g. `v0.2.2`) |
+| `environment` | Yes | `staging` or `production` |
 
-**Outputs:**
-- `image-uri`: Full image URI
-- `image-digest`: Image digest
+**Runner:** Self-hosted — requires network access to the Kubernetes API server (`https://myserver:6443`) and pre-installed `helm` + `kubectl`.
 
-### 3. Deploy Workflow (`deploy.yml`)
+**What it does:**
+1. Decodes `KUBECONFIG_B64` secret into `/tmp/kubeconfig`.
+2. Verifies cluster connectivity.
+3. Runs `helm upgrade --install blitzpay ./helm/blitzpay` with environment-specific values files:
+   - `values.yaml` (base)
+   - `values-staging.yaml` or `values-prod.yaml`
+4. Sets `image.tag` to the provided input.
+5. Waits up to 5 minutes for rollout, then verifies with `kubectl rollout status`.
+6. Always cleans up `/tmp/kubeconfig` on completion.
 
-A reusable workflow for deploying the application to Kubernetes using Arconia library.
+**Namespaces:** `blitzpay-staging` / `blitzpay-prod`
 
-**Features:**
-- Deploys to Kubernetes using kubectl
-- Supports Arconia plugin for manifest generation
-- Fallback to manual Kubernetes manifests if Arconia not available
-- Manages ConfigMaps and Secrets
-- Includes health checks and readiness probes
-- Supports multiple environments (dev, staging, prod)
+**Required secret:** `KUBECONFIG_B64` — base64-encoded kubeconfig scoped to the target cluster.
 
-**Usage:**
-```yaml
-jobs:
-  deploy:
-    uses: ./.github/workflows/deploy.yml
-    with:
-      environment: 'dev'
-      image-uri: 'ghcr.io/owner/blitzpay:sha-abc123'
-      namespace: 'blitzpay-dev'
-      replicas: 1
-    secrets:
-      kubeconfig: ${{ secrets.KUBECONFIG_DEV }}
-      database-url: ${{ secrets.DATABASE_URL_DEV }}
-      truelayer-client-id: ${{ secrets.TRUELAYER_CLIENT_ID_DEV }}
-      truelayer-client-secret: ${{ secrets.TRUELAYER_CLIENT_SECRET_DEV }}
-```
+---
 
-**Inputs:**
-- `environment` (required): Deployment environment (dev, staging, prod)
-- `image-uri` (required): Full image URI to deploy
-- `namespace` (optional, default: 'default'): Kubernetes namespace
-- `app-name` (optional, default: 'blitzpay'): Application name (Note: When using k8s/deployment.yaml fallback, the app name remains 'blitzpay'. For custom names, use Arconia or inline manifests)
-- `replicas` (optional, default: 1): Number of replicas
-- `arconia-version` (optional, default: '0.6.0'): Arconia Gradle plugin version
+### Auto-Label Pull Requests (`auto-label.yml`)
 
-**Secrets:**
-- `kubeconfig` (required): Base64-encoded Kubernetes config
-- `database-url` (optional): Database connection URL
-- `truelayer-client-id` (optional): TrueLayer client ID
-- `truelayer-client-secret` (optional): TrueLayer client secret
+**Trigger:** PR opened, synchronize, or reopened (any branch).
 
-### 6. CI/CD Pipeline (`ci-cd.yml`)
+**Delegates to:** `pull-request-auto-label.yml` in the shared pipeline.
 
-Main CI/CD pipeline that orchestrates all workflows.
+**Label configuration:** `.github/labels.yml` — edit this file to add/change labels and their matching rules. No workflow changes needed.
 
-**Features:**
-- Automatic testing on push and pull requests
-- Automatic deployment to dev on develop branch
-- Automatic deployment to staging on main/master branch
-- Manual deployment to production via workflow_dispatch
-- Environment-specific configuration
-- Optional SBOM upload to Dependency-Track when `DTRACK_URL` and `DTRACK_API_KEY` secrets are provided
+**Labels applied and their semver bump impact:**
 
-**Triggers:**
-- Push to main, master, or develop branches
-- Pull requests to main, master, or develop branches
-- Manual workflow dispatch with environment selection
+| Label | Bump | Trigger |
+|---|---|---|
+| `breaking-change` | MAJOR | PR title/body contains `BREAKING CHANGE` or `!:` |
+| `feature` | MINOR | Files changed under `src/main/kotlin/**` |
+| `bug-fix` | PATCH | PR title or branch contains `fix`, `bug`, `hotfix` |
+| `documentation` | PATCH | `*.md` files or `docs/**` |
+| `infrastructure` | PATCH | `Dockerfile`, `docker-compose.yml`, `k8s/**`, `.github/**` |
+| `dependencies` | PATCH | `build.gradle.kts`, `settings.gradle.kts`, `gradle/**` |
+| `tests` | PATCH | `src/test/**` |
+| `config` | PATCH | `src/main/resources/**` |
 
-## Setup Instructions
+Multiple labels are applied when multiple patterns match.
 
-### 1. Repository Secrets
+---
 
-Configure the following secrets in your GitHub repository:
+### Release Notes (`release-notes.yml`)
 
-**Development:**
-- `KUBECONFIG_DEV`: Base64-encoded kubeconfig for dev cluster
-- `DATABASE_URL_DEV`: Development database URL
-- `TRUELAYER_CLIENT_ID_DEV`: TrueLayer client ID for dev
-- `TRUELAYER_CLIENT_SECRET_DEV`: TrueLayer client secret for dev
+**Trigger:** PR merged (closed + `merged == true`) into `main`.
 
-**Staging:**
-- `KUBECONFIG_STAGING`: Base64-encoded kubeconfig for staging cluster
-- `DATABASE_URL_STAGING`: Staging database URL
-- `TRUELAYER_CLIENT_ID_STAGING`: TrueLayer client ID for staging
-- `TRUELAYER_CLIENT_SECRET_STAGING`: TrueLayer client secret for staging
+**Delegates to:** `release-notes.yml` in the shared pipeline.
 
-**Production:**
-- `KUBECONFIG_PROD`: Base64-encoded kubeconfig for production cluster
-- `DATABASE_URL_PROD`: Production database URL
-- `TRUELAYER_CLIENT_ID_PROD`: TrueLayer client ID for production
-- `TRUELAYER_CLIENT_SECRET_PROD`: TrueLayer client secret for production
+**What it does (inside the shared pipeline):**
+1. Reads labels from the merged PR.
+2. Runs `semver.sh` to compute the next version (MAJOR > MINOR > PATCH priority; defaults to `0.1.0` / `0.0.1` when no prior tags exist).
+3. Generates Markdown release notes grouped by label category.
+4. Updates `version` in `build.gradle.kts` and pushes a `chore: release vX.Y.Z [skip ci]` commit.
+5. Creates an annotated Git tag (`vX.Y.Z`).
+6. Creates a GitHub Release — this in turn triggers `cd.yml` to build and push the Docker image.
 
-#### Dependency-Track (Optional)
-- `DTRACK_URL`: Dependency-Track base URL for BOM uploads (e.g., `https://dependency-track.example.com`)
-- `DTRACK_API_KEY`: API key with permission to POST to `/api/v1/bom`
-- `DTRACK_PROJECT_NAME` (optional): Overrides `projectName` in Dependency-Track (defaults to `${{ github.repository }}`)
-- `DTRACK_PROJECT_VERSION` (optional): Overrides `projectVersion` (defaults to `${{ github.sha }}`)
-### 2. Prepare Kubeconfig
+> **Important for agents:** The release flow is fully automated. Never manually create Git tags or GitHub Releases unless recovering from a broken pipeline run. Doing so can produce duplicate tags or skip the `build.gradle.kts` version bump.
 
-To encode your kubeconfig:
-```bash
-cat ~/.kube/config | base64 -w 0
-```
+---
 
-### 3. Arconia Integration
+### Cleanup — Releases & Tags (`cleanup-release-tags.yml`)
 
-The deploy workflow includes Arconia Gradle plugin integration for generating Kubernetes manifests. If Arconia is not configured, the workflow falls back to generating basic Kubernetes manifests.
+**Trigger:** Daily at `02:15 UTC` and `workflow_dispatch`.
 
-To use Arconia, ensure your `build.gradle.kts` includes:
-```kotlin
-plugins {
-    id("io.github.polargradient.arconia") version "0.6.0"
-}
-```
+**Default behavior:** Dry-run only (`dry_run: true`). To actually delete, trigger manually with `dry_run: false`.
 
-## Deployment Flow
+**Deletes:** Releases and tags older than `older_than_days` (default: 30). Includes drafts and pre-releases.
 
-1. **Development:**
-   - Push to `develop` branch
-   - Tests run automatically
-   - Docker image is built
-   - Application deploys to dev environment
+---
 
-2. **Staging:**
-   - Push to `main` or `master` branch
-   - Tests run automatically
-   - Docker image is built
-   - Application deploys to staging environment
+### Cleanup — Workflow Runs (`cleanup-github-workflows.yml`)
 
-3. **Production:**
-   - Use workflow_dispatch to manually trigger deployment
-   - Select 'prod' environment
-   - Application deploys to production after staging validation
+**Trigger:** Daily at `02:15 UTC` and `workflow_dispatch`.
 
-## Monitoring Deployments
+**Default behavior:** Dry-run only (`dry_run: true`).
 
-After deployment, check the status:
-```bash
-kubectl get pods -n <namespace>
-kubectl get deployment <app-name> -n <namespace>
-kubectl logs -f deployment/<app-name> -n <namespace>
-```
+**Deletes:** Old and failed workflow run records older than `older_than_days` (default: 14).
 
-## Rollback
+---
 
-To rollback a deployment:
-```bash
-kubectl rollout undo deployment/<app-name> -n <namespace>
-```
+## Status Badges
 
-## Troubleshooting
+Badges in `README.md` use `?event=` or `?branch=` to target the correct run history. Using the wrong parameter returns a stale or broken badge.
 
-### Build Failures
-- Check test results artifacts in the Actions tab
-- Review build logs for Gradle errors
-- Ensure all dependencies are available
+| Workflow | Badge param | Reason |
+|---|---|---|
+| `ci.yml` | `?branch=main` | Push-triggered; scope to main for production signal |
+| `cd.yml` | `?branch=main` | Release-triggered; last run always on main |
+| `deploy.yml` | `?event=workflow_dispatch` | Manual only; no branch context |
+| `auto-label.yml` | `?event=pull_request` | PR-only trigger |
+| `release-notes.yml` | `?event=pull_request` | PR-only trigger (merged PRs) |
 
-### Deployment Failures
-- Verify kubeconfig secret is correctly configured
-- Check pod logs: `kubectl logs -f <pod-name> -n <namespace>`
-- Check deployment events: `kubectl describe deployment <app-name> -n <namespace>`
-- Verify image is accessible from the cluster
+Cleanup workflows are intentionally not badged — they add noise without contributor signal.
 
-### Image Pull Errors
-- Ensure GitHub Container Registry permissions are set correctly
-- Verify the image was pushed successfully
-- Check if image pull secrets are configured in the cluster
+---
 
-## Additional Resources
+## Required Repository Variables & Secrets
 
-- [GitHub Actions Documentation](https://docs.github.com/en/actions)
-- [Kubernetes Documentation](https://kubernetes.io/docs/)
-- [Arconia GitHub Repository](https://github.com/polargradient/arconia)
-- [Docker Documentation](https://docs.docker.com/)
+| Name | Type | Used by | Description |
+|---|---|---|---|
+| `JAVA_VERSION` | Variable | `ci.yml` | JDK version for Gradle builds |
+| `CONTAINER_REGISTRY` | Variable | `cd.yml` | Registry host, e.g. `ghcr.io/medimohammadise` |
+| `KUBECONFIG_B64` | Secret | `deploy.yml` | Base64-encoded kubeconfig for k8s cluster |
+| `QODANA_TOKEN` | Secret | `ci.yml` | Qodana Cloud token for code quality reports |
+| `DTRACK_URL` | Secret | `ci.yml` | Dependency-Track base URL (optional) |
+| `DTRACK_API_KEY` | Secret | `ci.yml` | Dependency-Track API key (optional) |

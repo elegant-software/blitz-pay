@@ -30,6 +30,16 @@ Contributors should preserve the project architecture described in `README.md`. 
 
 When a change would violate one of these principles, either redesign it to fit the existing architecture or update the architecture docs and implementation together as one deliberate change.
 
+## File Naming
+
+### Markdown files
+
+- Use **lowercase kebab-case** for all regular documentation files: `api-versioning-guide.md`, `architecture-guidelines.md`.
+- Use **UPPERCASE** only for well-known root-level convention files that tools and platforms recognize by name: `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `AGENTS.md`, `CLAUDE.md`, `LICENSE.md`.
+- No spaces or underscores in file names.
+- Apply the same rule to subdirectories that hold documentation (e.g. `reference/`, `docs/`).
+- Files inside hidden tool directories (`.agents/`, `.codex/`, `.specify/`, `.claude/`) are managed by external tooling and are exempt from this convention.
+
 ## Commit Messages
 
 Use semantic commit messages in the form:

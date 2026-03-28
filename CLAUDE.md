@@ -53,7 +53,7 @@ Modules communicate via Spring `ApplicationEventPublisher` / `@ApplicationModule
 
 ### API versioning
 
-URL-path versioning (`/v1/...`) uses a custom `PathOnlyApiVersionResolver` that prevents version parsing collisions with Swagger/documentation routes. Config: `useVersionRequired(false)`, `setDefaultVersion("1")`, `detectSupportedVersions(true)`. See `reference/API_VERSIONING_GUIDE.md` for details.
+URL-path versioning (`/v1/...`) uses a custom `PathOnlyApiVersionResolver` that prevents version parsing collisions with Swagger/documentation routes. Config: `useVersionRequired(false)`, `setDefaultVersion("1")`, `detectSupportedVersions(true)`. See `reference/api-versioning-guide.md` for details.
 
 ### Module metadata
 
