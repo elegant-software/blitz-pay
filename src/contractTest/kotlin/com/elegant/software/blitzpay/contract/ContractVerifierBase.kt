@@ -1,5 +1,6 @@
 package com.elegant.software.blitzpay.contract
 
+import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
 import com.elegant.software.blitzpay.payments.QuickpayApplication
 import com.elegant.software.blitzpay.payments.truelayer.api.PaymentRequested
 import com.elegant.software.blitzpay.payments.truelayer.api.PaymentResult
@@ -36,6 +37,9 @@ abstract class ContractVerifierBase {
 
     @MockitoBean
     private lateinit var jwksService: JwksService
+
+    @MockitoBean
+    private lateinit var merchantApplicationRepository: MerchantApplicationRepository
 
     @BeforeEach
     fun setupRestAssured() {

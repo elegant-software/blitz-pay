@@ -1,18 +1,4 @@
 {
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "input=$(cat); f=$(echo \"$input\" | jq -r '.tool_input.file_path // \"\"'); echo \"$f\" | grep -q 'setup-github-env\\.sh' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"setup-github-env.sh was just modified. Update the Notion page https://www.notion.so/331feba108398167b777f2ce033cdd94 to reflect any changes to variables or secrets (set_var / set_secret calls).\"}}' || true",
-            "statusMessage": "Checking if Notion sync needed..."
-          }
-        ]
-      }
-    ]
-  },
   "permissions": {
     "allow": [
       "Bash(.specify/scripts/bash/check-prerequisites.sh --json 2>&1)",
@@ -36,7 +22,31 @@
       "Bash(find ~/.gradle/caches/jars-* -name *.jar)",
       "Bash(find ~/.gradle/caches -name *.jar)",
       "Bash(.specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks 2>&1)",
-      "Bash(git mv:*)"
+      "Bash(git mv:*)",
+      "Bash(./gradlew clean:*)",
+      "Bash(./gradlew contractTest)",
+      "Bash(find /Users/mehdi/MyProject/BlitzPay/build/test-results/contractTest -name *.xml)",
+      "Bash(xargs ls:*)",
+      "Bash(find /Users/mehdi/MyProject/BlitzPay/src/contractTest -type f -name *.kt)",
+      "Bash(./gradlew check:*)",
+      "Bash(./gradlew contractTest --stacktrace)",
+      "Bash(./gradlew contractTest --rerun-tasks)",
+      "Bash(./gradlew build:*)",
+      "Bash(xargs cat:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); f=$(echo \"$input\" | jq -r '.tool_input.file_path // \"\"'); echo \"$f\" | grep -q 'setup-github-env\\.sh' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"setup-github-env.sh was just modified. Update the Notion page https://www.notion.so/331feba108398167b777f2ce033cdd94 to reflect any changes to variables or secrets (set_var / set_secret calls).\"}}' || true",
+            "statusMessage": "Checking if Notion sync needed..."
+          }
+        ]
+      }
     ]
   }
 }
