@@ -23,7 +23,8 @@ enum class MerchantOnboardingStatus {
 object MerchantOnboardingLifecycle {
     private val transitions = mapOf(
         MerchantOnboardingStatus.DRAFT to setOf(
-            MerchantOnboardingStatus.SUBMITTED
+            MerchantOnboardingStatus.SUBMITTED,
+            MerchantOnboardingStatus.ACTIVE
         ),
         MerchantOnboardingStatus.SUBMITTED to setOf(
             MerchantOnboardingStatus.VERIFICATION,

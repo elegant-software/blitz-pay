@@ -1,11 +1,34 @@
 package com.elegant.software.blitzpay.merchant.domain
 
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 class MerchantApplicationTest {
+
+    @Test
+    fun `registerDirect sets status to ACTIVE and records activatedAt`() {
+        val application = merchantApplication()
+        val activatedAt = Instant.parse("2026-03-29T10:00:00Z")
+
+        application.registerDirect(activatedAt)
+
+        assertEquals(MerchantOnboardingStatus.ACTIVE, application.status)
+        assertEquals(activatedAt, application.submittedAt)
+        assertEquals(activatedAt, application.lastUpdatedAt)
+    }
+
+    @Test
+    fun `registerDirect rejects transition from non-DRAFT status`() {
+        val application = merchantApplication(status = MerchantOnboardingStatus.SUBMITTED)
+
+        val ex = assertThrows<IllegalArgumentException> {
+            application.registerDirect()
+        }
+        assert(ex.message!!.contains("SUBMITTED"))
+    }
 
     @Test
     fun `submit moves application from draft to submitted and stamps submission time`() {

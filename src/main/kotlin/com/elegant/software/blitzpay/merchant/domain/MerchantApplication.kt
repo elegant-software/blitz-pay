@@ -72,6 +72,13 @@ class MerchantApplication(
     @JoinColumn(name = "monitoring_record_id")
     var monitoringRecord: MonitoringRecord? = null
 
+    fun registerDirect(activatedAt: Instant = Instant.now()) {
+        MerchantOnboardingLifecycle.requireTransition(status, MerchantOnboardingStatus.ACTIVE)
+        status = MerchantOnboardingStatus.ACTIVE
+        submittedAt = activatedAt
+        touch(activatedAt)
+    }
+
     fun submit(submittedAt: Instant = Instant.now()) {
         MerchantOnboardingLifecycle.requireTransition(status, MerchantOnboardingStatus.SUBMITTED)
         status = MerchantOnboardingStatus.SUBMITTED
