@@ -6,6 +6,11 @@ import com.elegant.software.blitzpay.merchant.domain.SupportingMaterialType
 import java.time.Instant
 import java.util.UUID
 
+data class RegisterMerchantRequest(
+    val businessProfile: MerchantBusinessProfileRequest,
+    val primaryContact: MerchantPrimaryContactRequest
+)
+
 data class CreateMerchantApplicationRequest(
     val businessProfile: MerchantBusinessProfileRequest,
     val primaryContact: MerchantPrimaryContactRequest

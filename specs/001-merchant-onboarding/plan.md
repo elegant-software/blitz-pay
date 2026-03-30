@@ -1,33 +1,44 @@
-# Implementation Plan: Merchant Onboarding
+# Implementation Plan: Merchant Registration (Skip Onboarding)
 
-**Branch**: `[001-merchant-onboarding]` | **Date**: 2026-03-23 | **Spec**: [spec.md](/Users/mehdi/MyProject/BlitzPay/specs/001-merchant-onboarding/spec.md)
+**Branch**: `001-merchant-onboarding` | **Date**: 2026-03-29 | **Spec**: [spec.md](spec.md)
 **Input**: Feature specification from `/specs/001-merchant-onboarding/spec.md`
 
 ## Summary
 
-Implement merchant onboarding as a new bounded workflow in BlitzPay that covers merchant submission, compliance review, approval decisioning, setup/activation, and post-activation monitoring for EU merchants. The plan starts with the most stable and highest-risk foundations first: domain model, lifecycle/state transitions, compliance decision flow, and audit/privacy controls. Delivery should proceed as vertical slices so that each phase leaves behind testable business value and explicit contracts.
+The user decided to skip the full multi-step merchant onboarding workflow (KYB, AML screening, manual review) for now. The immediate goal is a **direct merchant registration** endpoint: `POST /v1/merchants` creates a `MerchantApplication` and immediately sets it to `ACTIVE`, bypassing verification, screening, risk assessment, and decisioning stages. A `GET /v1/merchants/{merchantId}` endpoint retrieves the registered merchant. All compliance workflow steps (User Stories 2 and 3 from the spec) are deferred.
+
+---
 
 ## Technical Context
 
-**Language/Version**: Kotlin 2.3.x on Java 25  
-**Primary Dependencies**: Spring Boot 4, Spring WebFlux, Spring Data JPA, Spring Modulith, Springdoc OpenAPI, PostgreSQL driver, Testcontainers  
-**Storage**: PostgreSQL  
-**Testing**: JUnit 5, Spring Boot Test, Modulith tests, WebFlux tests, JPA tests, Testcontainers  
-**Target Platform**: Linux-hosted backend service  
-**Project Type**: Modular backend web service  
-**Performance Goals**: Merchant submission completes in under 10 minutes for end users; reviewer decision turnaround supports 90% of complete cases within 2 business days  
-**Constraints**: EU AML/KYB and GDPR obligations are in scope; contracts and failure modes must be explicit; every behavior change requires automated verification; structured observability is mandatory; every HTTP API must use Spring Boot path-based versioning and belong to an explicit Swagger/OpenAPI group  
-**Scale/Scope**: One onboarding workflow spanning merchant intake, review, activation, and monitoring for business merchants in the EU market
+**Language/Version**: Kotlin 2.3.20 on Java 25
+**Primary Dependencies**: Spring Boot 4.0.4, Spring WebFlux (reactive), Spring Modulith, Spring Data JPA, Hibernate
+**Storage**: PostgreSQL 16 — `ddl-auto: update`, no migration framework. All required tables already exist.
+**Testing**: JUnit 5 + Mockito Kotlin (unit); WebTestClient (contract tests)
+**Target Platform**: Linux server (containerized)
+**Project Type**: Web service (modular monolith via Spring Modulith)
+**Performance Goals**: Not specified for this scope
+**Constraints**: No new DB tables. Stay within the `merchant` Spring Modulith module. No cross-module coupling.
+**Scale/Scope**: Single merchant registration endpoint + retrieval
+
+---
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+The project constitution (`constitution.md`) uses placeholder template content and has no ratified principles. Evaluation is based on CLAUDE.md architectural rules:
 
-- **I. Secrets and Key Material Are Never Exposed**: Pass. Onboarding must keep merchant PII, bank details, and any provider credentials out of source control and out of unredacted logs.
-- **II. Payment Requests Must Be Cryptographically Verifiable**: Pass with monitoring. Merchant onboarding itself is not a payment request flow, but any setup handoff to payment providers must preserve signed-provider requirements and explicit request boundaries.
-- **III. Every Behavior Change Requires Automated Verification**: Pass only if each slice ships with automated tests covering lifecycle transitions, compliance rules, and regressions.
-- **IV. Contracts and Failure Modes Must Be Explicit**: Pass only if onboarding APIs, review actions, monitoring actions, and provider touchpoints have explicit schemas and deterministic error behavior.
-- **V. Production Behavior Must Be Observable**: Pass only if onboarding events, reviewer decisions, status transitions, and provider failures emit structured logs, audit events, and metrics.
+| Rule | Status |
+|------|--------|
+| Each module owns its API, implementation, persistence, and events | PASS — all new code stays in `merchant/` |
+| Cross-module communication via events, not direct bean coupling | PASS — no cross-module calls introduced |
+| `@NamedInterface` for sub-package exposure | PASS — `MerchantGateway` already uses `@NamedInterface`; controller lives in `api/` |
+| No migration framework — Hibernate `ddl-auto: update` | PASS — no new tables |
+| Spring WebFlux (reactive) | NOTE — existing merchant code uses JPA (blocking). Controller will use `Mono.fromCallable` wrapping, consistent with existing pattern (see invoice module) |
+| Contract tests under `contract-test` profile | PASS — controller contract test required |
+
+**Gate result**: PASS. No violations to justify.
+
+---
 
 ## Project Structure
 
@@ -35,132 +46,141 @@ Implement merchant onboarding as a new bounded workflow in BlitzPay that covers 
 
 ```text
 specs/001-merchant-onboarding/
-├── plan.md
-├── spec.md
-├── merchant_onboarding_spec.md
-├── research.md
-├── data-model.md
-├── quickstart.md
+├── plan.md              ← this file
+├── research.md          ← Phase 0 output
+├── data-model.md        ← Phase 1 output
 ├── contracts/
-└── tasks.md
+│   └── merchant-registration.md  ← Phase 1 output
+└── tasks.md             ← Phase 2 output (/speckit.tasks)
 ```
 
-### Source Code (repository root)
+### Source Code Changes
 
 ```text
-src/main/kotlin/com/elegant/software/blitzpay/
-├── config/
-├── invoice/
-├── payments/
-│   ├── qrpay/
-│   ├── support/
-│   └── truelayer/
-└── merchant/
-    ├── api/
-    ├── application/
-    ├── domain/
-    ├── repository/
-    ├── support/
-    ├── compliance/
-    ├── activation/
-    └── monitoring/
+src/main/kotlin/com/elegant/software/blitzpay/merchant/
+├── domain/
+│   └── MerchantOnboardingLifecycle.kt    MODIFY — add DRAFT→ACTIVE transition
+│   └── MerchantApplication.kt            MODIFY — add registerDirect() method
+├── application/
+│   └── MerchantRegistrationService.kt    CREATE — register + findById
+└── api/
+    ├── MerchantOnboardingModels.kt       MODIFY — add RegisterMerchantRequest
+    └── MerchantController.kt             CREATE — POST /v1/merchants, GET /v1/merchants/{id}
 
-src/test/kotlin/com/elegant/software/blitzpay/
-├── merchant/
-│   ├── contract/
-│   ├── integration/
-│   └── unit/
-└── config/
+src/contractTest/kotlin/com/elegant/software/blitzpay/merchant/
+└── MerchantControllerTest.kt             CREATE — WebTestClient contract tests
+
+src/test/kotlin/com/elegant/software/blitzpay/merchant/
+└── MerchantRegistrationServiceTest.kt    CREATE — unit tests for service
 ```
 
-**Structure Decision**: Use the existing single Spring Boot service and add merchant onboarding as a new Modulith-aligned module rooted under `src/main/kotlin/com/elegant/software/blitzpay/merchant`. Use `repository/` for Spring Data JPA repositories and `support/` for technical support components such as logging-backed audit or observability helpers. Keep module APIs explicit and avoid direct coupling into existing payment internals except through published interfaces.
+---
 
-## Phase 0 Research
+## Implementation Decisions
 
-- Confirm the exact onboarding handoff points to existing payment/provider integrations, especially TrueLayer-related account setup.
-- Confirm the legal retention window and approved regional storage boundary expected for EU onboarding records.
-- Decide whether sanctions/PEP screening is implemented internally, delegated to a provider, or stubbed behind an adapter for this feature slice.
-- Document failure handling for duplicate applications, incomplete compliance evidence, provider timeouts, and reviewer conflict cases.
+### 1. Lifecycle: `DRAFT → ACTIVE`
 
-## Phase 1 Design
+`MerchantOnboardingLifecycle` transition map gains `ACTIVE` in the `DRAFT` allowed-targets set.
 
-### Domain First
+```kotlin
+MerchantOnboardingStatus.DRAFT to setOf(
+    MerchantOnboardingStatus.SUBMITTED,
+    MerchantOnboardingStatus.ACTIVE      // ← new: direct registration path
+),
+```
 
-- Define the core entities: `MerchantApplication`, `BusinessProfile`, `Person`, `SupportingMaterial`, `RiskAssessment`, `ReviewDecision`, `MonitoringRecord`.
-- Define uniqueness rules for merchant applications, business registration identifiers, beneficial-owner identities, and monitoring records.
-- Define canonical lifecycle states and allowed transitions:
-  `draft -> submitted -> verification -> screening -> risk review -> decision pending -> setup -> active -> monitoring`
+### 2. Domain Method: `MerchantApplication.registerDirect()`
 
-### Contracts
+```kotlin
+fun registerDirect(activatedAt: Instant = Instant.now()) {
+    MerchantOnboardingLifecycle.requireTransition(status, MerchantOnboardingStatus.ACTIVE)
+    status = MerchantOnboardingStatus.ACTIVE
+    submittedAt = activatedAt
+    touch(activatedAt)
+}
+```
 
-- Define merchant-facing APIs for starting, saving, submitting, and retrieving onboarding applications.
-- Define internal reviewer APIs for requesting changes, recording review outcomes, approving/rejecting, and managing monitoring events.
-- Define provider-facing adapters and contracts for setup/activation handoffs without leaking provider-specific concerns into the merchant domain model.
-- Define the merchant module's explicit Swagger/OpenAPI group and keep all exposed endpoints on Spring Boot path-based versioned routes.
+This keeps lifecycle enforcement intact — the same `requireTransition` guard applies.
 
-### Quality Controls
+### 3. `MerchantRegistrationService`
 
-- Define audit events for every status transition and reviewer decision.
-- Define PII handling rules for storage, response payloads, and log redaction.
-- Define observability outputs: structured logs, counters for lifecycle transitions, and failure metrics for compliance/provider steps.
+```kotlin
+@Service
+@Transactional
+class MerchantRegistrationService(
+    private val merchantApplicationRepository: MerchantApplicationRepository,
+    private val merchantAuditTrail: MerchantAuditTrail,
+    private val merchantObservabilitySupport: MerchantObservabilitySupport
+) {
+    fun register(request: RegisterMerchantRequest): MerchantApplication { ... }
+    fun findById(merchantId: UUID): MerchantApplication { ... }
+}
+```
 
-## Delivery Slices
+`register()` logic:
+1. Check for duplicate active merchant by `registrationNumber`.
+2. Generate `applicationReference` as `"BLTZ-" + UUID.randomUUID().toString().take(8).uppercase()`.
+3. Create `MerchantApplication` with `DRAFT` status.
+4. Call `application.registerDirect(now)`.
+5. Save and audit.
 
-### Slice 1: Merchant Submission
+### 4. `MerchantController`
 
-- Create merchant onboarding module skeleton and internal package boundaries.
-- Implement draft creation, save/resume, validation, review-before-submit, and submission reference generation.
-- Expose merchant submission APIs under path-based versioned routes and register them in a dedicated Swagger/OpenAPI group.
-- Add contract and integration tests for happy path, invalid input, and duplicate-application prevention.
+```kotlin
+@RestController
+@RequestMapping("/v1/merchants")
+class MerchantController(
+    private val merchantRegistrationService: MerchantRegistrationService
+) {
+    @PostMapping
+    fun register(@RequestBody request: RegisterMerchantRequest): Mono<ResponseEntity<MerchantApplicationResponse>>
 
-### Slice 2: Compliance Review
+    @GetMapping("/{merchantId}")
+    fun get(@PathVariable merchantId: UUID): Mono<ResponseEntity<MerchantApplicationResponse>>
+}
+```
 
-- Implement verification, screening, risk review, and action-required decision flow.
-- Add reviewer decision recording, change requests, resubmission handling, and audit history.
-- Expose reviewer-facing APIs under path-based versioned routes and include them in the merchant module's Swagger/OpenAPI group.
-- Add tests for lifecycle transitions, correction loops, rejection flow, and compliance-required data completeness.
+Wraps blocking JPA calls in `Mono.fromCallable { ... }.subscribeOn(Schedulers.boundedElastic())`, consistent with how the reactive layer handles JPA in this project.
 
-### Slice 3: Activation and Setup
+### 5. `RegisterMerchantRequest` (added to `MerchantOnboardingModels.kt`)
 
-- Implement approval-to-setup-to-active flow with explicit handoff boundary to provider/account-setup logic.
-- Record setup outcomes, failures, retries, and final active status.
-- Add tests for approval success, setup failure, and idempotent activation handling.
+```kotlin
+data class RegisterMerchantRequest(
+    val businessProfile: MerchantBusinessProfileRequest,
+    val primaryContact: MerchantPrimaryContactRequest
+)
+```
 
-### Slice 4: Monitoring
+### 6. Error Handling
 
-- Implement monitoring record creation for active merchants.
-- Support follow-up review actions, monitoring-trigger events, and ongoing oversight state updates.
-- Add tests for monitoring entry, monitoring-triggered review, and history preservation.
+| Exception | HTTP Status |
+|-----------|-------------|
+| `IllegalArgumentException` (duplicate / validation) | 400 or 409 |
+| `NoSuchElementException` | 404 |
 
-### Slice 5: Audit, Privacy, and Operational Controls
+Spring's default `ResponseEntityExceptionHandler` or the project's existing error handling should cover `IllegalArgumentException`. Check existing error handler first.
 
-- Enforce access restrictions, retention policy hooks, regional storage assumptions, and GDPR-oriented data handling.
-- Add structured logging, metrics, and health visibility for the onboarding module.
-- Add tests for unauthorized access, audit trail completeness, and retention/control behavior that can be validated at application level.
+---
 
-## Test Strategy
+## Deferred (Out of Scope)
 
-- **Unit tests**: state transition rules, validation logic, risk/compliance decision helpers, duplicate detection, retention/access policy helpers.
-- **Integration tests**: persistence of onboarding lifecycle, reviewer workflows, monitoring creation, and transactional consistency.
-- **Contract tests**: merchant-facing and reviewer-facing HTTP APIs, request/response schemas, validation errors, and provider adapter boundaries.
-- **Modularity tests**: verify the merchant module exposes only intended APIs and does not reach into internal payment packages directly.
+- User Story 2: Status tracking / merchant portal
+- User Story 3: Internal review, decisioning, activation workflow
+- Supporting materials upload
+- AML/KYB screening integration
+- Notification system
+- GDPR data subject rights endpoints
+- Monitoring record management
 
-## Risks and Mitigations
+These are preserved in the spec and tasks.md for future sprints.
 
-- **Compliance scope creep**: keep the spec boundary intact and push provider-specific implementation detail into adapters.
-- **Lifecycle inconsistency**: centralize transition rules and test invalid transitions explicitly.
-- **PII leakage**: enforce redaction and access-control checks from the first slice rather than as a cleanup task.
-- **Provider coupling**: isolate activation/setup behind internal interfaces so onboarding remains stable if provider details change.
+---
 
-## Immediate Next Planning Work
+## Phase 0 Output
 
-1. Produce `research.md` for compliance retention, storage boundary, screening-provider, and activation-handoff decisions.
-2. Produce `data-model.md` with entities, relationships, invariants, and lifecycle transitions.
-3. Produce API contracts under `contracts/` for merchant submission and reviewer decision flows.
-4. Generate `tasks.md` from the delivery slices once the above artifacts are in place.
+→ [research.md](research.md)
 
-## Complexity Tracking
+## Phase 1 Output
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| None at plan stage | N/A | N/A |
+→ [data-model.md](data-model.md)
+→ [contracts/merchant-registration.md](contracts/merchant-registration.md)

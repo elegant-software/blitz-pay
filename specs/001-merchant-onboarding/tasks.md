@@ -1,134 +1,92 @@
-# Tasks: Merchant Onboarding
+# Tasks: Merchant Registration (Skip Onboarding)
 
 **Input**: Design documents from `/specs/001-merchant-onboarding/`
-**Prerequisites**: plan.md, spec.md
+**Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/
 
-**Tests**: Automated tests are required by the repository constitution for any behavior change.
+**Scope decision**: Full onboarding workflow deferred. This task list covers only the direct merchant registration path: `POST /v1/merchants` creates and activates a merchant; `GET /v1/merchants/{merchantId}` retrieves it.
 
-**Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
+**Tests**: Test tasks are included for contract tests (WebTestClient, `contract-test` profile) and unit tests for the service layer, consistent with the project's testing conventions.
 
-## Format: `[ID] [P?] [Story] Description`
+**Organization**: Tasks are grouped by phase. The foundational domain changes are in Phase 2; the registration feature is Phase 3 (single user story equivalent). Deferred onboarding stories are listed at the end as a reference for future sprints.
+
+## Format: `[ID] [P?] [Story?] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this task belongs to (`US1`, `US2`, `US3`)
+- **[Story]**: User story label (`US1` = Register Merchant directly)
 - Include exact file paths in descriptions
+
+---
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-**Purpose**: Create the merchant onboarding module skeleton and feature documentation outputs.
+**Purpose**: Confirm design artifacts are in place before implementation begins. No code changes in this phase.
 
-- [ ] T001 Create feature research notes in `specs/001-merchant-onboarding/research.md`
-- [ ] T002 Create feature data model in `specs/001-merchant-onboarding/data-model.md`
-- [ ] T003 Create contract directory and initial API contract files in `specs/001-merchant-onboarding/contracts/`
-- [ ] T004 Create merchant module package structure under `src/main/kotlin/com/elegant/software/blitzpay/merchant/`
-- [ ] T005 [P] Create merchant test package structure under `src/test/kotlin/com/elegant/software/blitzpay/merchant/`
+- [ ] T001 Verify `specs/001-merchant-onboarding/research.md`, `data-model.md`, and `contracts/merchant-registration.md` are present and consistent with plan.md
 
 ---
 
-## Phase 2: Foundational (Blocking Prerequisites)
+## Phase 2: Foundational Domain Changes (Blocking Prerequisites)
 
-**Purpose**: Build the core domain, persistence, lifecycle, security, and observability pieces required by all user stories.
+**Purpose**: Extend the existing domain model to support the `DRAFT → ACTIVE` direct registration path. These changes are required before the service and controller can be built.
 
-**⚠️ CRITICAL**: No user story work can begin until this phase is complete
+**⚠️ CRITICAL**: Phase 3 cannot start until this phase is complete.
 
-- [ ] T006 Create merchant lifecycle/state model in `src/main/kotlin/com/elegant/software/blitzpay/merchant/domain/`
-- [ ] T007 [P] Create core domain entities for `MerchantApplication`, `BusinessProfile`, `Person`, `SupportingMaterial`, `RiskAssessment`, `ReviewDecision`, and `MonitoringRecord` in `src/main/kotlin/com/elegant/software/blitzpay/merchant/domain/`
-- [ ] T008 Create repositories and persistence mappings in `src/main/kotlin/com/elegant/software/blitzpay/merchant/repository/`
-- [ ] T009 Create lifecycle transition and validation services in `src/main/kotlin/com/elegant/software/blitzpay/merchant/application/`
-- [ ] T010 [P] Create module API boundaries and package exposure rules for the merchant module in `src/main/kotlin/com/elegant/software/blitzpay/merchant/api/`
-- [ ] T011 [P] Add access-control, PII redaction, and audit event support in `src/main/kotlin/com/elegant/software/blitzpay/merchant/application/` and `src/main/kotlin/com/elegant/software/blitzpay/merchant/support/`
-- [ ] T012 [P] Add observability support for onboarding events, state transitions, and failures in `src/main/kotlin/com/elegant/software/blitzpay/merchant/support/`
-- [ ] T013 [P] Create foundational unit tests for lifecycle rules and validation helpers in `src/test/kotlin/com/elegant/software/blitzpay/merchant/unit/`
-- [ ] T014 [P] Create persistence/integration tests for merchant core entities and repositories in `src/test/kotlin/com/elegant/software/blitzpay/merchant/integration/`
-- [ ] T015 Create modulith boundary test for the merchant module in `src/test/kotlin/com/elegant/software/blitzpay/merchant/`
+- [ ] T002 Add `ACTIVE` to the allowed-next set for `DRAFT` in the transition map in `src/main/kotlin/com/elegant/software/blitzpay/merchant/domain/MerchantOnboardingLifecycle.kt`
+- [ ] T003 Add `registerDirect(activatedAt: Instant)` method to `MerchantApplication` in `src/main/kotlin/com/elegant/software/blitzpay/merchant/domain/MerchantApplication.kt` — calls `MerchantOnboardingLifecycle.requireTransition(status, ACTIVE)`, sets `status = ACTIVE`, `submittedAt = activatedAt`, calls `touch(activatedAt)`
+- [ ] T004 [P] Add unit test for the `DRAFT → ACTIVE` lifecycle transition and `registerDirect()` in `src/test/kotlin/com/elegant/software/blitzpay/merchant/domain/MerchantApplicationTest.kt`
 
-**Checkpoint**: Foundation ready, user story work can now begin in priority order or in parallel if staffed.
+**Checkpoint**: `./gradlew test` passes with the new lifecycle transition and domain method tests.
 
 ---
 
-## Phase 3: User Story 1 - Submit Merchant Application (Priority: P1) 🎯 MVP
+## Phase 3: User Story 1 — Register Merchant (Priority: P1) 🎯 MVP
 
-**Goal**: Allow a prospective merchant to start onboarding, save progress, validate input, review details, and submit a compliant application.
+**Goal**: A caller can `POST /v1/merchants` with business profile + primary contact and receive a `201 Created` with the merchant in `ACTIVE` status. A caller can `GET /v1/merchants/{merchantId}` to retrieve it. The endpoint enforces no-duplicate-registration by `registrationNumber`.
 
-**Independent Test**: A merchant can create a draft, complete required business/contact/ownership details, review the application, submit successfully, and receive a unique application reference.
+**Independent Test**: `POST /v1/merchants` with valid payload returns 201 and `"status": "ACTIVE"`. `POST /v1/merchants` with the same `registrationNumber` returns 409. `GET /v1/merchants/{id}` returns the previously registered merchant. `GET /v1/merchants/{unknownId}` returns 404.
 
-### Tests for User Story 1
+### Contract Tests for User Story 1
 
-- [ ] T016 [P] [US1] Add contract tests for merchant onboarding create/save/submit endpoints in `src/test/kotlin/com/elegant/software/blitzpay/merchant/contract/`
-- [ ] T017 [P] [US1] Add integration test for draft save/resume and submission journey in `src/test/kotlin/com/elegant/software/blitzpay/merchant/integration/`
-- [ ] T018 [P] [US1] Add integration test for duplicate active-application prevention in `src/test/kotlin/com/elegant/software/blitzpay/merchant/integration/`
+> **Write these FIRST — they must FAIL before implementation tasks T007–T009 are started.**
+
+- [ ] T005 [P] [US1] Write contract test for `POST /v1/merchants` (happy path: 201 + ACTIVE status, body fields) in `src/contractTest/kotlin/com/elegant/software/blitzpay/merchant/MerchantControllerTest.kt`
+- [ ] T006 [P] [US1] Write contract test for `POST /v1/merchants` (conflict: duplicate registrationNumber → 409) and `GET /v1/merchants/{merchantId}` (200 and 404) in `src/contractTest/kotlin/com/elegant/software/blitzpay/merchant/MerchantControllerTest.kt`
 
 ### Implementation for User Story 1
 
-- [ ] T019 [P] [US1] Create merchant application request/response models in `src/main/kotlin/com/elegant/software/blitzpay/merchant/api/`
-- [ ] T020 [P] [US1] Implement merchant submission validation rules in `src/main/kotlin/com/elegant/software/blitzpay/merchant/application/`
-- [ ] T021 [US1] Implement draft creation, save, resume, and review service in `src/main/kotlin/com/elegant/software/blitzpay/merchant/application/`
-- [ ] T022 [US1] Implement merchant onboarding HTTP endpoints in `src/main/kotlin/com/elegant/software/blitzpay/merchant/api/`
-- [ ] T023 [US1] Implement submission reference generation and submission audit events in `src/main/kotlin/com/elegant/software/blitzpay/merchant/application/`
-- [ ] T024 [US1] Add a dedicated Swagger/OpenAPI group and Spring Boot path-based versioning for merchant submission APIs in `src/main/kotlin/com/elegant/software/blitzpay/merchant/config/` and `src/main/kotlin/com/elegant/software/blitzpay/merchant/api/`
+- [ ] T007 [US1] Add `RegisterMerchantRequest` data class to `src/main/kotlin/com/elegant/software/blitzpay/merchant/api/MerchantOnboardingModels.kt` — fields: `businessProfile: MerchantBusinessProfileRequest`, `primaryContact: MerchantPrimaryContactRequest`
+- [ ] T008 [US1] Create `MerchantRegistrationService` in `src/main/kotlin/com/elegant/software/blitzpay/merchant/application/MerchantRegistrationService.kt` with:
+  - `register(request: RegisterMerchantRequest): MerchantApplication` — checks duplicate by `registrationNumber` via `MerchantApplicationRepository.existsByBusinessProfileRegistrationNumberAndStatusIn`, generates `applicationReference` as `"BLTZ-" + UUID.randomUUID().toString().take(8).uppercase()`, creates `MerchantApplication`, calls `registerDirect()`, saves, audits
+  - `findById(merchantId: UUID): MerchantApplication` — `findById` or throw `NoSuchElementException`
+- [ ] T009 [US1] Create `MerchantController` in `src/main/kotlin/com/elegant/software/blitzpay/merchant/api/MerchantController.kt` — `@RestController @RequestMapping("/v1/merchants")`:
+  - `POST /v1/merchants` → `Mono.fromCallable { merchantRegistrationService.register(request) }.subscribeOn(Schedulers.boundedElastic()).map { it.toResponse() }.map { ResponseEntity.status(201).body(it) }`
+  - `GET /v1/merchants/{merchantId}` → `Mono.fromCallable { merchantRegistrationService.findById(merchantId) }.subscribeOn(Schedulers.boundedElastic()).map { it.toResponse() }.map { ResponseEntity.ok(it) }`
+  - Map `NoSuchElementException` → 404, `IllegalArgumentException` with "already exists" → 409, other `IllegalArgumentException` → 400
+  - Include private `MerchantApplication.toResponse()` extension mapping to `MerchantApplicationResponse`
+- [ ] T010 [P] [US1] Write unit tests for `MerchantRegistrationService` in `src/test/kotlin/com/elegant/software/blitzpay/merchant/application/MerchantRegistrationServiceTest.kt` — cover: successful registration, duplicate rejection, not-found case
 
-**Checkpoint**: User Story 1 is independently functional and testable.
-
----
-
-## Phase 4: User Story 2 - Track Onboarding Status (Priority: P2)
-
-**Goal**: Allow merchants to view current onboarding status, see action-required details, and understand next steps.
-
-**Independent Test**: After submission and status changes, a merchant can retrieve the current lifecycle state, outstanding actions, and decision outcome without internal assistance.
-
-### Tests for User Story 2
-
-- [ ] T025 [P] [US2] Add contract tests for onboarding status retrieval endpoints in `src/test/kotlin/com/elegant/software/blitzpay/merchant/contract/`
-- [ ] T026 [P] [US2] Add integration test for action-required status and merchant resubmission visibility in `src/test/kotlin/com/elegant/software/blitzpay/merchant/integration/`
-
-### Implementation for User Story 2
-
-- [ ] T027 [P] [US2] Create status view models and action-required response models in `src/main/kotlin/com/elegant/software/blitzpay/merchant/api/`
-- [ ] T028 [US2] Implement onboarding status query service in `src/main/kotlin/com/elegant/software/blitzpay/merchant/application/`
-- [ ] T029 [US2] Implement merchant status and next-step endpoints with Spring Boot path-based versioning in `src/main/kotlin/com/elegant/software/blitzpay/merchant/api/`
-- [ ] T030 [US2] Implement merchant resubmission handling for requested corrections in `src/main/kotlin/com/elegant/software/blitzpay/merchant/application/`
-- [ ] T031 [US2] Add merchant-facing status change notifications in `src/main/kotlin/com/elegant/software/blitzpay/merchant/application/`
-
-**Checkpoint**: User Stories 1 and 2 both work independently.
+**Checkpoint**: `./gradlew check` passes. `POST /v1/merchants` returns 201 with `status: ACTIVE`. Contract tests green.
 
 ---
 
-## Phase 5: User Story 3 - Review, Approve, Activate, and Monitor Merchants (Priority: P3)
+## Phase 4: Polish & Cross-Cutting Concerns
 
-**Goal**: Allow internal reviewers to run compliance review, make decisions, activate approved merchants, and place them into ongoing monitoring.
+**Purpose**: Module integrity verification and OpenAPI documentation registration.
 
-**Independent Test**: An internal reviewer can review a submitted application, request corrections or approve/reject it, activate approved merchants, and record monitoring events on active merchants.
-
-### Tests for User Story 3
-
-- [ ] T032 [P] [US3] Add contract tests for reviewer decision, activation, and monitoring endpoints in `src/test/kotlin/com/elegant/software/blitzpay/merchant/contract/`
-- [ ] T033 [P] [US3] Add integration test for verification, screening, risk review, and approval flow in `src/test/kotlin/com/elegant/software/blitzpay/merchant/integration/`
-- [ ] T034 [P] [US3] Add integration test for approval-to-activation handoff and monitoring record creation in `src/test/kotlin/com/elegant/software/blitzpay/merchant/integration/`
-- [ ] T035 [P] [US3] Add integration test for monitoring-triggered follow-up actions in `src/test/kotlin/com/elegant/software/blitzpay/merchant/integration/`
-
-### Implementation for User Story 3
-
-- [ ] T036 [P] [US3] Create reviewer decision, activation, and monitoring request/response models in `src/main/kotlin/com/elegant/software/blitzpay/merchant/api/`
-- [ ] T037 [US3] Implement compliance review workflow for verification, screening, risk review, and decisioning in `src/main/kotlin/com/elegant/software/blitzpay/merchant/compliance/`
-- [ ] T038 [US3] Implement reviewer decision and action-required services in `src/main/kotlin/com/elegant/software/blitzpay/merchant/application/`
-- [ ] T039 [US3] Implement activation/setup handoff service in `src/main/kotlin/com/elegant/software/blitzpay/merchant/activation/`
-- [ ] T040 [US3] Implement monitoring record creation and follow-up workflow in `src/main/kotlin/com/elegant/software/blitzpay/merchant/monitoring/`
-- [ ] T041 [US3] Implement internal reviewer HTTP endpoints with Spring Boot path-based versioning and Swagger group coverage in `src/main/kotlin/com/elegant/software/blitzpay/merchant/api/`
-
-**Checkpoint**: All user stories are independently functional.
+- [ ] T011 [P] Add the `/v1/merchants/**` path group to `MerchantOpenApiConfig` in `src/main/kotlin/com/elegant/software/blitzpay/merchant/config/OpenApiConfig.kt` if not already scanned
+- [ ] T012 [P] Run and pass Spring Modulith boundary verification — confirm `MerchantRegistrationService` and `MerchantController` do not leak internal types across module boundaries; update or add `ApplicationModulesTest` in `src/test/kotlin/com/elegant/software/blitzpay/merchant/` if needed
+- [ ] T013 Run `./gradlew clean build` to confirm full build including all tests passes
 
 ---
 
-## Phase 6: Polish & Cross-Cutting Concerns
+## Deferred User Stories (Future Sprints)
 
-**Purpose**: Finalize cross-story controls and delivery readiness.
+These user stories are preserved from the original spec but are out of scope for this branch.
 
-- [ ] T042 [P] Add GDPR retention and regional-storage policy documentation in `specs/001-merchant-onboarding/research.md`
-- [ ] T043 [P] Update `specs/001-merchant-onboarding/quickstart.md` with merchant onboarding validation steps
-- [ ] T044 Add structured logging and metrics verification across merchant flows in `src/test/kotlin/com/elegant/software/blitzpay/merchant/integration/`
-- [ ] T045 Add security and unauthorized-access regression tests in `src/test/kotlin/com/elegant/software/blitzpay/merchant/integration/`
-- [ ] T046 Run end-to-end feature verification and update `specs/001-merchant-onboarding/tasks.md` with completion state
+| Story | Title | Blocked By |
+|-------|-------|------------|
+| US2 | Track Onboarding Status (P2) | Reviewer tooling, merchant portal |
+| US3 | Review and Approve Applications (P3) | KYB/AML screening integration, reviewer UI |
 
 ---
 
@@ -136,63 +94,76 @@
 
 ### Phase Dependencies
 
-- **Phase 1: Setup**: No dependencies
-- **Phase 2: Foundational**: Depends on Phase 1 and blocks all user stories
-- **Phase 3: US1**: Depends on Phase 2
-- **Phase 4: US2**: Depends on Phase 2 and can reuse US1 outputs
-- **Phase 5: US3**: Depends on Phase 2 and integrates with US1/US2 lifecycle behavior
-- **Phase 6: Polish**: Depends on completion of the desired user stories
+- **Phase 1 (Setup)**: No dependencies — starts immediately
+- **Phase 2 (Foundational)**: Depends on Phase 1 — BLOCKS Phase 3
+- **Phase 3 (US1)**: Depends on Phase 2 completion
+  - T005, T006 (contract tests): Write first, fail first
+  - T007 (model change): Parallel with T005/T006
+  - T008 (service): Depends on T007 (uses `RegisterMerchantRequest`), T003 (uses `registerDirect()`)
+  - T009 (controller): Depends on T008
+  - T010 (unit test): Parallel with T009 (different file)
+- **Phase 4 (Polish)**: Depends on Phase 3 completion
 
-### User Story Dependencies
+### Within Phase 3
 
-- **US1**: First MVP slice, no dependency on later stories
-- **US2**: Depends on foundational lifecycle and submitted applications from US1
-- **US3**: Depends on foundational lifecycle and submitted applications from US1; complements US2 status visibility
-
-### Within Each User Story
-
-- Tests should be written before implementation and fail on missing behavior
-- API models before services
-- Services before controllers/endpoints
-- All controllers must use path-based API versioning and belong to an explicit Swagger/OpenAPI group
-- Core workflow before notifications/observability refinements
+```
+T005, T006 (write contract tests — FAIL)
+T007 (add RegisterMerchantRequest)
+    ↓
+T008 (MerchantRegistrationService)          T010 (unit tests — parallel)
+    ↓
+T009 (MerchantController)
+```
 
 ### Parallel Opportunities
 
-- `T005` can run alongside `T004`
-- `T007`, `T010`, `T011`, `T012`, `T013`, and `T014` can run in parallel after `T006`
-- `T016`, `T017`, and `T018` can run in parallel
-- `T019` and `T020` can run in parallel before `T021`
-- `T025` and `T026` can run in parallel
-- `T027` can run in parallel with `T028`
-- `T032` to `T035` can run in parallel
-- `T036` can run in parallel with `T037`
+- T004 and T005/T006 can all start once Phase 2 domain changes are written (T002, T003)
+- T010 (unit tests) can be written in parallel with T009 (controller)
+- T011 and T012 can run in parallel within Phase 4
+
+---
+
+## Parallel Example: Phase 3
+
+```
+# Once T002 + T003 are done, launch in parallel:
+Task T004: "Unit test for registerDirect() in MerchantApplicationTest.kt"
+Task T005: "Contract test POST /v1/merchants happy path in MerchantControllerTest.kt"
+Task T006: "Contract test POST /v1/merchants conflict + GET in MerchantControllerTest.kt"
+Task T007: "Add RegisterMerchantRequest to MerchantOnboardingModels.kt"
+
+# Once T007 is done:
+Task T008: "Create MerchantRegistrationService.kt"
+
+# Once T008 is done, launch in parallel:
+Task T009: "Create MerchantController.kt"
+Task T010: "Unit tests for MerchantRegistrationService in MerchantRegistrationServiceTest.kt"
+```
+
+---
 
 ## Implementation Strategy
 
-### MVP First
+### MVP (This Branch)
 
-1. Complete Phase 1
-2. Complete Phase 2
-3. Complete Phase 3
-4. Validate merchant submission independently before moving on
+1. Complete Phase 2: domain lifecycle + `registerDirect()` method
+2. Write contract tests (T005, T006) — verify they FAIL
+3. Add model, service, controller (T007–T009)
+4. Verify contract tests pass: `./gradlew contractTest`
+5. Run full build: `./gradlew clean build`
 
-### Incremental Delivery
+### Future Increments
 
-1. Deliver US1 as the merchant intake MVP
-2. Add US2 for self-service status visibility
-3. Add US3 for internal review, activation, and monitoring
-4. Finish with privacy, observability, and operational hardening
+- Sprint N+1: Merchant status tracking endpoint (`GET /v1/merchants/{id}/status`)
+- Sprint N+2: Internal reviewer endpoints (transition, decision, request-changes)
+- Sprint N+3: KYB/AML integration hooks, monitoring record management
 
-### Team Strategy
-
-1. One developer handles foundational domain and persistence work
-2. One developer can take merchant-facing APIs and status endpoints after Phase 2
-3. One developer can take reviewer/compliance/monitoring flows after Phase 2
+---
 
 ## Notes
 
-- `[P]` tasks are intended to avoid file conflicts where practical
-- Keep Spring Modulith boundaries explicit for the new merchant module
-- Avoid direct coupling from merchant onboarding into payment internals; use module APIs or adapters
-- Do not skip automated tests for behavior changes
+- `[P]` tasks touch different files — they can be launched as parallel agents
+- All blocking JPA calls in the controller must be wrapped with `Mono.fromCallable(...).subscribeOn(Schedulers.boundedElastic())`
+- Contract tests run under the `contract-test` Spring profile — no real DB, DataSource auto-config excluded, TrueLayer mocked
+- `MerchantRegistrationService` is separate from `MerchantOnboardingService` — do not add `register()` to the existing service
+- The `DRAFT → ACTIVE` transition is available via the generic `transitionTo()` path after T002, but `registerDirect()` is the intended entry point for this use case

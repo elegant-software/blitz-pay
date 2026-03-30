@@ -32,7 +32,17 @@
       "Bash(./gradlew contractTest --stacktrace)",
       "Bash(./gradlew contractTest --rerun-tasks)",
       "Bash(./gradlew build:*)",
-      "Bash(xargs cat:*)"
+      "Bash(xargs cat:*)",
+      "Bash(./.specify/scripts/bash/setup-plan.sh --json 2>&1)",
+      "Bash(grep -E \"\\\\.kt$\")",
+      "Bash(find /Users/mehdi/MyProject/blitz-pay -name application*.yml -o -name application*.yaml)",
+      "Bash(./.specify/scripts/bash/update-agent-context.sh claude:*)",
+      "Bash(./.specify/scripts/bash/check-prerequisites.sh --json 2>&1)",
+      "Bash(./.specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks 2>&1)",
+      "Bash(./gradlew test:*)",
+      "Bash(./gradlew contractTest --tests \"com.elegant.software.blitzpay.merchant.*\")",
+      "Bash(./gradlew contractTest --tests \"com.elegant.software.blitzpay.merchant.MerchantControllerTest.GET v1 merchants returns registered merchant\")",
+      "Bash(./gradlew contractTest --tests \"com.elegant.software.blitzpay.merchant.MerchantControllerTest\")"
     ]
   },
   "hooks": {

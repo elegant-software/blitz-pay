@@ -37,6 +37,11 @@ class MerchantOnboardingLifecycleTest {
     }
 
     @Test
+    fun `allows direct registration path from DRAFT to ACTIVE`() {
+        assertTrue(MerchantOnboardingLifecycle.canTransition(MerchantOnboardingStatus.DRAFT, MerchantOnboardingStatus.ACTIVE))
+    }
+
+    @Test
     fun `rejects skipping directly from submission to active`() {
         assertFalse(MerchantOnboardingLifecycle.canTransition(MerchantOnboardingStatus.SUBMITTED, MerchantOnboardingStatus.ACTIVE))
         assertFailsWith<IllegalArgumentException> {

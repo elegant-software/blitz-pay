@@ -72,3 +72,10 @@ Full contribution conventions — commit style, architecture principles, Spring 
 ## Commit Convention
 
 Semantic commits: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`. Summaries: short, imperative, specific. One semantic commit per logical change; squash fixup commits before merging.
+
+## Active Technologies
+- Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux (reactive), Spring Modulith, Spring Data JPA, Hibernate (001-merchant-onboarding)
+- PostgreSQL 16 — `ddl-auto: update`, no migration framework. All required tables already exist. (001-merchant-onboarding)
+
+## Recent Changes
+- 001-merchant-onboarding: Added Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux (reactive), Spring Modulith, Spring Data JPA, Hibernate
