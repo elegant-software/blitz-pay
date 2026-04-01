@@ -109,7 +109,7 @@ they can run. All required values are documented and set via a single script:
 
 The script uses the `gh` CLI. Authenticate first with `gh auth login`.
 
-For a full list of what each variable/secret does, see [`.github/workflows/README.md`](.github/workflows/README.md).
+For a full list of what each variable/secret does, see [`.github/workflows/README.md`](docs/GITHUB_ACTIONS.md).
 
 **Adding a new variable or secret to a workflow:**
 1. Add the `${{ vars.NAME }}` or `${{ secrets.NAME }}` reference in the workflow file

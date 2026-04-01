@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   notes:
-    uses: medimohammadise/elegant-ci-cd-pipeline/.github/workflows/release-notes.yml@main
+    uses: elegant-software/elegant-ci-cd-pipeline/.github/workflows/release-notes.yml@1f506dd1bd3686d6e31b3169977b2b672ff38a1a
     with:
       base_branch: ${{ inputs.base_branch }}
       release_boundary: ${{ inputs.release_boundary }}

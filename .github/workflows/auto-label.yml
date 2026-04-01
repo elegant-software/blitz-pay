@@ -12,9 +12,8 @@ permissions:
 jobs:
   label:
     name: Apply Labels
-    uses: medimohammadise/elegant-ci-cd-pipeline/.github/workflows/pull-request-auto-label.yml@main
+    uses: elegant-software/elegant-ci-cd-pipeline/.github/workflows/pull-request-auto-label.yml@1f506dd1bd3686d6e31b3169977b2b672ff38a1a
     with:
       pr_number: ${{ github.event.pull_request.number }}
       repository: ${{ github.repository }}
       labels_config_path: .github/labels.yml
-

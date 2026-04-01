@@ -19,7 +19,7 @@ jobs:
     permissions:
       actions: write
       contents: write
-    uses: medimohammadise/elegant-ci-cd-pipeline/.github/workflows/cleanup-github-workflows.yml@main
+    uses: elegant-software/elegant-ci-cd-pipeline/.github/workflows/cleanup-github-workflows.yml@1f506dd1bd3686d6e31b3169977b2b672ff38a1a
     with:
         older_than_days: ${{ fromJSON(inputs.older_than_days || '14') }}
         dry_run: ${{ fromJSON(inputs.dry_run || 'true') }}

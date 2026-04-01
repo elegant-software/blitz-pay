@@ -1,14 +1,14 @@
 # BlitzPay
 
 <!-- Build & Test -->
-[![CI](https://github.com/medimohammadise/blitz-pay/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/medimohammadise/blitz-pay/actions/workflows/ci.yml)
-[![CD](https://github.com/medimohammadise/blitz-pay/actions/workflows/cd.yml/badge.svg?branch=main)](https://github.com/medimohammadise/blitz-pay/actions/workflows/cd.yml)
-[![Deploy](https://github.com/medimohammadise/blitz-pay/actions/workflows/deploy.yml/badge.svg?event=workflow_dispatch)](https://github.com/medimohammadise/blitz-pay/actions/workflows/deploy.yml)
+[![CI](https://github.com/elegant-software/blitz-pay/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/elegant-software/blitz-pay/actions/workflows/ci.yml)
+[![CD](https://github.com/elegant-software/blitz-pay/actions/workflows/cd.yml/badge.svg?branch=main)](https://github.com/elegant-software/blitz-pay/actions/workflows/cd.yml)
+[![Deploy](https://github.com/elegant-software/blitz-pay/actions/workflows/deploy.yml/badge.svg?event=workflow_dispatch)](https://github.com/elegant-software/blitz-pay/actions/workflows/deploy.yml)
 
 <!-- PR Automation & Release -->
-[![Auto-Label Pull Requests](https://github.com/medimohammadise/blitz-pay/actions/workflows/auto-label.yml/badge.svg?event=pull_request)](https://github.com/medimohammadise/blitz-pay/actions/workflows/auto-label.yml)
-[![Release Notes](https://github.com/medimohammadise/blitz-pay/actions/workflows/release-notes.yml/badge.svg?event=pull_request)](https://github.com/medimohammadise/blitz-pay/actions/workflows/release-notes.yml)
-[![Latest Release](https://img.shields.io/github/v/release/medimohammadise/blitz-pay)](https://github.com/medimohammadise/blitz-pay/releases)
+[![Auto-Label Pull Requests](https://github.com/elegant-software/blitz-pay/actions/workflows/auto-label.yml/badge.svg?event=pull_request)](https://github.com/elegant-software/blitz-pay/actions/workflows/auto-label.yml)
+[![Release Notes](https://github.com/elegant-software/blitz-pay/actions/workflows/release-notes.yml/badge.svg?event=pull_request)](https://github.com/elegant-software/blitz-pay/actions/workflows/release-notes.yml)
+[![Latest Release](https://img.shields.io/github/v/release/elegant-software/blitz-pay)](https://github.com/elegant-software/blitz-pay/releases)
 
 <!-- Stack -->
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.3.20-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
