@@ -25,19 +25,19 @@ spec:
               service:
                 name: {{ include "blitz-pay.fullname" . }}
                 port:
-                  number: 80
+                  number: 9000
           - path: /swagger-ui
             pathType: Prefix
             backend:
               service:
                 name: {{ include "blitz-pay.fullname" . }}
                 port:
-                  number: 80
+                  number: 9000
           - path: /
             pathType: Prefix
             backend:
               service:
                 name: {{ include "blitz-pay.fullname" . }}
                 port:
-                  number: 80
+                  number: 9000
 {{- end }}

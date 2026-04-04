@@ -18,7 +18,7 @@ jobs:
   cleanup:
     permissions:
       contents: write
-    uses: medimohammadise/elegant-ci-cd-pipeline/.github/workflows/cleanup-release-tags.yml@main
+    uses: elegant-software/elegant-ci-cd-pipeline/.github/workflows/cleanup-release-tags.yml@main
     with:
       older_than_days: ${{ fromJSON(inputs.older_than_days || '30') }}
       dry_run: ${{ fromJSON(inputs.dry_run || 'true') }}

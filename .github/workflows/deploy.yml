@@ -17,8 +17,6 @@ on:
 
 jobs:
   deploy:
-    # Self-hosted runner must have kubectl, helm, and ~/.kube/config pre-configured
-    # for the kind cluster on myserver. See reference/RUNNER_SETUP.md.
     runs-on: self-hosted
     environment: ${{ inputs.environment }}
     permissions:
@@ -27,22 +25,54 @@ jobs:
       APP_NAME: ${{ vars.APP_NAME }}
       HELM_CHART: ./helm/${{ vars.APP_NAME }}
       ENV_SUFFIX: ${{ inputs.environment == 'production' && 'prod' || 'staging' }}
+      OTLP_LOGS_ENDPOINT: ${{ vars.OTLP_LOGS_ENDPOINT }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        env:
+          K8S_SERVER: ${{ secrets.K8S_SERVER }}
+          K8S_CA_CERT: ${{ secrets.K8S_CA_CERT }}
+          K8S_TOKEN: ${{ secrets.K8S_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "$K8S_CA_CERT" | base64 -d > "$HOME/.kube/ca.crt"
+
+          kubectl config set-cluster deploy-cluster \
+            --server="$K8S_SERVER" \
+            --certificate-authority="$HOME/.kube/ca.crt" \
+            --embed-certs=true
+
+          kubectl config set-credentials deploy-user \
+            --token="$K8S_TOKEN"
+
+          kubectl config set-context deploy-context \
+            --cluster=deploy-cluster \
+            --user=deploy-user
+
+          kubectl config use-context deploy-context
 
       - name: Verify cluster connectivity
         run: kubectl cluster-info --request-timeout=10s
 
       - name: Deploy to ${{ inputs.environment }}
         run: |
-          helm upgrade --install $APP_NAME $HELM_CHART \
-            --namespace blitzpay-$ENV_SUFFIX \
-            --create-namespace \
-            --values $HELM_CHART/values.yaml \
-            --values $HELM_CHART/values-$ENV_SUFFIX.yaml \
-            --set image.tag=${{ inputs.image-tag }} \
-            --wait \
+          HELM_ARGS=(
+            --namespace blitzpay-$ENV_SUFFIX
+            --create-namespace
+            --values $HELM_CHART/values.yaml
+            --values $HELM_CHART/values-$ENV_SUFFIX.yaml
+            --set image.tag=${{ inputs.image-tag }}
+            --wait
             --timeout 5m
+          )
+
+          # Allow environment-specific OTLP endpoint from GitHub Environment Variables.
+          if [ -n "${OTLP_LOGS_ENDPOINT:-}" ]; then
+            HELM_ARGS+=(--set-string config.otlpLogsEndpoint="$OTLP_LOGS_ENDPOINT")
+          fi
+
+          helm upgrade --install $APP_NAME $HELM_CHART "${HELM_ARGS[@]}"
 
       - name: Verify rollout
         run: |

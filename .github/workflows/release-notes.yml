@@ -14,4 +14,4 @@ permissions:
 jobs:
   release-notes:
     if: ${{ github.event.pull_request.merged == true }}
-    uses: medimohammadise/elegant-ci-cd-pipeline/.github/workflows/release-notes.yml@main
+    uses: elegant-software/elegant-ci-cd-pipeline/.github/workflows/release-notes.yml@main

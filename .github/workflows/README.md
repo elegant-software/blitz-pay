@@ -1,6 +1,6 @@
 # GitHub Actions Workflows
 
-All workflows in this project are **thin delegators** — they define triggers and permissions locally, then call reusable workflows from the shared pipeline library at [`medimohammadise/elegant-ci-cd-pipeline`](https://github.com/medimohammadise/elegant-ci-cd-pipeline) pinned to `@main`.
+All workflows in this project are **thin delegators** — they define triggers and permissions locally, then call reusable workflows from the shared pipeline library at [`elegant-software/elegant-ci-cd-pipeline`](https://github.com/elegant-software/elegant-ci-cd-pipeline) pinned to `@main`.
 
 > **For agents:** Do not add inline build/test/deploy logic here. Any change to what CI/CD _does_ belongs in `elegant-ci-cd-pipeline`. Changes here are limited to triggers, permissions, inputs, and secrets forwarding.
 
@@ -50,7 +50,7 @@ All workflows in this project are **thin delegators** — they define triggers a
 - `image-tag`: `${{ github.ref_name }}` (the release tag, e.g. `v1.2.3`)
 - `registry`: `${{ vars.CONTAINER_REGISTRY }}`
 
-**Required repository variables:** `APP_NAME` and `CONTAINER_REGISTRY` — e.g. `blitz-pay` and `ghcr.io/medimohammadise`.
+**Required repository variables:** `APP_NAME` and `CONTAINER_REGISTRY` — e.g. `blitz-pay` and `ghcr.io/elegant-software`.
 
 ---
 
@@ -165,7 +165,8 @@ Cleanup workflows are intentionally not badged — they add noise without contri
 |---|---|---|---|
 | `APP_NAME` | Variable | `cd.yml`, `deploy.yml` | Application name — must match `rootProject.name` in `settings.gradle.kts` |
 | `JAVA_VERSION` | Variable | `ci.yml`, `cd.yml` | JDK version for Gradle builds |
-| `CONTAINER_REGISTRY` | Variable | `cd.yml` | Registry host + org, e.g. `ghcr.io/medimohammadise` |
+| `CONTAINER_REGISTRY` | Variable | `cd.yml` | Registry host + org, e.g. `ghcr.io/elegant-software` |
+| `OTLP_LOGS_ENDPOINT` | Variable (Environment-level) | `deploy.yml` | OTLP logs endpoint injected into Helm ConfigMap as `OTLP_LOGS_ENDPOINT` |
 | `QODANA_TOKEN` | Secret | `ci.yml` | Qodana Cloud token for code quality reports |
 | `DTRACK_URL` | Secret | `ci.yml` | Dependency-Track base URL (optional) |
 | `DTRACK_API_KEY` | Secret | `ci.yml` | Dependency-Track API key (optional) |

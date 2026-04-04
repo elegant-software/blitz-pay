@@ -4,7 +4,7 @@
 replicaCount: 1
 
 image:
-  repository: ghcr.io/medimohammadise/blitz-pay
+  repository: ghcr.io/elegant-software/blitz-pay
   tag: latest
   pullPolicy: IfNotPresent
   pullSecrets: []  # e.g. [ghcr-pull-secret]
@@ -75,6 +75,7 @@ privateKey:
 # ---------------------------------------------------------------------------
 config:
   springProfilesActive: prod
+  otlpLogsEndpoint: http://localhost:3100/otlp
   truelayerApiBase: https://api.truelayer-sandbox.com
   truelayerEnv: sandbox
   truelayerHttpLogs: "false"

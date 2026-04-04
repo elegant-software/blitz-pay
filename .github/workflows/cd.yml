@@ -21,7 +21,7 @@ jobs:
       attestations: write
     #needs: ci
     if: github.event_name == 'release'
-    uses: medimohammadise/elegant-ci-cd-pipeline/.github/workflows/backend-docker-build.yml@main
+    uses: elegant-software/elegant-ci-cd-pipeline/.github/workflows/backend-docker-build.yml@main
     with:
       java-version: ${{ vars.JAVA_VERSION }}
       image-name: ${{ vars.APP_NAME }}

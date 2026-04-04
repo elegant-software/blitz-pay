@@ -9,5 +9,5 @@ permissions:
   pull-requests: write
 jobs:
   call-automation:
-    uses: medimohammadise/elegant-ci-cd-pipeline/.github/workflows/codex-github-issue-spec-kit-automation.yml@main
+    uses: elegant-software/elegant-ci-cd-pipeline/.github/workflows/codex-github-issue-spec-kit-automation.yml@main
     secrets: inherit

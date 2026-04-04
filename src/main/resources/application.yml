@@ -53,6 +53,8 @@ springdoc:
         url: /api-docs/Support
       - name: General
         url: /api-docs/General
+      - name: MobileObservability
+        url: /api-docs/MobileObservability
       - name: Actuator
         url: /api-docs/Actuator
 api:
@@ -62,6 +64,15 @@ api:
     qrpay: 1
     truelayer: 1
     payments: 1
+    mobile-observability: 1
+
+observability:
+  otlp:
+    logs-endpoint: ${OTLP_LOGS_ENDPOINT:http://localhost:3100/otlp}
+    auth-header: ${OTLP_AUTH_HEADER:}
+    auth-value: ${OTLP_AUTH_VALUE:}
+    service-namespace: ${OTLP_SERVICE_NAMESPACE:observability}
+    max-events-per-request: ${OTLP_MAX_EVENTS:100}
 
 truelayer:
   apiBase: ${TRUELAYER_API_BASE:https://api.truelayer-sandbox.com}

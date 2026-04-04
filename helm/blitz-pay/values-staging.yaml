@@ -8,7 +8,7 @@ image:
     - ghcr-pull-secret
 
 ingress:
-  hostname: api.staging.blitz-pay.com
+  hostname: elegant.blitzpay.internal
   tlsSecretName: blitz-pay-tls-staging
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-staging

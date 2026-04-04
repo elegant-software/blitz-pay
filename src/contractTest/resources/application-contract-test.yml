@@ -7,6 +7,12 @@ spring:
       - org.springframework.modulith.events.jpa.JpaEventPublicationAutoConfiguration
       - org.springframework.modulith.events.config.EventPublicationAutoConfiguration
 
+observability:
+  otlp:
+    logs-endpoint: http://localhost:3100/otlp
+    service-namespace: blitzpay
+    max-events-per-request: 100
+
 truelayer:
   apiBase: https://api.truelayer-sandbox.test
   accessToken: contract-test-access-token

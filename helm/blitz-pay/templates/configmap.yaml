@@ -6,6 +6,7 @@ metadata:
     {{- include "blitz-pay.labels" . | nindent 4 }}
 data:
   SPRING_PROFILES_ACTIVE: {{ .Values.config.springProfilesActive | quote }}
+  OTLP_LOGS_ENDPOINT: {{ .Values.config.otlpLogsEndpoint | quote }}
   TRUELAYER_API_BASE: {{ .Values.config.truelayerApiBase | quote }}
   TRUELAYER_ENV: {{ .Values.config.truelayerEnv | quote }}
   TRUELAYER_HTTP_LOGS: {{ .Values.config.truelayerHttpLogs | quote }}
