@@ -35,6 +35,15 @@ jobs:
           K8S_CA_CERT: ${{ secrets.K8S_CA_CERT }}
           K8S_TOKEN: ${{ secrets.K8S_TOKEN }}
         run: |
+          missing=()
+          [ -z "$K8S_SERVER" ]  && missing+=("K8S_SERVER")
+          [ -z "$K8S_CA_CERT" ] && missing+=("K8S_CA_CERT")
+          [ -z "$K8S_TOKEN" ]   && missing+=("K8S_TOKEN")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required secrets: ${missing[*]}"
+            exit 1
+          fi
+
           mkdir -p "$HOME/.kube"
           echo "$K8S_CA_CERT" | base64 -d > "$HOME/.kube/ca.crt"
 
