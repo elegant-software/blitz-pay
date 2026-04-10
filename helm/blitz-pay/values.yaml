@@ -99,7 +99,7 @@ ingress:
   enabled: true
   ingressClassName: nginx
   hostname: api.blitz-pay.local
-  tlsSecretName: blitz-pay-tls
+  tlsSecretName: wildcard-elegantsoftware-de-tls
   # blockActuator via server-snippet is intentionally removed — snippet annotations are
   # disabled by the ingress-nginx admission webhook. Actuator exposure is already
   # restricted at the application level (application.yml exposes only health and metrics).

@@ -9,8 +9,8 @@ image:
     - ghcr-pull-secret
 
 ingress:
-  hostname: api.blitz-pay.com
-  tlsSecretName: blitz-pay-tls-prod
+  hostname: api-blitzpay.elegantsoftware.de
+  tlsSecretName: wildcard-elegantsoftware-de-tls
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"

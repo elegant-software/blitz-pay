@@ -21,7 +21,7 @@
 
 **Pattern**:
 ```yaml
-# deployment.yaml template snippet
+# deployment.yml template snippet
 envFrom:
   - configMapRef:
       name: {{ include "blitzpay.fullname" . }}-config

@@ -101,7 +101,7 @@ kubectl create secret generic blitzpay-secrets \
   --namespace=default
 
 # Apply manifests
-kubectl apply -f k8s/deployment.yaml --namespace=default
+kubectl apply -f k8s/deployment.yml --namespace=default
 
 # Check status
 kubectl get pods -l app=blitzpay

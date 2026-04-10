@@ -121,23 +121,13 @@ setup_k8s() {
   echo "           Set."
 
   # --- K8S_CA_CERT (auto-fetched from the server) ---
-  # Extract host:port from the server URL
   local host_port
   host_port=$(echo "$k8s_server" | sed -E 's|https?://||; s|/.*||')
 
   echo "  [secret] K8S_CA_CERT — fetching CA certificate from $host_port ..."
-  local ca_pem
-  ca_pem=$(openssl s_client -connect "$host_port" -showcerts </dev/null 2>/dev/null \
-    | awk '/-----BEGIN CERTIFICATE-----/{found=1} found{print} /-----END CERTIFICATE-----/{if(found) exit}')
-
-  if [ -z "$ca_pem" ]; then
-    echo "  ERROR: could not fetch CA certificate from $host_port"
-    echo "  Make sure the server is reachable and the URL is correct."
-    exit 1
-  fi
-
   local ca_b64
-  ca_b64=$(echo "$ca_pem" | base64 | tr -d '\n')
+  ca_b64=$("$(dirname "$0")/fetch-k8s-ca.sh" "$k8s_server")
+
   gh secret set K8S_CA_CERT --body "$ca_b64" --repo "$REPO"
   echo "           Set (fetched from $host_port)."
 

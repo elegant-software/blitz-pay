@@ -8,11 +8,11 @@ image:
     - ghcr-pull-secret
 
 ingress:
-  hostname: elegant.blitzpay.internal
-  tlsSecretName: blitz-pay-tls-staging
+  hostname: api-blitzpay-staging.elegantsoftware.de
+  tlsSecretName: wildcard-elegantsoftware-de-tls
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-staging
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
 
