@@ -20,6 +20,11 @@
 
 - API versioning guide: [reference/api-versioning-guide.md](reference/api-versioning-guide.md)
 
+## Database schema
+
+Application schema changes are managed with Liquibase under `src/main/resources/db/changelog/`.
+Run the application or tests against PostgreSQL and Liquibase will create or validate the schema before Hibernate starts.
+
 ## Contract Tests
 
 `./gradlew contractTest` runs the API contract suite against a dedicated `contract-test` Spring profile.
@@ -98,4 +103,3 @@ Security and repo hygiene notes
 ```
 
 - Prefer storing secrets in a secure vault or CI secret manager for production deployments.
-
