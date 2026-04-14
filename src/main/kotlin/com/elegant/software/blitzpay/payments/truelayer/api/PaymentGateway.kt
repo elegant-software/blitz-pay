@@ -5,6 +5,9 @@ import java.net.URI
 import java.util.UUID
 
 @NamedInterface("PaymentGateway")
+interface PaymentGateway {
+    fun startPayment(paymentRequest: PaymentRequested): PaymentResult
+}
 
     data class PaymentRequested(
         var paymentRequestId: UUID?,
@@ -18,6 +21,8 @@ import java.util.UUID
         val paymentRequestId: UUID,
         val orderId: String,
         val paymentId: String? = null,
+        val resourceToken: String? = null,
+        val redirectReturnUri: String? = null,
         val redirectURI: URI? = null,
         val status: Status? = null,
         val error: String? = null

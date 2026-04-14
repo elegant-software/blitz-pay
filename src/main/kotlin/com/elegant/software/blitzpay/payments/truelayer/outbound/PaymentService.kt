@@ -1,5 +1,6 @@
 package com.elegant.software.blitzpay.payments.truelayer.outbound
 
+import com.elegant.software.blitzpay.payments.truelayer.api.PaymentGateway
 import com.elegant.software.blitzpay.payments.truelayer.api.PaymentRequested
 import com.elegant.software.blitzpay.payments.truelayer.api.PaymentResult
 import com.elegant.software.blitzpay.payments.truelayer.support.TrueLayerProperties
@@ -37,11 +38,11 @@ import java.util.concurrent.CompletableFuture
 class PaymentService(
     private val trueLayerProperties: TrueLayerProperties,
     private val trueLayerClient: TrueLayerClient
-)  {
+) : PaymentGateway {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    fun startPayment(paymentRequest: PaymentRequested): PaymentResult {
+    override fun startPayment(paymentRequest: PaymentRequested): PaymentResult {
         // Adapt types for SDK requirements
         val amountInMinor = paymentRequest.amountMinorUnits.toInt() // SDK likely expects Int
         val currency = CurrencyCode.valueOf(paymentRequest.currency.uppercase()) // Use SDK's CurrencyCode enum
@@ -120,7 +121,14 @@ class PaymentService(
                     .resourceToken(paymentData.resourceToken)
                     .resourceId(paymentId)
                     .build()
-            return PaymentResult(paymentRequestId = paymentRequest.paymentRequestId!!,orderId = paymentRequest.orderId, paymentId = paymentId, redirectURI = redirectURI)
+            return PaymentResult(
+                paymentRequestId = paymentRequest.paymentRequestId!!,
+                orderId = paymentRequest.orderId,
+                paymentId = paymentId,
+                resourceToken = paymentData.resourceToken,
+                redirectReturnUri = paymentRequest.redirectReturnUri,
+                redirectURI = redirectURI
+            )
         }
 
         return verifyResult()

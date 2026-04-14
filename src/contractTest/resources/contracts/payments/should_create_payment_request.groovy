@@ -25,7 +25,10 @@ Contract.make {
             contentType(applicationJson())
         }
         body(
-            paymentRequestId: $(consumer('123e4567-e89b-12d3-a456-426614174000'), producer(regex('[0-9a-fA-F\\-]{36}')))
+            paymentRequestId: $(consumer('123e4567-e89b-12d3-a456-426614174000'), producer(regex('[0-9a-fA-F\\-]{36}'))),
+            paymentId: 'contract-test-payment-id',
+            resourceToken: 'contract-test-resource-token',
+            redirectReturnUri: 'https://merchant.example.com/return'
         )
     }
 }

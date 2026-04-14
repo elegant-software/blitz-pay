@@ -27,7 +27,9 @@
       "Bash(chmod +x /Users/mehdi/MyProject/blitz-pay/.github/scripts/fetch-k8s-ca.sh)",
       "mcp__claude_ai_Notion__notion-fetch",
       "mcp__claude_ai_Notion__notion-update-page",
-      "Bash(chmod +x /Users/mehdi/MyProject/blitz-pay/.github/scripts/setup-k8s-org-secrets.sh)"
+      "Bash(chmod +x /Users/mehdi/MyProject/blitz-pay/.github/scripts/setup-k8s-org-secrets.sh)",
+      "Bash(./gradlew compileKotlin compileTestKotlin compileContractTestKotlin)",
+      "Bash(./gradlew contractTest)"
     ]
   },
   "hooks": {

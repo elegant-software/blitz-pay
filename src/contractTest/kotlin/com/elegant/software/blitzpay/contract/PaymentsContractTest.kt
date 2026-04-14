@@ -32,5 +32,8 @@ class PaymentsContractTest : ContractVerifierBase() {
                     "Expected UUID-like paymentRequestId but got '$paymentRequestId'"
                 }
             }
+            .jsonPath("$.paymentId").isEqualTo("contract-test-payment-id")
+            .jsonPath("$.resourceToken").isEqualTo("contract-test-resource-token")
+            .jsonPath("$.redirectReturnUri").isEqualTo("https://merchant.example.com/return")
     }
 }
