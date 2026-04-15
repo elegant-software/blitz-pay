@@ -26,7 +26,21 @@
       "Bash(chmod +x /Users/mehdi/MyProject/blitz-pay/.github/scripts/renew-k8s-credentials.sh)",
       "Bash(chmod +x /Users/mehdi/MyProject/blitz-pay/.github/scripts/fetch-k8s-ca.sh)",
       "mcp__claude_ai_Notion__notion-fetch",
-      "mcp__claude_ai_Notion__notion-update-page"
+      "mcp__claude_ai_Notion__notion-update-page",
+      "Bash(chmod +x /Users/mehdi/MyProject/blitz-pay/.github/scripts/setup-k8s-org-secrets.sh)",
+      "Bash(./gradlew compileKotlin compileTestKotlin compileContractTestKotlin)",
+      "Bash(./gradlew contractTest)",
+      "Bash(git checkout *)",
+      "Bash(.specify/scripts/bash/setup-plan.sh *)",
+      "Bash(.specify/scripts/bash/update-agent-context.sh claude *)",
+      "Bash(cat src/main/kotlin/com/elegant/software/blitzpay/payments/truelayer/*.kt)",
+      "Bash(./gradlew compileKotlin)",
+      "Bash(./gradlew test *)",
+      "Bash(./gradlew compileKotlin test --tests \"com.elegant.software.blitzpay.payments.ModularityTests.verifiesArchitecture\")",
+      "Bash(ls /Users/mehdi/MyProject/blitz-pay/specs/006*)",
+      "Bash(./gradlew compileKotlin compileContractTestKotlin)",
+      "Bash(cat /Users/mehdi/MyProject/blitz-pay/build/test-results/contractTest/*.xml)",
+      "Bash(./gradlew check *)"
     ]
   },
   "hooks": {

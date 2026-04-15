@@ -6,28 +6,21 @@ spring:
     driver-class-name: org.postgresql.Driver
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
-    hikari:
-      maximum-pool-size: 10
-      minimum-idle: 10
-      auto-commit: true
-      pool-name: HikariPool-1
-      connection-init-sql: "SET search_path TO blitzpay, public"
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: none
-    show-sql: false
+      ddl-auto: update
+    show-sql: true
     properties:
       hibernate.connection.isolation: 2
       hibernate:
-        default_schema: blitzpay
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-  liquibase:
-    change-log: classpath:db/changelog/db.changelog-master.yaml
-    enabled: true
-    default-schema: blitzpay
-    liquibase-schema: public
+  hikari:
+    maximum-pool-size: 10
+    minimum-idle: 10
+    auto-commit: true
+    pool-name: HikariPool-1
   threads:
     virtual:
       enabled: true
@@ -60,14 +53,10 @@ springdoc:
         url: /api-docs/Support
       - name: General
         url: /api-docs/General
+      - name: MobileObservability
+        url: /api-docs/MobileObservability
       - name: Push
         url: /api-docs/Push
-      - name: Stripe
-        url: /api-docs/Stripe
-      - name: Braintree
-        url: /api-docs/Braintree
-      - name: Merchant
-        url: /api-docs/Merchant
       - name: Actuator
         url: /api-docs/Actuator
 api:
@@ -77,7 +66,15 @@ api:
     qrpay: 1
     truelayer: 1
     payments: 1
-    merchant: 1
+    mobile-observability: 1
+
+observability:
+  otlp:
+    logs-endpoint: ${OTLP_LOGS_ENDPOINT:http://localhost:3100/otlp}
+    auth-header: ${OTLP_AUTH_HEADER:}
+    auth-value: ${OTLP_AUTH_VALUE:}
+    service-namespace: ${OTLP_SERVICE_NAMESPACE:observability}
+    max-events-per-request: ${OTLP_MAX_EVENTS:100}
 
 truelayer:
   apiBase: ${TRUELAYER_API_BASE:https://api.truelayer-sandbox.com}
@@ -94,16 +91,6 @@ truelayer:
   webhooks:
     environment: sandbox
     maxSkew: PT60M
-
-stripe:
-  secret-key: ${STRIPE_SECRET_KEY:}
-  publishable-key: ${EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY:}
-
-braintree:
-  merchant-id: ${BRAINTREE_MERCHANT_ID:}
-  public-key: ${BRAINTREE_PUBLIC_KEY:}
-  private-key: ${BRAINTREE_PRIVATE_KEY:}
-  environment: ${BRAINTREE_ENVIRONMENT:sandbox}
 
 blitzpay:
   expo:

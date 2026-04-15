@@ -1,15 +1,11 @@
 package com.elegant.software.blitzpay.contract
 
 import com.elegant.software.blitzpay.payments.QuickpayApplication
-import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
-import com.elegant.software.blitzpay.merchant.repository.MerchantProductRepository
-import com.elegant.software.blitzpay.merchant.repository.MonitoringRecordRepository
 import com.elegant.software.blitzpay.payments.push.persistence.DeviceRegistrationRepository
 import com.elegant.software.blitzpay.payments.push.persistence.PaymentStatusRepository
 import com.elegant.software.blitzpay.payments.push.persistence.ProcessedWebhookEventRepository
 import com.elegant.software.blitzpay.payments.push.persistence.PushDeliveryAttemptRepository
 import com.elegant.software.blitzpay.support.ContractTestConfig
-import jakarta.persistence.EntityManager
 import org.springframework.context.annotation.Import
 import com.elegant.software.blitzpay.payments.truelayer.api.PaymentRequested
 import com.elegant.software.blitzpay.payments.truelayer.api.PaymentResult
@@ -59,18 +55,6 @@ abstract class ContractVerifierBase {
 
     @MockitoBean
     protected lateinit var pushDeliveryAttemptRepository: PushDeliveryAttemptRepository
-
-    @MockitoBean
-    protected lateinit var merchantApplicationRepository: MerchantApplicationRepository
-
-    @MockitoBean
-    protected lateinit var merchantProductRepository: MerchantProductRepository
-
-    @MockitoBean
-    protected lateinit var monitoringRecordRepository: MonitoringRecordRepository
-
-    @MockitoBean
-    protected lateinit var entityManager: EntityManager
 
     @BeforeEach
     fun setupRestAssured() {
