@@ -41,6 +41,7 @@ nimbus-jose-jwt      = "10.8"
 
 # Shared platform - logging, documentation, testing
 kotlin-logging       = "3.0.5"
+logstash-logback     = "8.0"
 springdoc            = "3.0.2"
 mockito-kotlin       = "6.3.0"
 
@@ -76,6 +77,7 @@ truelayer-java       = { module = "com.truelayer:truelayer-java", version.ref = 
 truelayer-signing    = { module = "com.truelayer:truelayer-signing", version.ref = "truelayer-signing" }
 nimbus-jose-jwt      = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimbus-jose-jwt" }
 kotlin-logging-jvm   = { module = "io.github.microutils:kotlin-logging-jvm", version.ref = "kotlin-logging" }
+logstash-logback-encoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstash-logback" }
 
 # -----------------------------------------------------------------------------
 # Shared platform (all Modulith modules)

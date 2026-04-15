@@ -14,13 +14,15 @@ import com.truelayer.java.payments.entities.beneficiary.MerchantAccount
 import com.truelayer.java.payments.entities.paymentmethod.PaymentMethod
 import com.truelayer.java.payments.entities.providerselection.ProviderSelection
 import com.truelayer.java.payments.entities.schemeselection.preselected.SchemeSelection
-import org.apache.commons.lang3.concurrent.UncheckedFuture.map
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.stereotype.Component
 import java.net.URI
-import java.util.*
+import java.time.Duration
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 /**
  * TrueLayer payment gateway adapter.
@@ -80,57 +82,112 @@ class PaymentService(
                 "orderId" to paymentRequest.orderId))
             .build()
 
-        log.info("[DEBUG_LOG] Prepared TrueLayer CreatePaymentRequest: {}", paymentRequest)
+        log.info(
+            "truelayer createPayment request paymentRequestId={} orderId={} amountMinor={} currency={} merchantAccount={}",
+            paymentRequest.paymentRequestId,
+            paymentRequest.orderId,
+            amountInMinor,
+            currency,
+            trueLayerProperties.merchantAccountId,
+        )
 
-        // fire the request
+        val started = System.nanoTime()
         val paymentResponse: CompletableFuture<ApiResponse<CreatePaymentResponse?>?> = trueLayerClient
             .payments()
             .createPayment(createTrueLayerPaymentRequest)
 
-        // wait for the response
-        val apiResponse = paymentResponse.get()
-        fun verifyResult(): PaymentResult {
-            if (apiResponse == null) {
-                log.error("TrueLayer payment API response was null for order {}", paymentRequest.orderId)
-                return PaymentResult(
-                    paymentRequestId = paymentRequest.paymentRequestId!!,
-                    orderId = paymentRequest.orderId,
-                    error = "TrueLayer payment API response was null"
-                )
-            }
-            if (apiResponse.error != null) {
-                log.error(
-                    "TrueLayer payment API call failed for order {} with response {}",
-                    paymentRequest.orderId,
-                    apiResponse.error
-                )
-                return PaymentResult(paymentRequestId = paymentRequest.paymentRequestId!!,orderId = paymentRequest.orderId, error = apiResponse.error.toString())
-            }
-            val paymentData = apiResponse.data
-            if (paymentData == null) {
-                log.error("TrueLayer payment API response data was null for order {}", paymentRequest.orderId)
-                return PaymentResult(paymentRequestId = paymentRequest.paymentRequestId!!,orderId = paymentRequest.orderId, error = "Payment API response data was null")
-            }
-            val paymentId = paymentData.id
-            if (paymentId == null) {
-                log.error("TrueLayer payment ID was null in response for the order {}", paymentRequest.orderId)
-                return PaymentResult(paymentRequestId = paymentRequest.paymentRequestId!!,orderId = paymentRequest.orderId, error = "Payment ID was null in response")
-            }
-            val redirectURI =
-                trueLayerClient.hppLinkBuilder().returnUri(URI.create("https://console.truelayer.com/redirect-page"))
-                    .resourceToken(paymentData.resourceToken)
-                    .resourceId(paymentId)
-                    .build()
-            return PaymentResult(
-                paymentRequestId = paymentRequest.paymentRequestId!!,
-                orderId = paymentRequest.orderId,
-                paymentId = paymentId,
-                resourceToken = paymentData.resourceToken,
-                redirectReturnUri = paymentRequest.redirectReturnUri,
-                redirectURI = redirectURI
+        val apiResponse: ApiResponse<CreatePaymentResponse?>? = try {
+            paymentResponse.get(API_CALL_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
+        } catch (ex: TimeoutException) {
+            log.error(
+                "truelayer createPayment TIMEOUT paymentRequestId={} orderId={} timeoutMs={}",
+                paymentRequest.paymentRequestId, paymentRequest.orderId, API_CALL_TIMEOUT.toMillis(), ex,
             )
+            return errorResult(paymentRequest, "truelayer_timeout")
+        } catch (ex: ExecutionException) {
+            val cause = ex.cause ?: ex
+            log.error(
+                "truelayer createPayment THREW paymentRequestId={} orderId={} errorClass={} error={}",
+                paymentRequest.paymentRequestId, paymentRequest.orderId, cause.javaClass.simpleName, cause.message, cause,
+            )
+            return errorResult(paymentRequest, "truelayer_exception:${cause.javaClass.simpleName}")
+        } catch (ex: Exception) {
+            log.error(
+                "truelayer createPayment INTERRUPTED paymentRequestId={} orderId={} errorClass={} error={}",
+                paymentRequest.paymentRequestId, paymentRequest.orderId, ex.javaClass.simpleName, ex.message, ex,
+            )
+            return errorResult(paymentRequest, "truelayer_interrupted")
         }
 
-        return verifyResult()
+        val elapsedMs = (System.nanoTime() - started) / 1_000_000
+
+        if (apiResponse == null) {
+            log.error(
+                "truelayer createPayment NULL_RESPONSE paymentRequestId={} orderId={} elapsedMs={}",
+                paymentRequest.paymentRequestId, paymentRequest.orderId, elapsedMs,
+            )
+            return errorResult(paymentRequest, "truelayer_null_response")
+        }
+        if (apiResponse.error != null) {
+            val err = apiResponse.error
+            log.error(
+                "truelayer createPayment API_ERROR paymentRequestId={} orderId={} httpStatus={} type={} title={} detail={} traceId={} elapsedMs={}",
+                paymentRequest.paymentRequestId,
+                paymentRequest.orderId,
+                runCatching { err.status }.getOrNull(),
+                runCatching { err.type }.getOrNull(),
+                runCatching { err.title }.getOrNull(),
+                runCatching { err.detail }.getOrNull(),
+                runCatching { err.traceId }.getOrNull(),
+                elapsedMs,
+            )
+            log.debug("truelayer createPayment API_ERROR full response paymentRequestId={} error={}", paymentRequest.paymentRequestId, err)
+            return errorResult(paymentRequest, "truelayer_api_error:${runCatching { err.type }.getOrNull() ?: "unknown"}")
+        }
+        val paymentData = apiResponse.data
+        if (paymentData == null) {
+            log.error(
+                "truelayer createPayment NULL_DATA paymentRequestId={} orderId={} elapsedMs={}",
+                paymentRequest.paymentRequestId, paymentRequest.orderId, elapsedMs,
+            )
+            return errorResult(paymentRequest, "truelayer_null_data")
+        }
+        val paymentId = paymentData.id
+        if (paymentId == null) {
+            log.error(
+                "truelayer createPayment NULL_PAYMENT_ID paymentRequestId={} orderId={} elapsedMs={}",
+                paymentRequest.paymentRequestId, paymentRequest.orderId, elapsedMs,
+            )
+            return errorResult(paymentRequest, "truelayer_null_payment_id")
+        }
+
+        log.info(
+            "truelayer createPayment OK paymentRequestId={} orderId={} paymentId={} elapsedMs={}",
+            paymentRequest.paymentRequestId, paymentRequest.orderId, paymentId, elapsedMs,
+        )
+
+        val redirectURI = trueLayerClient.hppLinkBuilder()
+            .returnUri(URI.create("https://console.truelayer.com/redirect-page"))
+            .resourceToken(paymentData.resourceToken)
+            .resourceId(paymentId)
+            .build()
+        return PaymentResult(
+            paymentRequestId = paymentRequest.paymentRequestId!!,
+            orderId = paymentRequest.orderId,
+            paymentId = paymentId,
+            resourceToken = paymentData.resourceToken,
+            redirectReturnUri = paymentRequest.redirectReturnUri,
+            redirectURI = redirectURI,
+        )
+    }
+
+    private fun errorResult(paymentRequest: PaymentRequested, error: String) = PaymentResult(
+        paymentRequestId = paymentRequest.paymentRequestId!!,
+        orderId = paymentRequest.orderId,
+        error = error,
+    )
+
+    companion object {
+        private val API_CALL_TIMEOUT: Duration = Duration.ofSeconds(15)
     }
 }

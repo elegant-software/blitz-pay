@@ -4,6 +4,7 @@ package com.elegant.software.blitzpay.payments.truelayer.inbound
 
 import TlWebhookEnvelope
 
+import com.elegant.software.blitzpay.config.LogContext
 import com.elegant.software.blitzpay.payments.truelayer.support.JwksService
 import com.elegant.software.blitzpay.payments.truelayer.support.TlWebhookProperties
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -37,33 +38,51 @@ class TlWebhookController(
         @RequestHeader headers: Map<String, String>,
         @RequestBody rawBody: String
     ): ResponseEntity<Any> {
-        LOG.info("Webhook ${rawBody}")
+        val webhookId = headers["x-tl-webhook-id"]
+        return LogContext.with(LogContext.WEBHOOK_ID to webhookId) {
+            handle(headers, rawBody, webhookId)
+        }
+    }
+
+    private fun handle(
+        headers: Map<String, String>,
+        rawBody: String,
+        webhookId: String?,
+    ): ResponseEntity<Any> {
+        LOG.debug { "truelayer webhook raw body=$rawBody" }
         val signature = headers["tl-signature"]
-            ?: headers["tl-signature"] // be generous with casing
             ?: run {
-                LOG.warn("Unauthorized: Missing tl-signature header")
+                LOG.warn { "truelayer webhook rejected reason=missing_tl_signature webhookId=$webhookId" }
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
             }
 
         // Optional: basic replay protection using X-TL-Webhook-Timestamp
-        if (!timestampFresh(headers["x-tl-webhook-timestamp"])) {
-            LOG.warn("Unauthorized: Timestamp is missing or not fresh enough")
+        val tsHeader = headers["x-tl-webhook-timestamp"]
+        if (!timestampFresh(tsHeader)) {
+            LOG.warn { "truelayer webhook rejected reason=stale_timestamp webhookId=$webhookId timestamp=$tsHeader maxSkew=$maxSkew" }
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
         }
 
         val path = "/v1/webhooks/truelayer" // must match exactly
         // Verify JKU is an allowed TrueLayer origin then fetch JWKS
-        val jkuFromSig = try { Verifier.extractJku(signature) } catch (ex: Exception) {
-            LOG.warn("Unauthorized: Failed to extract JKU from signature: ${'$'}{ex.message}")
+        val jkuFromSig = try {
+            Verifier.extractJku(signature)
+        } catch (ex: Exception) {
+            LOG.warn(ex) { "truelayer webhook rejected reason=jku_extract_failed webhookId=$webhookId error=${ex.message}" }
             null
         }
         if (jkuFromSig == null || !jkuFromSig.equals(props.allowedJku, ignoreCase = true)) {
-            LOG.warn("Unauthorized: JKU is null or does not match allowed JKU. Got: ${'$'}jkuFromSig, expected: ${'$'}{props.allowedJku}")
+            LOG.warn { "truelayer webhook rejected reason=jku_mismatch webhookId=$webhookId got=$jkuFromSig expected=${props.allowedJku}" }
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
         }
 
-        val jwksJson = jwksService.fetchJwks().block() ?: run {
-            LOG.warn("Unauthorized: Failed to fetch JWKS from service")
+        val jwksJson = try {
+            jwksService.fetchJwks().block()
+        } catch (ex: Exception) {
+            LOG.error(ex) { "truelayer webhook rejected reason=jwks_fetch_failed webhookId=$webhookId jku=$jkuFromSig" }
+            null
+        } ?: run {
+            LOG.warn { "truelayer webhook rejected reason=jwks_empty webhookId=$webhookId jku=$jkuFromSig" }
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
         }
 
@@ -76,25 +95,28 @@ class TlWebhookController(
                 .verify(signature)
             true
         } catch (ex: Exception) {
-            LOG.warn("Unauthorized: Signature verification failed: ${'$'}{ex.message}")
+            LOG.warn(ex) { "truelayer webhook rejected reason=signature_verification_failed webhookId=$webhookId error=${ex.message}" }
             false
         }
 
         if (!ok) {
-            LOG.warn("Unauthorized: Signature verification returned false")
+            LOG.warn { "truelayer webhook rejected reason=signature_invalid webhookId=$webhookId" }
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build()
         }
 
         // Parse body now that it’s verified
         val event: TlWebhookEnvelope = try {
             mapper.readValue(rawBody)
-
-        } catch (_: Exception) {
+        } catch (ex: Exception) {
+            LOG.warn(ex) { "truelayer webhook rejected reason=malformed_body webhookId=$webhookId error=${ex.message}" }
             return ResponseEntity.badRequest().build()
         }
+
+        LOG.info {
+            "truelayer webhook accepted webhookId=$webhookId eventId=${event.event_id} type=${event.type} " +
+                "paymentRequestId=${event.metadata?.get("paymentRequestId")} timestamp=${event.timestamp}"
+        }
         applicationEventPublisher.publishEvent(event)
-
-
         return ResponseEntity.ok().build()
     }
 

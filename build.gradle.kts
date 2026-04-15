@@ -72,6 +72,7 @@ dependencies {
     implementation(libs.truelayer.signing) // TrueLayer official signing lib
     implementation(libs.nimbus.jose.jwt) // webhook signature verification
     implementation(libs.kotlin.logging.jvm) // Idiomatic kotlin logging (mu.KotlinLogging)
+    implementation(libs.logstash.logback.encoder) // Structured JSON logging (production)
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
 

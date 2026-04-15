@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Structured logging configuration.
+
+  Production standard:  SLF4J + Logback + logstash-logback-encoder + MDC.
+  Every log line is a single JSON object, one event per line, ready for ingest
+  by Loki / Elastic / Cloud Logging.
+
+  Profiles:
+    local          - human-readable colourised pattern for developer terminals.
+    (default/prod) - JSON to stdout, all MDC keys included.
+
+  MDC keys populated by the app:
+    traceId          - per-request correlation id (see TraceIdWebFilter).
+    paymentRequestId - payment request UUID on webhook / status / push paths.
+    eventId          - TrueLayer event id on webhook handling.
+    webhookId        - TrueLayer x-tl-webhook-id header.
+-->
+<configuration>
+
+    <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="blitz-pay"/>
+
+    <!-- ======== JSON (default, prod, staging) ======== -->
+    <springProfile name="!local &amp; !contract-test">
+        <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+                <providers>
+                    <timestamp>
+                        <fieldName>@timestamp</fieldName>
+                        <timeZone>UTC</timeZone>
+                    </timestamp>
+                    <version/>
+                    <logLevel/>
+                    <loggerName>
+                        <fieldName>logger</fieldName>
+                        <shortenedLoggerNameLength>40</shortenedLoggerNameLength>
+                    </loggerName>
+                    <threadName/>
+                    <pattern>
+                        <pattern>
+                            {
+                              "service": "${appName}",
+                              "env": "${SPRING_PROFILES_ACTIVE:-default}"
+                            }
+                        </pattern>
+                    </pattern>
+                    <mdc/>
+                    <message/>
+                    <arguments/>
+                    <stackTrace>
+                        <fieldName>stack_trace</fieldName>
+                        <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                            <maxDepthPerThrowable>40</maxDepthPerThrowable>
+                            <maxLength>8192</maxLength>
+                            <rootCauseFirst>true</rootCauseFirst>
+                            <exclude>^sun\.reflect\..*\.invoke</exclude>
+                            <exclude>^net\.sf\.cglib\.proxy\.MethodProxy\.invoke</exclude>
+                        </throwableConverter>
+                    </stackTrace>
+                </providers>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="JSON"/>
+        </root>
+    </springProfile>
+
+    <!-- ======== Human-readable (developer terminal) ======== -->
+    <springProfile name="local | contract-test">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) [%X{traceId:-                                    }] %cyan(%logger{36}) - %msg%n%ex</pattern>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- Shared levels (both profiles). Override with LOGGING_LEVEL_... env vars. -->
+    <logger name="com.elegant.software.blitzpay" level="INFO"/>
+    <logger name="org.hibernate.SQL" level="WARN"/>
+    <logger name="org.hibernate.orm.jdbc.bind" level="WARN"/>
+    <logger name="org.hibernate.engine.jdbc.spi.SqlExceptionHelper" level="WARN"/>
+    <logger name="org.springframework.web" level="INFO"/>
+
+</configuration>

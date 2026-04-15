@@ -6,21 +6,28 @@ spring:
     driver-class-name: org.postgresql.Driver
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 10
+      auto-commit: true
+      pool-name: HikariPool-1
+      connection-init-sql: "SET search_path TO blitzpay, public"
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: validate
+    show-sql: false
     properties:
       hibernate.connection.isolation: 2
       hibernate:
+        default_schema: blitzpay
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-  hikari:
-    maximum-pool-size: 10
-    minimum-idle: 10
-    auto-commit: true
-    pool-name: HikariPool-1
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    enabled: true
+    default-schema: blitzpay
+    liquibase-schema: blitzpay
   threads:
     virtual:
       enabled: true

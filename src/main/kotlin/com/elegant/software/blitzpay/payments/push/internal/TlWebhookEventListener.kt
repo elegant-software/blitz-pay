@@ -1,6 +1,7 @@
 package com.elegant.software.blitzpay.payments.push.internal
 
 import TlWebhookEnvelope
+import com.elegant.software.blitzpay.config.LogContext
 import com.elegant.software.blitzpay.payments.push.api.PaymentStatusChanged
 import com.elegant.software.blitzpay.payments.push.api.PaymentStatusCode
 import com.elegant.software.blitzpay.payments.push.persistence.ProcessedWebhookEventEntity
@@ -26,37 +27,46 @@ class TlWebhookEventListener(
     fun on(envelope: TlWebhookEnvelope) {
         val eventId = envelope.event_id
         if (eventId.isNullOrBlank()) {
-            log.warn { "webhook without event_id; ignoring" }
+            log.warn { "webhook rejected reason=missing_event_id type=${envelope.type}" }
             return
         }
+        LogContext.with(LogContext.EVENT_ID to eventId) {
+            handleVerified(envelope, eventId)
+        }
+    }
+
+    private fun handleVerified(envelope: TlWebhookEnvelope, eventId: String) {
         val newStatus = mapStatus(envelope.type) ?: run {
-            log.debug { "webhook type=${envelope.type} does not map to a status; skipping" }
+            log.debug { "webhook skipped reason=unmapped_type type=${envelope.type}" }
             return
         }
-        val paymentRequestId = envelope.metadata?.get("paymentRequestId")?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+        val paymentRequestId = envelope.metadata?.get("paymentRequestId")
+            ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
         if (paymentRequestId == null) {
-            log.warn { "webhook missing paymentRequestId metadata event=$eventId" }
+            log.warn { "webhook rejected reason=missing_payment_request_id_metadata type=${envelope.type}" }
             return
         }
 
-        if (processedRepository.existsById(eventId)) {
-            log.info { "webhook duplicate event=$eventId; skipping" }
-            return
-        }
-        processedRepository.save(ProcessedWebhookEventEntity(eventId = eventId))
+        LogContext.with(LogContext.PAYMENT_REQUEST_ID to paymentRequestId) {
+            if (processedRepository.existsById(eventId)) {
+                log.info { "webhook skipped reason=duplicate_event" }
+                return@with
+            }
+            processedRepository.save(ProcessedWebhookEventEntity(eventId = eventId))
 
-        val occurredAt = runCatching { envelope.timestamp?.let(Instant::parse) }.getOrNull() ?: Instant.now()
-        val transition = paymentStatusService.apply(paymentRequestId, newStatus, occurredAt, eventId)
-        if (transition.changed) {
-            publisher.publishEvent(
-                PaymentStatusChanged(
-                    paymentRequestId = transition.paymentRequestId,
-                    newStatus = transition.newStatus,
-                    previousStatus = transition.previousStatus,
-                    occurredAt = transition.occurredAt,
-                    sourceEventId = transition.sourceEventId,
+            val occurredAt = runCatching { envelope.timestamp?.let(Instant::parse) }.getOrNull() ?: Instant.now()
+            val transition = paymentStatusService.apply(paymentRequestId, newStatus, occurredAt, eventId)
+            if (transition.changed) {
+                publisher.publishEvent(
+                    PaymentStatusChanged(
+                        paymentRequestId = transition.paymentRequestId,
+                        newStatus = transition.newStatus,
+                        previousStatus = transition.previousStatus,
+                        occurredAt = transition.occurredAt,
+                        sourceEventId = transition.sourceEventId,
+                    )
                 )
-            )
+            }
         }
     }
 

@@ -5,6 +5,7 @@ import mu.KotlinLogging
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.WebClientResponseException
 import reactor.util.retry.Retry
 import java.time.Duration
 
@@ -61,8 +62,14 @@ open class ExpoPushClient(
                 ExpoTicket(message.to, item?.id, ExpoTicket.Status.ERROR, item?.details?.error)
             }
         }
+    } catch (ex: WebClientResponseException) {
+        log.error(ex) {
+            "expo push batch HTTP_ERROR size=${batch.size} status=${ex.statusCode.value()} " +
+                "body=${ex.responseBodyAsString.take(1024)}"
+        }
+        batch.map { ExpoTicket(it.to, null, ExpoTicket.Status.ERROR, "http_${ex.statusCode.value()}") }
     } catch (ex: Exception) {
-        log.warn(ex) { "expo push batch failed size=${batch.size}" }
+        log.error(ex) { "expo push batch TRANSPORT_ERROR size=${batch.size} errorClass=${ex.javaClass.simpleName}" }
         batch.map { ExpoTicket(it.to, null, ExpoTicket.Status.ERROR, "transport_error") }
     }
 

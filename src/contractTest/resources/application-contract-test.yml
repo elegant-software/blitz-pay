@@ -6,6 +6,12 @@ spring:
       - org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration
       - org.springframework.modulith.events.jpa.JpaEventPublicationAutoConfiguration
       - org.springframework.modulith.events.config.EventPublicationAutoConfiguration
+      - org.springframework.boot.liquibase.autoconfigure.LiquibaseAutoConfiguration
+  liquibase:
+    enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: none
 
 observability:
   otlp:
