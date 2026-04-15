@@ -33,6 +33,7 @@ TRUELAYER_CLIENT_SECRET
 TRUELAYER_KEY_ID
 TRUELAYER_MERCHANT_ACCOUNT_ID
 TRUELAYER_PRIVATE_KEY_PATH   # path to PEM private key
+EXPO_ACCESS_TOKEN            # Expo Push access token (payments.push module)
 ```
 
 Contract tests do **not** require these — TrueLayer beans are mocked under the `contract-test` Spring profile.
@@ -74,8 +75,8 @@ Full contribution conventions — commit style, architecture principles, Spring 
 Semantic commits: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`. Summaries: short, imperative, specific. One semantic commit per logical change; squash fixup commits before merging.
 
 ## Active Technologies
-- Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux (reactive), Spring Modulith, Spring Data JPA, Hibernate (001-merchant-onboarding)
-- PostgreSQL 16 — `ddl-auto: update`, no migration framework. All required tables already exist. (001-merchant-onboarding)
+- Kotlin 2.3.20 on Java 25 (unchanged) + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith, Hibernate/JPA on PostgreSQL 16, TrueLayer Java SDK (unchanged). New: Reactor `WebClient` against the Expo Push HTTPS API (`https://exp.host/--/api/v2/push/send`) — no additional SDK; a thin in-repo client keeps the dependency surface minimal. (006-push-notifications)
+- PostgreSQL via JPA (`ddl-auto: update`, no migration framework — matches current project convention). Two new tables: `payment_status` (authoritative current state per payment request) and `device_registration` (Expo push tokens per payment request / payer). Optional `push_delivery_attempt` for observability; kept in-memory-only if retention cost is a concern. (006-push-notifications)
 
 ## Recent Changes
-- 001-merchant-onboarding: Added Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux (reactive), Spring Modulith, Spring Data JPA, Hibernate
+- 006-push-notifications: Added Kotlin 2.3.20 on Java 25 (unchanged) + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith, Hibernate/JPA on PostgreSQL 16, TrueLayer Java SDK (unchanged). New: Reactor `WebClient` against the Expo Push HTTPS API (`https://exp.host/--/api/v2/push/send`) — no additional SDK; a thin in-repo client keeps the dependency surface minimal.

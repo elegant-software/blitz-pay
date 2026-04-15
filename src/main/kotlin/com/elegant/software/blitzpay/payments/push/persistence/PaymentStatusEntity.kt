@@ -13,7 +13,7 @@ import java.time.Instant
 import java.util.UUID
 
 @Entity
-@Table(name = "push_payment_status")
+@Table(name = "payment_status")
 class PaymentStatusEntity(
     @Id
     @Column(name = "payment_request_id", nullable = false)
