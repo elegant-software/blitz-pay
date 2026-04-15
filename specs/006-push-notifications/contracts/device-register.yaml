@@ -1,0 +1,90 @@
+openapi: 3.0.3
+info:
+  title: BlitzPay — Device Registration
+  version: "1.0.0"
+  description: |
+    Register, refresh, or retire an Expo push token for a payment request so
+    the backend can deliver `payment_executed` / `payment_settled` notifications
+    to the payer's device. Part of feature `006-push-notifications`.
+
+paths:
+  /v1/devices:
+    post:
+      operationId: registerDevice
+      summary: Register or refresh a push token against a payment request.
+      description: |
+        Idempotent on `expoPushToken`: repeated calls refresh `lastSeenAt` and
+        update the associated payment request binding. Invalid tokens reported
+        by Expo via delivery receipts are retired automatically; clients do
+        not need to unregister explicitly on uninstall.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DeviceRegistrationRequest" }
+      responses:
+        "201":
+          description: Registration accepted (new token).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeviceRegistrationResponse" }
+        "200":
+          description: Registration refreshed (existing token).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeviceRegistrationResponse" }
+        "400":
+          description: Malformed payload (missing required field, invalid token shape).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "404":
+          description: |
+            Payment request not found or not visible to the caller. Existence
+            is not leaked.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+  /v1/devices/{expoPushToken}:
+    delete:
+      operationId: unregisterDevice
+      summary: Explicit unregister (user logout / privacy).
+      parameters:
+        - in: path
+          name: expoPushToken
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Unregistered. Also returned if the token was unknown (idempotent). }
+
+components:
+  schemas:
+    DevicePlatform:
+      type: string
+      enum: [IOS, ANDROID]
+    DeviceRegistrationRequest:
+      type: object
+      required: [paymentRequestId, expoPushToken]
+      properties:
+        paymentRequestId: { type: string, format: uuid }
+        expoPushToken:
+          type: string
+          pattern: '^ExponentPushToken\[[^\]]+\]$'
+        platform:
+          $ref: "#/components/schemas/DevicePlatform"
+    DeviceRegistrationResponse:
+      type: object
+      required: [id, paymentRequestId, expoPushToken]
+      properties:
+        id: { type: string, format: uuid }
+        paymentRequestId: { type: string, format: uuid }
+        expoPushToken: { type: string }
+        platform: { $ref: "#/components/schemas/DevicePlatform" }
+    Problem:
+      type: object
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }

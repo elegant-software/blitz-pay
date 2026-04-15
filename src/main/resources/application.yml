@@ -55,6 +55,8 @@ springdoc:
         url: /api-docs/General
       - name: MobileObservability
         url: /api-docs/MobileObservability
+      - name: Push
+        url: /api-docs/Push
       - name: Actuator
         url: /api-docs/Actuator
 api:
@@ -89,3 +91,12 @@ truelayer:
   webhooks:
     environment: sandbox
     maxSkew: PT60M
+
+blitzpay:
+  expo:
+    access-token: ${EXPO_ACCESS_TOKEN:}
+    base-url: ${EXPO_PUSH_URL:https://exp.host/--/api/v2/push/send}
+    receipts-url: ${EXPO_RECEIPTS_URL:https://exp.host/--/api/v2/push/getReceipts}
+    request-timeout-ms: ${EXPO_TIMEOUT_MS:10000}
+    max-batch-size: ${EXPO_MAX_BATCH:100}
+    receipt-delay-minutes: ${EXPO_RECEIPT_DELAY_MIN:15}

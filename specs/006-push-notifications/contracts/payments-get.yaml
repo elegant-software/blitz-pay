@@ -1,0 +1,83 @@
+openapi: 3.0.3
+info:
+  title: BlitzPay — Payment Status Query
+  version: "1.0.0"
+  description: |
+    Fallback endpoint for clients to fetch the authoritative current status of a
+    payment request. Used when push notifications are delayed, dropped, or
+    suppressed by the OS. Part of feature `006-push-notifications`.
+
+servers:
+  - url: https://{host}
+    variables:
+      host: { default: api.blitzpay.local }
+
+paths:
+  /v1/payments/{paymentRequestId}:
+    get:
+      operationId: getPaymentStatus
+      summary: Fetch the authoritative current status of a payment request.
+      parameters:
+        - in: path
+          name: paymentRequestId
+          required: true
+          schema: { type: string, format: uuid }
+          description: The payment request identifier issued when the QR was created.
+      responses:
+        "200":
+          description: Current payment status.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaymentStatusResponse" }
+              examples:
+                settled:
+                  value:
+                    paymentRequestId: 7f1a8e22-2d30-4e4e-9b83-0f1a5e8c7e01
+                    status: SETTLED
+                    terminal: true
+                    lastEventAt: "2026-04-15T09:12:31Z"
+                pending:
+                  value:
+                    paymentRequestId: 7f1a8e22-2d30-4e4e-9b83-0f1a5e8c7e01
+                    status: PENDING
+                    terminal: false
+                    lastEventAt: null
+        "404":
+          description: |
+            Not found. Returned both when the payment request does not exist AND
+            when the caller is not entitled to see it. Existence is not leaked.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "400":
+          description: Malformed identifier.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Problem" }
+
+components:
+  schemas:
+    PaymentStatusCode:
+      type: string
+      enum: [PENDING, EXECUTED, SETTLED, FAILED, EXPIRED]
+    PaymentStatusResponse:
+      type: object
+      required: [paymentRequestId, status, terminal]
+      properties:
+        paymentRequestId: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/PaymentStatusCode" }
+        terminal:
+          type: boolean
+          description: True iff status is SETTLED, FAILED, or EXPIRED.
+        lastEventAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Time of the gateway event that produced the current status.
+    Problem:
+      type: object
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }

@@ -1,0 +1,9 @@
+{
+  "data": {
+    "YYYYYYYY-YYYY-YYYY-YYYY-YYYYYYYYYYYY": {
+      "status": "error",
+      "message": "The Android device is no longer registered with FCM.",
+      "details": { "error": "DeviceNotRegistered" }
+    }
+  }
+}

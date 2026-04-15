@@ -1,0 +1,9 @@
+{
+  "data": [
+    {
+      "status": "error",
+      "message": "\"ExponentPushToken[invalid]\" is not a registered push notification recipient",
+      "details": { "error": "DeviceNotRegistered" }
+    }
+  ]
+}
