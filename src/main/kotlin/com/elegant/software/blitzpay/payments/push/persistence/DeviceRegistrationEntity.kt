@@ -15,11 +15,11 @@ enum class DevicePlatform { IOS, ANDROID }
 
 @Entity
 @Table(
-    name = "push_device_registration",
+    name = "device_registration",
     indexes = [
-        Index(name = "ux_push_device_registration_token", columnList = "expo_push_token", unique = true),
-        Index(name = "ix_push_device_registration_payment_request", columnList = "payment_request_id"),
-        Index(name = "ix_push_device_registration_payer_ref", columnList = "payer_ref"),
+        Index(name = "ux_device_registration_token", columnList = "expo_push_token", unique = true),
+        Index(name = "ix_device_registration_payment_request", columnList = "payment_request_id"),
+        Index(name = "ix_device_registration_payer_ref", columnList = "payer_ref"),
     ],
 )
 class DeviceRegistrationEntity(

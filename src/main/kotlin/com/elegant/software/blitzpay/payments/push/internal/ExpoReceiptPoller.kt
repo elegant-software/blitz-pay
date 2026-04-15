@@ -3,17 +3,13 @@ package com.elegant.software.blitzpay.payments.push.internal
 import com.elegant.software.blitzpay.payments.push.config.ExpoPushProperties
 import com.elegant.software.blitzpay.payments.push.persistence.DeliveryOutcome
 import com.elegant.software.blitzpay.payments.push.persistence.PushDeliveryAttemptRepository
-import org.slf4j.LoggerFactory
-import org.springframework.boot.context.event.ApplicationReadyEvent
-import org.springframework.context.event.EventListener
+import mu.KotlinLogging
 import org.springframework.http.MediaType
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
 import java.time.Duration
 import java.time.Instant
-import java.util.concurrent.atomic.AtomicBoolean
-
 
 @Component
 open class ExpoReceiptPoller(
@@ -22,16 +18,10 @@ open class ExpoReceiptPoller(
     private val attemptRepository: PushDeliveryAttemptRepository,
     private val deviceRegistrationService: DeviceRegistrationService,
 ) {
-    private val log = LoggerFactory.getLogger(ExpoReceiptPoller::class.java)
-    private val ready = AtomicBoolean(false)
+    private val log = KotlinLogging.logger {}
 
-    @EventListener(ApplicationReadyEvent::class)
-    fun markReady() {
-        ready.set(true)
-    }
     @Scheduled(fixedDelayString = "\${blitzpay.expo.receipt-poll-interval-ms:60000}")
     open fun poll() {
-        if (!ready.get()) return
         val cutoff = Instant.now().minus(Duration.ofMinutes(properties.receiptDelayMinutes))
         val pending = attemptRepository.findAll()
             .filter { it.ticketId != null && it.receiptOutcome == null && it.createdAt.isBefore(cutoff) }
@@ -49,7 +39,7 @@ open class ExpoReceiptPoller(
                 .block(Duration.ofMillis(properties.requestTimeoutMs))
                 ?.data ?: emptyMap()
         } catch (ex: Exception) {
-            log.warn("expo receipts fetch failed size={}", ticketIds.size, ex)
+            log.warn(ex) { "expo receipts fetch failed size=${ticketIds.size}" }
             return
         }
 

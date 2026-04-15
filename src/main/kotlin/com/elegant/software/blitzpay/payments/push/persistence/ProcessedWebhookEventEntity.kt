@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository
 import java.time.Instant
 
 @Entity
-@Table(name = "push_processed_webhook_event")
+@Table(name = "processed_webhook_event")
 class ProcessedWebhookEventEntity(
     @Id
     @Column(name = "event_id", nullable = false, length = 128)

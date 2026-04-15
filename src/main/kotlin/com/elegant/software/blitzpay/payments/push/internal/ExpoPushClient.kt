@@ -1,11 +1,10 @@
 package com.elegant.software.blitzpay.payments.push.internal
 
 import com.elegant.software.blitzpay.payments.push.config.ExpoPushProperties
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
-import org.springframework.web.reactive.function.client.WebClientResponseException
 import reactor.util.retry.Retry
 import java.time.Duration
 
@@ -30,7 +29,7 @@ open class ExpoPushClient(
     private val properties: ExpoPushProperties,
     private val expoWebClient: WebClient,
 ) {
-    private val log = LoggerFactory.getLogger(ExpoPushClient::class.java)
+    private val log = KotlinLogging.logger {}
 
     open fun send(messages: List<ExpoMessage>): List<ExpoTicket> {
         if (messages.isEmpty()) return emptyList()
@@ -62,14 +61,8 @@ open class ExpoPushClient(
                 ExpoTicket(message.to, item?.id, ExpoTicket.Status.ERROR, item?.details?.error)
             }
         }
-    } catch (ex: WebClientResponseException) {
-        log.error(
-            "expo push batch HTTP_ERROR size={} status={} body={}",
-            batch.size, ex.statusCode.value(), ex.responseBodyAsString.take(1024), ex
-        )
-        batch.map { ExpoTicket(it.to, null, ExpoTicket.Status.ERROR, "http_${ex.statusCode.value()}") }
     } catch (ex: Exception) {
-        log.error("expo push batch TRANSPORT_ERROR size={} errorClass={}", batch.size, ex.javaClass.simpleName, ex)
+        log.warn(ex) { "expo push batch failed size=${batch.size}" }
         batch.map { ExpoTicket(it.to, null, ExpoTicket.Status.ERROR, "transport_error") }
     }
 
