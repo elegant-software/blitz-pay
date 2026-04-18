@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.elegant.software.blitzpay.payments
+package com.elegant.software.blitzpay
 
 import com.elegant.software.blitzpay.payments.QuickpayApplication
-import mu.KotlinLogging
 import org.junit.jupiter.api.Test
+import org.slf4j.LoggerFactory
 import org.springframework.modulith.core.ApplicationModules
 import org.springframework.modulith.docs.Documenter
 import java.io.File
@@ -36,7 +36,7 @@ import java.util.*
 
 internal class ModularityTests {
     companion object {
-        private val LOG = KotlinLogging.logger {}
+        private val LOG = LoggerFactory.getLogger(ModularityTests::class.java)
     }
 
     var modules: ApplicationModules = ApplicationModules.of(QuickpayApplication::class.java)

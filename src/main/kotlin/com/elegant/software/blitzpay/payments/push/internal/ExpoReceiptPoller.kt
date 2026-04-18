@@ -3,7 +3,7 @@ package com.elegant.software.blitzpay.payments.push.internal
 import com.elegant.software.blitzpay.payments.push.config.ExpoPushProperties
 import com.elegant.software.blitzpay.payments.push.persistence.DeliveryOutcome
 import com.elegant.software.blitzpay.payments.push.persistence.PushDeliveryAttemptRepository
-import mu.KotlinLogging
+import org.slf4j.LoggerFactory
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
 import org.springframework.http.MediaType
@@ -22,7 +22,7 @@ open class ExpoReceiptPoller(
     private val attemptRepository: PushDeliveryAttemptRepository,
     private val deviceRegistrationService: DeviceRegistrationService,
 ) {
-    private val log = KotlinLogging.logger {}
+    private val log = LoggerFactory.getLogger(ExpoReceiptPoller::class.java)
     private val ready = AtomicBoolean(false)
 
     @EventListener(ApplicationReadyEvent::class)
@@ -49,7 +49,7 @@ open class ExpoReceiptPoller(
                 .block(Duration.ofMillis(properties.requestTimeoutMs))
                 ?.data ?: emptyMap()
         } catch (ex: Exception) {
-            log.warn(ex) { "expo receipts fetch failed size=${ticketIds.size}" }
+            log.warn("expo receipts fetch failed size={}", ticketIds.size, ex)
             return
         }
 

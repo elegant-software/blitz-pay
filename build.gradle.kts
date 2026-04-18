@@ -78,8 +78,8 @@ dependencies {
     implementation(libs.truelayer.java)
     implementation(libs.truelayer.signing) // TrueLayer official signing lib
     implementation(libs.nimbus.jose.jwt) // webhook signature verification
-    implementation(libs.kotlin.logging.jvm) // Idiomatic kotlin logging (mu.KotlinLogging)
     implementation(libs.logstash.logback.encoder) // Structured JSON logging (production)
+
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
 
@@ -99,7 +99,6 @@ dependencies {
     // TrueLayer Java SDK
     implementation(libs.truelayer.java)
     implementation(libs.truelayer.signing) // official signing lib
-    implementation(libs.kotlin.logging.jvm) //Idiomatic kotlin logging
     implementation(libs.nimbus.jose.jwt) // Required for signature verification
     // Mustang Project – EU-standard ZUGFeRD / Factur-X invoice generation
     implementation(libs.mustang.library)
