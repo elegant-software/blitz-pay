@@ -1,0 +1,542 @@
+openapi: 3.1.0
+info:
+  title: OpenAPI definition
+  version: v0
+servers:
+- url: http://localhost:56934
+  description: Generated server url
+tags:
+- name: Braintree
+  description: PayPal / digital wallet payments via Braintree
+- name: Stripe
+  description: Card payment session creation via Stripe
+- name: Invoices
+  description: EU-standard ZUGFeRD / Factur-X invoice generation
+- name: Payment Status
+  description: Fallback query for authoritative payment status
+- name: Device Registration
+  description: Expo push token registration for payment status notifications
+- name: Actuator
+  description: Monitor and interact
+  externalDocs:
+    description: Spring Boot Actuator Web API Documentation
+    url: https://docs.spring.io/spring-boot/docs/current/actuator-api/html/
+- name: QR Payments
+  description: Operations related to QR payments
+paths:
+  /{version}/webhooks/truelayer:
+    post:
+      tags:
+      - tl-webhook-controller
+      operationId: receive
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+  /{version}/payments/stripe/create-intent:
+    post:
+      tags:
+      - Stripe
+      summary: Create a Stripe PaymentIntent and return credentials to the mobile
+        SDK.
+      operationId: createIntent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIntentRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+  /{version}/payments/request:
+    post:
+      tags:
+      - QR Payments
+      operationId: createPaymentRequest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentRequested"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+  /{version}/payments/braintree/client-token:
+    post:
+      tags:
+      - Braintree
+      summary: Generate a Braintree client token for the mobile SDK.
+      operationId: clientToken
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+  /{version}/payments/braintree/checkout:
+    post:
+      tags:
+      - Braintree
+      summary: Submit a Braintree payment nonce for settlement.
+      operationId: checkout
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckoutRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+  /{version}/invoices:
+    post:
+      tags:
+      - Invoices
+      summary: Generate ZUGFeRD PDF invoice
+      description: "Returns a human-readable PDF/A-3 with embedded ZUGFeRD XML. Send\
+        \ Accept: application/pdf."
+      operationId: generateXml
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceData"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/xml:
+              schema:
+                type: string
+                format: byte
+            application/pdf:
+              schema:
+                type: string
+                format: byte
+  /{version}/devices:
+    post:
+      tags:
+      - Device Registration
+      summary: Register or refresh a push token against a payment request.
+      operationId: register
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceRegistrationRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DeviceRegistrationResponse"
+  /{version}/qr-payments/{paymentRequestId}/events:
+    get:
+      tags:
+      - qr-payment-sse-controller
+      operationId: stream
+      parameters:
+      - name: paymentRequestId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            text/event-stream:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServerSentEventPaymentResult"
+  /{version}/payments/{paymentRequestId}:
+    get:
+      tags:
+      - Payment Status
+      summary: Fetch the authoritative current status of a payment request.
+      operationId: getPaymentStatus
+      parameters:
+      - name: paymentRequestId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PaymentStatusResponse"
+  /actuator/metrics/{requiredMetricName}:
+    get:
+      tags:
+      - Actuator
+      summary: Actuator web endpoint 'metrics-requiredMetricName'
+      operationId: metric
+      parameters:
+      - name: requiredMetricName
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: tag
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/vnd.spring-boot.actuator.v3+json:
+              schema:
+                type: object
+            application/vnd.spring-boot.actuator.v2+json:
+              schema:
+                type: object
+            application/json:
+              schema:
+                type: object
+        "404":
+          description: Not Found
+  /actuator/metrics:
+    get:
+      tags:
+      - Actuator
+      summary: Actuator web endpoint 'metrics'
+      operationId: listNames
+      responses:
+        "200":
+          description: OK
+          content:
+            application/vnd.spring-boot.actuator.v3+json:
+              schema:
+                type: object
+            application/vnd.spring-boot.actuator.v2+json:
+              schema:
+                type: object
+            application/json:
+              schema:
+                type: object
+  /actuator/health/{path}:
+    get:
+      tags:
+      - Actuator
+      summary: Actuator web endpoint 'health-path'
+      operationId: health
+      parameters:
+      - name: path
+        in: path
+        required: true
+        schema:
+          type: array
+          items:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/vnd.spring-boot.actuator.v3+json:
+              schema:
+                type: object
+            application/vnd.spring-boot.actuator.v2+json:
+              schema:
+                type: object
+            application/json:
+              schema:
+                type: object
+        "404":
+          description: Not Found
+  /actuator/health:
+    get:
+      tags:
+      - Actuator
+      summary: Actuator web endpoint 'health'
+      operationId: health_1
+      responses:
+        "200":
+          description: OK
+          content:
+            application/vnd.spring-boot.actuator.v3+json:
+              schema:
+                type: object
+            application/vnd.spring-boot.actuator.v2+json:
+              schema:
+                type: object
+            application/json:
+              schema:
+                type: object
+  /actuator:
+    get:
+      tags:
+      - Actuator
+      summary: Actuator root web endpoint
+      operationId: links
+      responses:
+        "200":
+          description: OK
+          content:
+            application/vnd.spring-boot.actuator.v3+json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  additionalProperties:
+                    $ref: "#/components/schemas/Link"
+            application/vnd.spring-boot.actuator.v2+json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  additionalProperties:
+                    $ref: "#/components/schemas/Link"
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  additionalProperties:
+                    $ref: "#/components/schemas/Link"
+  /{version}/devices/{expoPushToken}:
+    delete:
+      tags:
+      - Device Registration
+      summary: Explicit unregister (user logout / privacy).
+      operationId: unregister
+      parameters:
+      - name: expoPushToken
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+components:
+  schemas:
+    CreateIntentRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+          format: double
+        currency:
+          type: string
+    PaymentRequested:
+      type: object
+      properties:
+        paymentRequestId:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+        amountMinorUnits:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        userDisplayName:
+          type: string
+        redirectReturnUri:
+          type: string
+      required:
+      - amountMinorUnits
+      - currency
+      - orderId
+      - redirectReturnUri
+      - userDisplayName
+    CheckoutRequest:
+      type: object
+      properties:
+        nonce:
+          type: string
+        amount:
+          type: number
+          format: double
+        currency:
+          type: string
+        invoiceId:
+          type: string
+    BankAccountData:
+      type: object
+      properties:
+        bankName:
+          type: string
+        iban:
+          type: string
+        bic:
+          type: string
+      required:
+      - bankName
+      - bic
+      - iban
+    InvoiceData:
+      type: object
+      properties:
+        invoiceNumber:
+          type: string
+        issueDate:
+          type: string
+          format: date
+        dueDate:
+          type: string
+          format: date
+        seller:
+          $ref: "#/components/schemas/TradePartyData"
+        buyer:
+          $ref: "#/components/schemas/TradePartyData"
+        lineItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceLineItem"
+        currency:
+          type: string
+        bankAccount:
+          $ref: "#/components/schemas/BankAccountData"
+        footerText:
+          type: string
+        logoBase64:
+          type: string
+      required:
+      - buyer
+      - currency
+      - dueDate
+      - invoiceNumber
+      - issueDate
+      - lineItems
+      - seller
+    InvoiceLineItem:
+      type: object
+      properties:
+        description:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        vatPercent:
+          type: number
+      required:
+      - description
+      - quantity
+      - unitPrice
+      - vatPercent
+    TradePartyData:
+      type: object
+      properties:
+        name:
+          type: string
+        street:
+          type: string
+        zip:
+          type: string
+        city:
+          type: string
+        country:
+          type: string
+        vatId:
+          type: string
+      required:
+      - city
+      - country
+      - name
+      - street
+      - zip
+    DeviceRegistrationRequest:
+      type: object
+      properties:
+        paymentRequestId:
+          type: string
+          format: uuid
+        expoPushToken:
+          type: string
+          pattern: "^ExponentPushToken\\[[^\\]]+\\]$"
+        platform:
+          type: string
+          enum:
+          - IOS
+          - ANDROID
+      required:
+      - expoPushToken
+      - paymentRequestId
+    DeviceRegistrationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        paymentRequestId:
+          type: string
+          format: uuid
+        expoPushToken:
+          type: string
+        platform:
+          type: string
+          enum:
+          - IOS
+          - ANDROID
+      required:
+      - expoPushToken
+      - id
+    ServerSentEventPaymentResult: {}
+    PaymentStatusResponse:
+      type: object
+      properties:
+        paymentRequestId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - PENDING
+          - EXECUTED
+          - SETTLED
+          - FAILED
+          - EXPIRED
+        terminal:
+          type: boolean
+        lastEventAt:
+          type: string
+          format: date-time
+      required:
+      - paymentRequestId
+      - status
+      - terminal
+    Link:
+      type: object
+      properties:
+        href:
+          type: string
+        templated:
+          type: boolean
