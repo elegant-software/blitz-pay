@@ -32,11 +32,17 @@ TRUELAYER_CLIENT_ID
 TRUELAYER_CLIENT_SECRET
 TRUELAYER_KEY_ID
 TRUELAYER_MERCHANT_ACCOUNT_ID
-TRUELAYER_PRIVATE_KEY_PATH   # path to PEM private key
-EXPO_ACCESS_TOKEN            # Expo Push access token (payments.push module)
+TRUELAYER_PRIVATE_KEY_PATH          # path to PEM private key
+EXPO_ACCESS_TOKEN                   # Expo Push access token (payments.push module)
+STRIPE_SECRET_KEY                   # Stripe secret key (payments.stripe module)
+EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY  # Stripe publishable key (returned to mobile clients)
+BRAINTREE_MERCHANT_ID               # Braintree merchant ID (payments.braintree module)
+BRAINTREE_PUBLIC_KEY                # Braintree public key
+BRAINTREE_PRIVATE_KEY               # Braintree private key
+BRAINTREE_ENVIRONMENT               # sandbox or production (default: sandbox)
 ```
 
-Contract tests do **not** require these — TrueLayer beans are mocked under the `contract-test` Spring profile.
+Contract tests do **not** require these — TrueLayer, Stripe, and Braintree beans are mocked under the `contract-test` Spring profile.
 
 ## Architecture
 
@@ -46,6 +52,8 @@ The app uses **Spring Modulith**: each direct sub-package of `com.elegant.softwa
 
 - **`payments.truelayer`** — TrueLayer gateway integration. Inbound: `WebhookController` receives payment status callbacks and verifies TrueLayer signatures. Outbound: `PaymentService` initiates payments. Public surface: `PaymentGateway` interface.
 - **`payments.qrpay`** — QR-code payment requests. `PaymentRequestController` creates payment requests; `QrPaymentSseController` streams status updates via SSE. Listens for `PaymentInitRequest` events and publishes results via `PaymentUpdateBus`.
+- **`payments.stripe`** — Stripe card payment gateway. `StripePaymentController` exposes `POST /v1/payments/stripe/create-intent`; returns `client_secret` and `publishableKey` for mobile Stripe SDK. Stateless — no DB tables.
+- **`payments.braintree`** — Braintree PayPal/digital wallet gateway. `BraintreePaymentController` exposes `POST /v1/payments/braintree/client-token` and `POST /v1/payments/braintree/checkout`. Degrades to HTTP 503 when `BRAINTREE_MERCHANT_ID` is absent. Stateless — no DB tables.
 - **`invoice`** — EU-standard ZUGFeRD/Factur-X invoice generation. `InvoiceController` routes by `Accept` header to XML or PDF generation. Public surface: `InvoiceGateway` / `InvoiceService`.
 
 ### Cross-module communication
@@ -77,6 +85,8 @@ Semantic commits: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`. Summaries: sh
 ## Active Technologies
 - Kotlin 2.3.20 on Java 25 (unchanged) + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith, Hibernate/JPA on PostgreSQL 16, TrueLayer Java SDK (unchanged). New: Reactor `WebClient` against the Expo Push HTTPS API (`https://exp.host/--/api/v2/push/send`) — no additional SDK; a thin in-repo client keeps the dependency surface minimal. (006-push-notifications)
 - PostgreSQL via JPA. Schema owned by Liquibase per `CONSTITUTION.md` (Persistence and Schema); Hibernate `ddl-auto` must be `validate` or `none`. Table names use the leaf-module prefix (e.g. `push_device_registration`, `push_payment_status`, `push_delivery_attempt`, `push_processed_webhook_event`). (006-push-notifications)
+- Kotlin 2.3.20 on JDK 25 + Spring Boot 4.0.4, Spring WebFlux (reactive), Spring Modulith, `stripe-java` SDK, `braintree-java` SDK (006-push-notifications)
+- No new tables — both modules are stateless proxies; no persistence required for MVP (006-push-notifications)
 
 ## Recent Changes
 - 006-push-notifications: Added Kotlin 2.3.20 on Java 25 (unchanged) + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith, Hibernate/JPA on PostgreSQL 16, TrueLayer Java SDK (unchanged). New: Reactor `WebClient` against the Expo Push HTTPS API (`https://exp.host/--/api/v2/push/send`) — no additional SDK; a thin in-repo client keeps the dependency surface minimal.

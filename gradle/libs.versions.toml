@@ -40,10 +40,13 @@ truelayer-signing    = "0.2.6"
 nimbus-jose-jwt      = "10.8"
 
 # Shared platform - logging, documentation, testing
-kotlin-logging       = "3.0.5"
 logstash-logback     = "8.0"
 springdoc            = "3.0.2"
 mockito-kotlin       = "6.3.0"
+
+# Modulith: `payments.stripe` + `payments.braintree` — mobile payment gateways
+stripe-java          = "28.4.0"
+braintree-java       = "3.43.0"
 
 # Optional runtime integrations
 dr-jskill            = "2026_02_19-a951a5e"
@@ -95,11 +98,16 @@ spring-boot-starter-data-jpa-test = { module = "org.springframework.boot:spring-
 spring-boot-starter-webflux-test = { module = "org.springframework.boot:spring-boot-starter-webflux-test" }
 spring-boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
 
-# Liquibase (version managed by Spring Boot BOM)
-liquibase-core = { module = "org.liquibase:liquibase-core" }
 
 # Third-party libraries (explicit versions required)
 springdoc-openapi-starter-webflux-ui = { module = "org.springdoc:springdoc-openapi-starter-webflux-ui", version.ref = "springdoc" }
+
+# -----------------------------------------------------------------------------
+# Modulith: `payments.stripe` + `payments.braintree`
+# Purpose: mobile payment gateway integrations (Stripe card + Braintree PayPal)
+# -----------------------------------------------------------------------------
+stripe-java          = { module = "com.stripe:stripe-java", version.ref = "stripe-java" }
+braintree-java       = { module = "com.braintreepayments.gateway:braintree-java", version.ref = "braintree-java" }
 
 # -----------------------------------------------------------------------------
 # Tests (shared across all modules)

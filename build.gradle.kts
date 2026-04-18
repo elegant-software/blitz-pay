@@ -65,6 +65,13 @@ dependencies {
     implementation(libs.flying.saucer.pdf)
 
     // ----------------------------
+    // Modulith: `payments.stripe` + `payments.braintree`
+    // Purpose: Stripe card payment + Braintree PayPal/digital wallet
+    // ----------------------------
+    implementation(libs.stripe.java)
+    implementation(libs.braintree.java)
+
+    // ----------------------------
     // Modulith: `payments` (TrueLayer + QRPay)
     // Purpose: payment webhooks/signatures + SSE payment updates
     // ----------------------------

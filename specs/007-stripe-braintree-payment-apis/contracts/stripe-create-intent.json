@@ -1,0 +1,67 @@
+{
+  "contract": "Stripe Create Payment Intent",
+  "version": "v1",
+  "endpoint": {
+    "method": "POST",
+    "path": "/v1/payments/stripe/create-intent",
+    "description": "Creates a Stripe PaymentIntent and returns the client secret and publishable key needed by the mobile Stripe SDK."
+  },
+  "request": {
+    "contentType": "application/json",
+    "body": {
+      "amount": {
+        "type": "number",
+        "required": true,
+        "description": "Payment amount as a decimal (e.g. 12.50 for €12.50). Must be positive and finite.",
+        "example": 12.50
+      },
+      "currency": {
+        "type": "string",
+        "required": false,
+        "description": "ISO 4217 currency code, lowercase. Defaults to 'eur' if absent.",
+        "example": "eur"
+      }
+    }
+  },
+  "responses": {
+    "200": {
+      "description": "Payment intent created successfully",
+      "contentType": "application/json",
+      "body": {
+        "paymentIntent": {
+          "type": "string",
+          "description": "Stripe PaymentIntent client_secret. Used by the mobile Stripe SDK to confirm the payment.",
+          "example": "pi_3Qxyz_secret_abc123"
+        },
+        "publishableKey": {
+          "type": "string",
+          "description": "Stripe publishable key. Safe to expose to clients.",
+          "example": "pk_live_51..."
+        }
+      }
+    },
+    "400": {
+      "description": "Invalid request — amount missing, zero, negative, or not a number",
+      "contentType": "application/json",
+      "body": {
+        "error": {
+          "type": "string",
+          "example": "amount must be a positive number"
+        }
+      }
+    },
+    "500": {
+      "description": "Stripe API error or server misconfiguration",
+      "contentType": "application/json",
+      "body": {
+        "error": {
+          "type": "string",
+          "example": "No such currency: 'xyz'"
+        }
+      }
+    }
+  },
+  "security": {
+    "note": "Secret key is never returned in any response field. Handled server-side only."
+  }
+}
