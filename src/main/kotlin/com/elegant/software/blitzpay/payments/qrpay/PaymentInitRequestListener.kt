@@ -4,7 +4,7 @@ package com.elegant.software.blitzpay.payments.qrpay
 
 import TlWebhookEnvelope
 import com.elegant.software.blitzpay.payments.support.PaymentUpdateBus
-import mu.KotlinLogging
+import org.slf4j.LoggerFactory
 import org.springframework.context.event.EventListener
 import org.springframework.modulith.ApplicationModule
 import org.springframework.stereotype.Component
@@ -15,7 +15,7 @@ class PaymentInitRequestListener(
     private val paymentUpdateBus: PaymentUpdateBus
 ) {
     companion object {
-        private val LOG = KotlinLogging.logger {}
+        private val LOG = LoggerFactory.getLogger(PaymentInitRequestListener::class.java)
     }
 
     @EventListener

@@ -79,7 +79,6 @@ flying-saucer-pdf    = { module = "org.xhtmlrenderer:flying-saucer-pdf", version
 truelayer-java       = { module = "com.truelayer:truelayer-java", version.ref = "truelayer-java" }
 truelayer-signing    = { module = "com.truelayer:truelayer-signing", version.ref = "truelayer-signing" }
 nimbus-jose-jwt      = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimbus-jose-jwt" }
-kotlin-logging-jvm   = { module = "io.github.microutils:kotlin-logging-jvm", version.ref = "kotlin-logging" }
 logstash-logback-encoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstash-logback" }
 
 # -----------------------------------------------------------------------------

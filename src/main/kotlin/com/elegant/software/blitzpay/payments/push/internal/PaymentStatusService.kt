@@ -4,7 +4,7 @@ import com.elegant.software.blitzpay.payments.push.api.PaymentStatusCode
 import com.elegant.software.blitzpay.payments.push.api.PaymentStatusResponse
 import com.elegant.software.blitzpay.payments.push.persistence.PaymentStatusEntity
 import com.elegant.software.blitzpay.payments.push.persistence.PaymentStatusRepository
-import mu.KotlinLogging
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -24,7 +24,7 @@ data class StatusTransition(
 class PaymentStatusService(
     private val repository: PaymentStatusRepository,
 ) {
-    private val log = KotlinLogging.logger {}
+    private val log = LoggerFactory.getLogger(PaymentStatusService::class.java)
 
     fun getByRequestId(paymentRequestId: UUID): Optional<PaymentStatusResponse> =
         repository.findById(paymentRequestId).map { entity ->
@@ -54,13 +54,13 @@ class PaymentStatusService(
                     updatedAt = Instant.now(),
                 )
             )
-            log.info { "payment status created request=$paymentRequestId status=${saved.currentStatus}" }
+            log.info("payment status created request={} status={}", paymentRequestId, saved.currentStatus)
             return StatusTransition(paymentRequestId, newStatus, null, occurredAt, sourceEventId, changed = true)
         }
 
         val previous = existing.currentStatus
         if (newStatus.rank() < previous.rank() || (newStatus == previous)) {
-            log.info { "payment status unchanged request=$paymentRequestId current=$previous incoming=$newStatus" }
+            log.info("payment status unchanged request={} current={} incoming={}", paymentRequestId, previous, newStatus)
             return StatusTransition(paymentRequestId, previous, previous, occurredAt, sourceEventId, changed = false)
         }
 
@@ -69,7 +69,7 @@ class PaymentStatusService(
         existing.lastEventAt = occurredAt
         existing.updatedAt = Instant.now()
         repository.save(existing)
-        log.info { "payment status transition request=$paymentRequestId $previous->$newStatus" }
+        log.info("payment status transition request={} {}->{}", paymentRequestId, previous, newStatus)
         return StatusTransition(paymentRequestId, newStatus, previous, occurredAt, sourceEventId, changed = true)
     }
 }

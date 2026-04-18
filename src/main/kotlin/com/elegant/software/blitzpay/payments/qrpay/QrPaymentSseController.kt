@@ -2,7 +2,7 @@ package com.elegant.software.blitzpay.payments.qrpay
 
 import com.elegant.software.blitzpay.payments.support.PaymentUpdateBus
 import com.elegant.software.blitzpay.payments.truelayer.api.PaymentResult
-import mu.KotlinLogging
+import org.slf4j.LoggerFactory
 import org.springframework.http.MediaType
 import org.springframework.http.codec.ServerSentEvent
 import org.springframework.web.bind.annotation.GetMapping
@@ -16,14 +16,14 @@ import java.util.UUID
 @RestController
 @RequestMapping("/{version:v\\d+(?:\\.\\d+)*}/qr-payments", version = "1")
 class QrPaymentSseController(private val bus: PaymentUpdateBus) {
-    private val logger = KotlinLogging.logger {}
+    private val logger = LoggerFactory.getLogger(QrPaymentSseController::class.java)
 
     @GetMapping(
         value = ["/{paymentRequestId}/events"],
         produces = [MediaType.TEXT_EVENT_STREAM_VALUE]
     )
     fun stream(@PathVariable paymentRequestId: UUID): Flux<ServerSentEvent<PaymentResult>> {
-        logger.info { "SSE client connected for paymentRequestId: $paymentRequestId" }
+        logger.info("SSE client connected for paymentRequestId: {}", paymentRequestId)
         return bus.sink(paymentRequestId)
             .asFlux()
             .timeout(Duration.ofMinutes(5), Flux.empty())     // auto-close idle streams gracefully
@@ -34,7 +34,7 @@ class QrPaymentSseController(private val bus: PaymentUpdateBus) {
                     .build()
             }
             .doFinally { signal -> 
-                logger.debug { "SSE stream ended with signal $signal for paymentRequestId: $paymentRequestId" }
+                logger.debug("SSE stream ended with signal {} for paymentRequestId: {}", signal, paymentRequestId)
                 bus.complete(paymentRequestId) 
             }
     }

@@ -7,7 +7,7 @@ import com.elegant.software.blitzpay.payments.push.persistence.DeliveryOutcome
 import com.elegant.software.blitzpay.payments.push.persistence.DeviceRegistrationRepository
 import com.elegant.software.blitzpay.payments.push.persistence.PushDeliveryAttemptEntity
 import com.elegant.software.blitzpay.payments.push.persistence.PushDeliveryAttemptRepository
-import mu.KotlinLogging
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.time.Instant
 import java.util.UUID
@@ -18,7 +18,7 @@ class PushDispatcher(
     private val pushClient: ExpoPushClient,
     private val attemptRepository: PushDeliveryAttemptRepository,
 ) {
-    private val log = KotlinLogging.logger {}
+    private val log = LoggerFactory.getLogger(PushDispatcher::class.java)
 
     fun dispatch(event: PaymentStatusChanged) = LogContext.with(
         LogContext.PAYMENT_REQUEST_ID to event.paymentRequestId,
@@ -26,7 +26,7 @@ class PushDispatcher(
     ) {
         val devices = deviceRepository.findByPaymentRequestIdAndInvalidFalse(event.paymentRequestId)
         if (devices.isEmpty()) {
-            log.info { "push dispatch skipped reason=no_devices status=${event.newStatus}" }
+            log.info("push dispatch skipped reason=no_devices status={}", event.newStatus)
             return@with
         }
 
@@ -43,22 +43,22 @@ class PushDispatcher(
             )
         }
 
-        log.info { "push dispatch start status=${event.newStatus} deviceCount=${devices.size}" }
+        log.info("push dispatch start status={} deviceCount={}", event.newStatus, devices.size)
 
         val tickets = try {
             pushClient.send(messages)
         } catch (ex: Exception) {
-            log.error(ex) { "push dispatch failed status=${event.newStatus} deviceCount=${devices.size} errorClass=${ex.javaClass.simpleName}" }
+            log.error("push dispatch failed status={} deviceCount={} errorClass={}", event.newStatus, devices.size, ex.javaClass.simpleName, ex)
             return@with
         }
 
         val accepted = tickets.count { it.status == ExpoTicket.Status.OK }
         val rejected = tickets.size - accepted
-        log.info { "push dispatch complete status=${event.newStatus} accepted=$accepted rejected=$rejected" }
+        log.info("push dispatch complete status={} accepted={} rejected={}", event.newStatus, accepted, rejected)
 
         tickets.forEach { ticket ->
             if (ticket.status != ExpoTicket.Status.OK) {
-                log.warn { "push ticket rejected token=${maskToken(ticket.token)} errorCode=${ticket.errorCode} ticketId=${ticket.ticketId}" }
+                log.warn("push ticket rejected token={} errorCode={} ticketId={}", maskToken(ticket.token), ticket.errorCode, ticket.ticketId)
             }
             try {
                 val outcome = if (ticket.status == ExpoTicket.Status.OK) DeliveryOutcome.ACCEPTED else DeliveryOutcome.REJECTED
@@ -76,7 +76,7 @@ class PushDispatcher(
                     )
                 )
             } catch (ex: Exception) {
-                log.warn(ex) { "push delivery attempt persist failed token=${maskToken(ticket.token)} errorClass=${ex.javaClass.simpleName}" }
+                log.warn("push delivery attempt persist failed token={} errorClass={}", maskToken(ticket.token), ex.javaClass.simpleName, ex)
             }
         }
     }
