@@ -4,6 +4,4 @@ databaseChangeLog:
   - include:
       file: db/changelog/20260418-001-create-push-tables.sql
   - include:
-      file: db/changelog/20260418-002-create-merchant-tables.sql
-  - include:
-      file: db/changelog/20260419-003-merchant-products.sql
+      file: db/changelog/20260419-001-create-event-publication.sql
