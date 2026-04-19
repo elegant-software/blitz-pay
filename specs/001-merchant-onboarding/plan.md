@@ -184,3 +184,249 @@ These are preserved in the spec and tasks.md for future sprints.
 
 → [data-model.md](data-model.md)
 → [contracts/merchant-registration.md](contracts/merchant-registration.md)
+
+---
+
+## Product Catalog Feature (added 2026-04-19)
+
+### Summary
+
+Each active merchant can manage a product catalog. Every product has a name, a unit price (decimal ≥ 0 in the merchant's implicit currency), an optional image URL (object storage), and a soft-delete `active` flag. Multi-tenancy is enforced via two independent layers: Hibernate `@Filter` at the application layer and PostgreSQL RLS at the database layer — following Thomas Vitalle's discriminator-based Spring Boot multi-tenancy pattern.
+
+### Technical Context
+
+**Tenant key**: `MerchantApplication.id` (UUID) → `merchant_application_id` column on `merchant_products`
+**Multi-tenancy primary**: Hibernate `@FilterDef` / `@Filter` (`tenantFilter`) enabled per request in service layer
+**Multi-tenancy safety net**: PostgreSQL RLS policy reading `app.current_merchant_id` session variable (set via `SET LOCAL` at transaction start)
+**Reactive propagation**: `MerchantTenantContext` stored in Reactor `ContextView`; transferred to Hibernate session inside `Mono.fromCallable { ... }.subscribeOn(Schedulers.boundedElastic())`
+**Image storage**: S3-compatible object storage; product record stores resolved HTTPS URL
+**Price**: `DECIMAL(12,4)` with `CHECK (unit_price >= 0)`; zero = free/sample product
+
+### Constitution Check (Product Catalog)
+
+| Rule | Status |
+|------|--------|
+| Module ownership — all code stays in `merchant/` | PASS |
+| Cross-module communication via events | PASS — no cross-module calls |
+| Hibernate `ddl-auto` — schema managed by Liquibase | PASS — two new changesets (table + RLS) |
+| Spring WebFlux reactive | PASS — Reactor context propagation for tenant; blocking JPA wrapped in `boundedElastic` |
+| Contract tests required | PASS — `MerchantProductControllerTest` required |
+
+**Gate result**: PASS.
+
+### Source Code Changes
+
+```text
+src/main/kotlin/com/elegant/software/blitzpay/merchant/
+├── domain/
+│   └── MerchantProduct.kt                        CREATE — @FilterDef/@Filter entity
+├── application/
+│   └── MerchantProductService.kt                 CREATE — CRUD + tenant filter activation
+├── web/
+│   └── MerchantProductController.kt              CREATE — POST/GET/PUT/DELETE /v1/merchants/{id}/products
+│   └── MerchantTenantFilter.kt                   CREATE — WebFilter writing tenant UUID to Reactor context
+├── repository/
+│   └── MerchantProductRepository.kt              CREATE — JpaRepository with tenant-safe finders
+└── api/
+    └── MerchantProductModels.kt                  CREATE — request/response DTOs
+
+src/main/resources/db/changelog/
+└── 20260419-003-merchant-products.sql            CREATE — table DDL + RLS policy (changesets 008, 009)
+
+src/contractTest/kotlin/com/elegant/software/blitzpay/merchant/
+└── MerchantProductControllerTest.kt              CREATE — WebTestClient contract tests
+
+src/test/kotlin/com/elegant/software/blitzpay/merchant/
+└── MerchantProductServiceTest.kt                 CREATE — unit tests (filter activation, tenant isolation)
+```
+
+### Implementation Decisions
+
+#### 1. Hibernate Filter Activation
+
+Before every repository call the service enables the filter on the current Hibernate session and sets the `SET LOCAL app.current_merchant_id` RLS variable in the same transaction:
+
+```kotlin
+private fun enableTenantFilter(merchantId: UUID) {
+    val session = entityManager.unwrap(Session::class.java)
+    session.enableFilter("tenantFilter").setParameter("merchantId", merchantId)
+    entityManager.createNativeQuery("SET LOCAL app.current_merchant_id = :mid")
+        .setParameter("mid", merchantId.toString())
+        .executeUpdate()
+}
+```
+
+The filter is scoped to the session and therefore to the transaction — no thread-local leakage risk.
+
+#### 2. Reactor Context → Hibernate Session Bridge
+
+Product service methods are `suspend`/`Mono`-based. Tenant ID is read from Reactor context and passed explicitly to `enableTenantFilter` inside the `boundedElastic` block:
+
+```kotlin
+fun listProducts(merchantId: UUID): Mono<List<ProductResponse>> =
+    Mono.fromCallable {
+        enableTenantFilter(merchantId)
+        productRepository.findAllByActiveTrue().map { it.toResponse() }
+    }.subscribeOn(Schedulers.boundedElastic())
+```
+
+#### 3. Cross-tenant Access Guard
+
+`MerchantProductService` calls `accessPolicy.requireProductAccess(actor, merchantId)` before enabling the filter. This produces a `403` before any DB call.
+
+#### 4. Liquibase Changesets
+
+Two new changesets in `20260419-003-merchant-products.sql`:
+- `20260419-008-merchant-products`: table DDL
+- `20260419-009-merchant-products-rls`: RLS enable + policy
+
+`FORCE ROW LEVEL SECURITY` ensures the application DB user (non-superuser) is also subject to the policy.
+
+### Phase 1 Output (Product Catalog)
+
+→ [data-model.md](data-model.md)
+→ [contracts/product-catalog.md](contracts/product-catalog.md)
+
+---
+
+## Merchant Location Feature (added 2026-04-19)
+
+### Summary
+
+Each merchant MAY have an optional physical location stored as a separate `MerchantLocation` entity (table `blitzpay.merchant_locations`). Fields: `latitude DECIMAL(9,6)`, `longitude DECIMAL(9,6)`, `googlePlaceId VARCHAR(255)`. Latitude and longitude are co-required (both-or-neither). Google Place ID is stored as-is with no real-time Maps API validation; future enrichment is deferred to a background job. Managed via `PUT /v1/merchants/{merchantId}/location` (upsert) and `GET /v1/merchants/{merchantId}/location`.
+
+### Technical Context
+
+**Entity**: `MerchantLocation` — 1-to-1 with `MerchantApplication` (UNIQUE FK)
+**Precision**: `DECIMAL(9,6)` — ~0.11 m resolution; no PostGIS required
+**Validation**: DB CHECK constraints + application-layer validation in `MerchantLocation.update()`
+**No multi-tenancy filter needed**: location queries use explicit `merchant_application_id` FK; no cross-tenant risk
+**Upsert pattern**: `MerchantLocationRepository.findByMerchantApplicationId()` → create if absent, else update in place
+
+### Constitution Check (Merchant Location)
+
+| Rule | Status |
+|------|--------|
+| Module ownership — all code stays in `merchant/` | PASS |
+| Cross-module communication via events | PASS — no cross-module calls |
+| Hibernate `ddl-auto` — schema managed by Liquibase | PASS — one new changeset (table DDL) |
+| Spring WebFlux reactive | PASS — blocking JPA wrapped in `boundedElastic` |
+| Contract tests required | PASS — `MerchantLocationControllerTest` required |
+
+**Gate result**: PASS.
+
+### Source Code Changes
+
+```text
+src/main/kotlin/com/elegant/software/blitzpay/merchant/
+├── domain/
+│   └── MerchantLocation.kt                           CREATE — JPA entity with update() validation
+├── application/
+│   └── MerchantLocationService.kt                    CREATE — upsert + get logic
+├── web/
+│   └── MerchantLocationController.kt                 CREATE — PUT/GET /v1/merchants/{id}/location
+├── repository/
+│   └── MerchantLocationRepository.kt                 CREATE — findByMerchantApplicationId
+└── api/
+    └── MerchantLocationModels.kt                     CREATE — UpsertLocationRequest, LocationResponse
+
+src/main/resources/db/changelog/
+└── 20260419-004-merchant-locations.sql               CREATE — table DDL (changeset 010)
+
+src/contractTest/kotlin/com/elegant/software/blitzpay/merchant/
+└── MerchantLocationControllerTest.kt                 CREATE — PUT 201, PUT 200, PUT 400 (bad coords), GET 200, GET 404
+
+src/test/kotlin/com/elegant/software/blitzpay/merchant/
+└── MerchantLocationServiceTest.kt                    CREATE — unit tests: create, update, clear coords, validation errors
+```
+
+### Implementation Decisions
+
+#### 1. Upsert via findByMerchantApplicationId
+
+```kotlin
+@Service
+@Transactional
+class MerchantLocationService(
+    private val locationRepository: MerchantLocationRepository,
+    private val merchantApplicationRepository: MerchantApplicationRepository
+) {
+    fun upsert(merchantId: UUID, request: UpsertLocationRequest): Pair<LocationResponse, Boolean> {
+        require(merchantApplicationRepository.existsById(merchantId)) { "Merchant $merchantId not found" }
+        val existing = locationRepository.findByMerchantApplicationId(merchantId)
+        val (record, created) = if (existing.isPresent) {
+            existing.get().also { it.update(request.latitude, request.longitude, request.googlePlaceId) } to false
+        } else {
+            MerchantLocation(merchantApplicationId = merchantId).also {
+                it.update(request.latitude, request.longitude, request.googlePlaceId)
+            } to true
+        }
+        return locationRepository.save(record).toResponse() to created
+    }
+
+    fun get(merchantId: UUID): LocationResponse =
+        locationRepository.findByMerchantApplicationId(merchantId)
+            .orElseThrow { NoSuchElementException("No location for merchant $merchantId") }
+            .toResponse()
+}
+```
+
+#### 2. Controller (reactive wrapper)
+
+```kotlin
+@RestController
+@RequestMapping("/{version}/merchants/{merchantId}/location")
+class MerchantLocationController(private val locationService: MerchantLocationService) {
+
+    @PutMapping
+    fun upsert(
+        @PathVariable merchantId: UUID,
+        @RequestBody request: UpsertLocationRequest
+    ): Mono<ResponseEntity<LocationResponse>> =
+        Mono.fromCallable { locationService.upsert(merchantId, request) }
+            .subscribeOn(Schedulers.boundedElastic())
+            .map { (response, created) ->
+                if (created) ResponseEntity.status(HttpStatus.CREATED).body(response)
+                else ResponseEntity.ok(response)
+            }
+
+    @GetMapping
+    fun get(@PathVariable merchantId: UUID): Mono<ResponseEntity<LocationResponse>> =
+        Mono.fromCallable { locationService.get(merchantId) }
+            .subscribeOn(Schedulers.boundedElastic())
+            .map { ResponseEntity.ok(it) }
+}
+```
+
+#### 3. Request/Response models
+
+```kotlin
+data class UpsertLocationRequest(
+    val latitude: BigDecimal? = null,
+    val longitude: BigDecimal? = null,
+    val googlePlaceId: String? = null
+)
+
+data class LocationResponse(
+    val merchantId: UUID,
+    val latitude: BigDecimal?,
+    val longitude: BigDecimal?,
+    val googlePlaceId: String?,
+    val createdAt: Instant,
+    val updatedAt: Instant
+)
+```
+
+#### 4. Liquibase migration
+
+File: `20260419-004-merchant-locations.sql`, changeset `20260419-010-merchant-locations`.
+Includes: table DDL with CHECK constraints for lat/lon range and co-requirement (`(latitude IS NULL) = (longitude IS NULL)`).
+
+#### 5. `ContractVerifierBase` additions
+
+Add `@MockitoBean protected lateinit var merchantLocationRepository: MerchantLocationRepository` to `ContractVerifierBase`.
+
+### Phase 1 Output (Merchant Location)
+
+→ [data-model.md](data-model.md)
+→ [contracts/merchant-location.md](contracts/merchant-location.md)

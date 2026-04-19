@@ -1,16 +1,11 @@
 package com.elegant.software.blitzpay.merchant.application
 
-import com.elegant.software.blitzpay.merchant.domain.BusinessProfile
 import com.elegant.software.blitzpay.merchant.domain.MerchantApplication
 import com.elegant.software.blitzpay.merchant.domain.MerchantOnboardingStatus
-import com.elegant.software.blitzpay.merchant.domain.Person
-import com.elegant.software.blitzpay.merchant.domain.PersonRole
-import com.elegant.software.blitzpay.merchant.domain.PrimaryContact
 import com.elegant.software.blitzpay.merchant.domain.ReviewOutcome
-import com.elegant.software.blitzpay.merchant.domain.SupportingMaterial
-import com.elegant.software.blitzpay.merchant.domain.SupportingMaterialType
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
 import com.elegant.software.blitzpay.merchant.support.MerchantObservabilitySupport
+import com.elegant.software.blitzpay.merchant.support.MerchantTestFixtureLoader
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
@@ -34,7 +29,7 @@ class MerchantOnboardingServiceTest {
 
     @Test
     fun `submit validates application and persists submitted status`() {
-        val application = readyToSubmitApplication()
+        val application = MerchantTestFixtureLoader.merchantApplicationWithDocuments()
         whenever(repository.findById(application.id)).thenReturn(Optional.of(application))
         whenever(
             repository.existsByBusinessProfileRegistrationNumberAndStatusIn(
@@ -57,7 +52,7 @@ class MerchantOnboardingServiceTest {
 
     @Test
     fun `submit rejects duplicate active application`() {
-        val application = readyToSubmitApplication()
+        val application = MerchantTestFixtureLoader.merchantApplicationWithDocuments()
         whenever(repository.findById(application.id)).thenReturn(Optional.of(application))
         whenever(
             repository.existsByBusinessProfileRegistrationNumberAndStatusIn(
@@ -76,7 +71,7 @@ class MerchantOnboardingServiceTest {
 
     @Test
     fun `record decision moves approved application into setup`() {
-        val application = readyToSubmitApplication(status = MerchantOnboardingStatus.DECISION_PENDING)
+        val application = MerchantTestFixtureLoader.merchantApplicationWithDocuments(status = MerchantOnboardingStatus.DECISION_PENDING)
         whenever(repository.findById(application.id)).thenReturn(Optional.of(application))
         whenever(repository.save(any<MerchantApplication>())).thenAnswer { it.getArgument<MerchantApplication>(0) }
 
@@ -95,7 +90,7 @@ class MerchantOnboardingServiceTest {
 
     @Test
     fun `start monitoring creates monitoring record and persists application`() {
-        val application = readyToSubmitApplication(status = MerchantOnboardingStatus.ACTIVE)
+        val application = MerchantTestFixtureLoader.merchantApplicationWithDocuments(status = MerchantOnboardingStatus.ACTIVE)
         whenever(repository.findById(application.id)).thenReturn(Optional.of(application))
         whenever(repository.save(any<MerchantApplication>())).thenAnswer { it.getArgument<MerchantApplication>(0) }
 
@@ -106,40 +101,5 @@ class MerchantOnboardingServiceTest {
         assertNotNull(result.lastUpdatedAt)
         verify(auditTrail).record(any())
         verify(observabilitySupport).recordSuccess("start_monitoring", MerchantOnboardingStatus.MONITORING)
-    }
-
-    private fun readyToSubmitApplication(
-        status: MerchantOnboardingStatus = MerchantOnboardingStatus.DRAFT
-    ) = MerchantApplication(
-        applicationReference = "MO-SVC-1",
-        businessProfile = BusinessProfile(
-            legalBusinessName = "Acme GmbH",
-            businessType = "LIMITED_COMPANY",
-            registrationNumber = "HRB654321",
-            operatingCountry = "DE",
-            primaryBusinessAddress = "Alexanderplatz 1, Berlin"
-        ),
-        primaryContact = PrimaryContact(
-            fullName = "Mina Example",
-            email = "mina@example.com",
-            phoneNumber = "+49123456789"
-        ),
-        status = status
-    ).apply {
-        addPerson(
-            Person(
-                fullName = "Mina Example",
-                role = PersonRole.BENEFICIAL_OWNER,
-                countryOfResidence = "DE",
-                ownershipPercentage = 100
-            )
-        )
-        addSupportingMaterial(
-            SupportingMaterial(
-                type = SupportingMaterialType.BUSINESS_REGISTRATION,
-                fileName = "registration.pdf",
-                storageKey = "merchant/MO-SVC-1/registration.pdf"
-            )
-        )
     }
 }

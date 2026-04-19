@@ -18,5 +18,8 @@ data class BusinessProfile(
     val operatingCountry: String,
 
     @Column(nullable = false)
-    val primaryBusinessAddress: String
+    val primaryBusinessAddress: String,
+
+    @Column(name = "logo_storage_key")
+    val logoStorageKey: String? = null
 )

@@ -2,14 +2,14 @@ package com.elegant.software.blitzpay.merchant.support
 
 import com.elegant.software.blitzpay.merchant.domain.MerchantOnboardingStatus
 import io.micrometer.core.instrument.MeterRegistry
-import mu.KotlinLogging
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 @Component
 class MicrometerMerchantObservabilitySupport(
     private val meterRegistry: MeterRegistry
 ) : MerchantObservabilitySupport {
-    private val logger = KotlinLogging.logger {}
+    private val logger = LoggerFactory.getLogger(MicrometerMerchantObservabilitySupport::class.java)
 
     override fun recordSuccess(action: String, status: MerchantOnboardingStatus) {
         meterRegistry.counter(
@@ -18,7 +18,7 @@ class MicrometerMerchantObservabilitySupport(
             "status", status.name
         ).increment()
 
-        logger.info { "merchant_observability action=$action status=${status.name} result=success" }
+        logger.info("merchant_observability action={} status={} result=success", action, status.name)
     }
 
     override fun recordFailure(action: String, reason: String) {
@@ -28,6 +28,6 @@ class MicrometerMerchantObservabilitySupport(
             "reason", reason
         ).increment()
 
-        logger.warn { "merchant_observability action=$action result=failure reason=$reason" }
+        logger.warn("merchant_observability action={} result=failure reason={}", action, reason)
     }
 }

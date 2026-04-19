@@ -27,8 +27,8 @@ class InvoiceController(private val invoiceService: InvoiceService) {
             .body(xml)
     }
 
-    @Operation(summary = "Generate ZUGFeRD PDF invoice", description = "Returns a human-readable PDF/A-3 with embedded ZUGFeRD XML. Send Accept: application/pdf.")
-    @PostMapping(produces = [MediaType.APPLICATION_PDF_VALUE])
+    @Operation(summary = "Generate ZUGFeRD PDF invoice", description = "Returns a human-readable PDF/A-3 with embedded ZUGFeRD XML.")
+    @PostMapping("/pdf", produces = [MediaType.APPLICATION_PDF_VALUE])
     fun generatePdf(@RequestBody invoiceData: InvoiceData): ResponseEntity<ByteArray> {
         val pdf = invoiceService.generatePdf(invoiceData)
         return ResponseEntity.ok()

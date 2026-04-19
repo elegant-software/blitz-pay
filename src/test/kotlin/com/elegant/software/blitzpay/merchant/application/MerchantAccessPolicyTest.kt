@@ -1,8 +1,6 @@
 package com.elegant.software.blitzpay.merchant.application
 
-import com.elegant.software.blitzpay.merchant.domain.BusinessProfile
-import com.elegant.software.blitzpay.merchant.domain.MerchantApplication
-import com.elegant.software.blitzpay.merchant.domain.PrimaryContact
+import com.elegant.software.blitzpay.merchant.support.MerchantTestFixtureLoader
 import org.junit.jupiter.api.Test
 import kotlin.test.assertFailsWith
 
@@ -18,7 +16,7 @@ class MerchantAccessPolicyTest {
                 role = MerchantActorRole.MERCHANT_APPLICANT,
                 merchantApplicationReference = "MO-ACCESS-1"
             ),
-            application()
+            MerchantTestFixtureLoader.merchantApplication(applicationReference = "MO-ACCESS-1")
         )
     }
 
@@ -31,7 +29,7 @@ class MerchantAccessPolicyTest {
                     role = MerchantActorRole.MERCHANT_APPLICANT,
                     merchantApplicationReference = "OTHER-REF"
                 ),
-                application()
+                MerchantTestFixtureLoader.merchantApplication(applicationReference = "MO-ACCESS-1")
             )
         }
     }
@@ -48,20 +46,4 @@ class MerchantAccessPolicyTest {
             )
         }
     }
-
-    private fun application() = MerchantApplication(
-        applicationReference = "MO-ACCESS-1",
-        businessProfile = BusinessProfile(
-            legalBusinessName = "Acme GmbH",
-            businessType = "LIMITED_COMPANY",
-            registrationNumber = "HRB777777",
-            operatingCountry = "DE",
-            primaryBusinessAddress = "Berlin"
-        ),
-        primaryContact = PrimaryContact(
-            fullName = "Mina Example",
-            email = "mina@example.com",
-            phoneNumber = "+49123456789"
-        )
-    )
 }
