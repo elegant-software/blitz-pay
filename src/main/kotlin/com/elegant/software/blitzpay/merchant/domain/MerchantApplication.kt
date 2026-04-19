@@ -139,6 +139,11 @@ class MerchantApplication(
         touch()
     }
 
+    fun updateLogo(storageKey: String) {
+        businessProfile = businessProfile.copy(logoStorageKey = storageKey)
+        touch()
+    }
+
     fun startMonitoring(record: MonitoringRecord, changedAt: Instant = Instant.now()) {
         monitoringRecord = record
         transitionTo(MerchantOnboardingStatus.MONITORING, changedAt)

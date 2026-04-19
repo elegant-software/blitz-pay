@@ -49,5 +49,6 @@ data class MerchantSummary(
     val registrationNumber: String,
     val status: MerchantOnboardingStatus,
     val submittedAt: Instant?,
-    val lastUpdatedAt: Instant
+    val lastUpdatedAt: Instant,
+    val logoStorageKey: String? = null
 )

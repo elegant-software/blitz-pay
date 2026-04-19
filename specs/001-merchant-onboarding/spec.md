@@ -12,6 +12,22 @@
 - Q: Should this feature scope end at approval, include activation, or also include ongoing monitoring? → A: Scope includes activation and ongoing monitoring.
 - Q: Should EU AML/KYB and GDPR obligations be explicit requirements in this feature? → A: EU AML/KYB and GDPR obligations are explicit requirements in this feature.
 
+### Session 2026-04-19 (product catalog)
+
+- Q: Where should product images be stored? → A: Object storage (S3-compatible); product record holds only the image URL. (FR-032 added)
+- Q: Should products support a deactivated/archived state, or is simple create/update/delete sufficient? → A: Soft delete — products have an `active` flag; inactive products are hidden from buyers but retained. (FR-033 added)
+- Q: Who can create and manage products for a merchant? → A: Both — merchants manage their own catalog via self-service API; internal admins can override. (FR-029, FR-030 added)
+- Q: Is product unit price always in the merchant's registered currency, or can each product carry its own currency? → A: Product price inherits the merchant's registered currency — no per-product currency field. (FR-031 updated)
+- Q: Should zero-price products be allowed, and how is unit price expressed? → A: Zero-price allowed — free/sample products are a valid use case; unit price is decimal ≥ 0. (FR-034 added)
+- Q: Multi-tenancy practices must be followed for product tables — how should tenant isolation be enforced? → A: Both — application-level filtering (`merchant_id` scoping) as primary path; PostgreSQL Row Level Security as safety net. (FR-035, FR-036 added)
+
+### Session 2026-04-19 (merchant location)
+
+- Q: Are latitude and longitude required fields during merchant registration? → A: Optional — coordinates and Place ID can be provided or enriched after registration. (FR-037 added)
+- Q: Where should latitude, longitude, and Google Place ID be stored? → A: Separate `MerchantLocation` entity — new table with FK to `merchant_applications`. (FR-038 added)
+- Q: Should location be updatable after initial registration? → A: Yes, via a dedicated `PUT /v1/merchants/{id}/location` endpoint. (FR-039 added)
+- Q: Should Google Maps Place ID be validated against Maps API on save? → A: Store as-is without external validation; a future background job may validate/enrich it. Checklist item added. (FR-040 added)
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Submit Merchant Application (Priority: P1)
@@ -68,6 +84,10 @@ An internal operations reviewer can evaluate submitted merchant applications, re
 - What happens when the merchant submits duplicate business registrations? The system detects likely duplicates and prevents multiple active applications for the same business without explicit review.
 - How does the system handle missing or unreadable supporting materials? The system blocks submission if required materials are missing and flags unreadable materials for correction if discovered during review.
 - How does the system handle a merchant whose application is approved after previously being sent back for corrections? The full history of review decisions and merchant updates remains visible.
+- What happens when a merchant attempts to read or modify a product belonging to a different merchant? The application MUST reject the request with a 403/404 before reaching the database; RLS MUST additionally block the query at the database layer as a secondary defence.
+- What happens when a product image upload to object storage fails? The system MUST reject the product create/update request and return an error; no partial product record is persisted.
+- What happens when a product's image URL becomes unreachable after storage deletion? The system MUST return a null image field rather than a broken URL or error.
+- What happens when a `PUT /v1/merchants/{id}/location` request supplies an out-of-range latitude (< −90 or > 90) or longitude (< −180 or > 180)? The system MUST reject the request with HTTP 400 and a descriptive validation error; no location record is created or modified.
 - What happens when an active merchant later triggers monitoring concerns? The system records the monitoring event, updates the merchant's oversight status, and supports follow-up review actions without losing the original onboarding history.
 - What happens when a merchant requests access to or correction of personal data during onboarding? The system supports those requests in line with applicable privacy obligations without breaking the compliance record.
 
@@ -103,6 +123,18 @@ An internal operations reviewer can evaluate submitted merchant applications, re
 - **FR-026**: The system MUST process merchant personal data in line with GDPR principles, including data minimization, purpose limitation, controlled access, and support for applicable data subject rights.
 - **FR-027**: The system MUST retain onboarding and compliance records for the applicable legally required retention period and prevent premature deletion of required records.
 - **FR-028**: The system MUST keep merchant onboarding and compliance records within approved regional storage boundaries for this feature's target market.
+- **FR-029**: The system MUST allow an authenticated merchant to create, update, and deactivate products in their own catalog via a self-service API.
+- **FR-030**: The system MUST allow authorized internal admin users to create, update, and deactivate products on behalf of any merchant.
+- **FR-031**: Each product MUST have a name and a unit price expressed as a decimal number (≥ 0) in the merchant's registered currency; zero-price products are permitted to support free or sample offerings.
+- **FR-032**: Each product MAY have an optional image; images MUST be uploaded to an object storage service (S3-compatible) and the product record MUST store only the resulting image URL.
+- **FR-033**: Products MUST support soft delete via an `active` flag; inactive products MUST be hidden from buyer-facing views but MUST be retained in the database for record-keeping.
+- **FR-034**: Product unit price MUST NOT carry its own currency field; it is implicitly denominated in the owning merchant's registered currency.
+- **FR-035**: All product-related database tables MUST include `merchant_id` as a non-nullable tenant discriminator column and MUST enforce a foreign key relationship to the merchant record.
+- **FR-036**: All product queries MUST be scoped to the authenticated merchant's `merchant_id` at the repository/service layer (application-level filtering as primary isolation); PostgreSQL Row Level Security policies MUST additionally be applied on product tables as a safety net to prevent cross-tenant data leakage at the database layer.
+- **FR-037**: A merchant MAY optionally provide geographic coordinates (latitude and longitude) and a Google Maps Place ID; none of these fields are required at registration time.
+- **FR-038**: Latitude, longitude, and Google Maps Place ID MUST be stored in a separate `MerchantLocation` entity with a foreign key to `merchant_applications`; latitude and longitude MUST use `DECIMAL(9,6)` precision; Place ID MUST be stored as a nullable `VARCHAR`.
+- **FR-039**: An authenticated merchant or internal admin MUST be able to create or replace the location record via `PUT /v1/merchants/{merchantId}/location`; the endpoint MUST also support removing location data by accepting null values.
+- **FR-040**: The Google Maps Place ID MUST be accepted and stored as-is without real-time validation against the Google Maps API; future enrichment (address, reviews resolution) SHOULD be performed by a background job (tracked as a checklist item).
 
 ### Key Entities *(include if feature involves data)*
 
@@ -114,6 +146,8 @@ An internal operations reviewer can evaluate submitted merchant applications, re
 - **Supporting Material**: Documents or evidence submitted by the merchant to support verification and approval.
 - **Risk Assessment**: The record of compliance and business risk evaluation used to support onboarding decisions and downstream monitoring.
 - **Monitoring Record**: The post-activation oversight record for an active merchant, including monitoring status, review triggers, outcomes, and follow-up actions.
+- **Product**: A catalog item offered by a merchant, carrying a `merchant_id` tenant discriminator, a name, unit price (decimal ≥ 0 in the merchant's registered currency), an `active` flag for soft delete, and an optional image URL referencing object storage. All queries are tenant-scoped by `merchant_id` at both application and database (RLS) layers.
+- **MerchantLocation**: An optional entity linked 1-to-1 with a `MerchantApplication`, holding `latitude DECIMAL(9,6)`, `longitude DECIMAL(9,6)`, and an optional `googlePlaceId VARCHAR`. Managed via `PUT /v1/merchants/{merchantId}/location`. Place ID enrichment (address, reviews) is deferred to a future background job.
 
 ## Assumptions
 

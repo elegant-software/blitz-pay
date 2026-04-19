@@ -74,3 +74,8 @@ CREATE TABLE blitzpay.merchant_review_decisions (
 );
 CREATE INDEX ix_merchant_decisions_application ON blitzpay.merchant_review_decisions (merchant_application_id);
 -- rollback DROP TABLE blitzpay.merchant_review_decisions;
+
+-- changeset mehdi:20260419-007-merchant-logo-storage-key
+ALTER TABLE blitzpay.merchant_applications
+    ADD COLUMN logo_storage_key VARCHAR(255);
+-- rollback ALTER TABLE blitzpay.merchant_applications DROP COLUMN logo_storage_key;

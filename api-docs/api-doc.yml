@@ -3,7 +3,7 @@ info:
   title: OpenAPI definition
   version: v0
 servers:
-- url: http://localhost:56934
+- url: http://localhost:57100
   description: Generated server url
 tags:
 - name: Braintree
@@ -12,6 +12,8 @@ tags:
   description: Card payment session creation via Stripe
 - name: Invoices
   description: EU-standard ZUGFeRD / Factur-X invoice generation
+- name: Merchant Onboarding
+  description: Endpoints for merchant onboarding and lifecycle
 - name: Payment Status
   description: Fallback query for authoritative payment status
 - name: Device Registration
@@ -21,9 +23,117 @@ tags:
   externalDocs:
     description: Spring Boot Actuator Web API Documentation
     url: https://docs.spring.io/spring-boot/docs/current/actuator-api/html/
+- name: Merchant Products
+  description: Product catalog management for merchants
 - name: QR Payments
   description: Operations related to QR payments
 paths:
+  /{version}/merchants/{merchantId}/products/{productId}:
+    get:
+      tags:
+      - Merchant Products
+      summary: Get a single active product
+      operationId: get
+      parameters:
+      - name: merchantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ProductResponse"
+    put:
+      tags:
+      - Merchant Products
+      summary: "Update a product's name, price, and image"
+      operationId: update
+      parameters:
+      - name: merchantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ProductResponse"
+    delete:
+      tags:
+      - Merchant Products
+      summary: Soft-delete a product (sets active = false)
+      operationId: deactivate
+      parameters:
+      - name: merchantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+  /{version}/merchants/{id}/logo:
+    put:
+      tags:
+      - Merchant Onboarding
+      summary: Set merchant logo
+      description: "Records the S3 storage key of a logo already uploaded by the client.\
+        \ Expected key format: merchant/{applicationId}/logo.{ext}"
+      operationId: setLogo
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetLogoRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MerchantSummary"
   /{version}/webhooks/truelayer:
     post:
       tags:
@@ -114,13 +224,119 @@ paths:
             '*/*':
               schema:
                 type: object
-  /{version}/invoices:
+  /{version}/merchants/{merchantId}/products:
+    get:
+      tags:
+      - Merchant Products
+      summary: List all active products for the merchant
+      operationId: list
+      parameters:
+      - name: merchantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ProductListResponse"
+    post:
+      tags:
+      - Merchant Products
+      summary: Create a product for the merchant
+      operationId: create
+      parameters:
+      - name: merchantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ProductResponse"
+  /{version}/merchants/{id}/activate:
+    post:
+      tags:
+      - Merchant Onboarding
+      summary: Directly activate a merchant application (skips onboarding flow)
+      operationId: activate
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MerchantSummary"
+  /{version}/merchants:
+    post:
+      tags:
+      - Merchant Onboarding
+      summary: "Register a new merchant (directly ACTIVE, duplicate registration number\
+        \ rejected with 409)"
+      operationId: create_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMerchantRequest"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MerchantSummary"
+  /{version}/invoices/pdf:
     post:
       tags:
       - Invoices
       summary: Generate ZUGFeRD PDF invoice
-      description: "Returns a human-readable PDF/A-3 with embedded ZUGFeRD XML. Send\
-        \ Accept: application/pdf."
+      description: Returns a human-readable PDF/A-3 with embedded ZUGFeRD XML.
+      operationId: generatePdf
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceData"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: byte
+  /{version}/invoices:
+    post:
+      tags:
+      - Invoices
+      summary: Generate ZUGFeRD XML invoice
+      description: "Returns a ZUGFeRD 2.0 / Factur-X compliant XML document. Send\
+        \ Accept: application/xml."
       operationId: generateXml
       requestBody:
         content:
@@ -133,10 +349,6 @@ paths:
           description: OK
           content:
             application/xml:
-              schema:
-                type: string
-                format: byte
-            application/pdf:
               schema:
                 type: string
                 format: byte
@@ -199,6 +411,26 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/PaymentStatusResponse"
+  /{version}/merchants/{id}:
+    get:
+      tags:
+      - Merchant Onboarding
+      summary: Get merchant application details
+      operationId: get_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MerchantSummary"
   /actuator/metrics/{requiredMetricName}:
     get:
       tags:
@@ -345,6 +577,94 @@ paths:
           description: No Content
 components:
   schemas:
+    UpdateProductRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        unitPrice:
+          type: number
+        imageUrl:
+          type: string
+      required:
+      - name
+      - unitPrice
+    ProductResponse:
+      type: object
+      properties:
+        productId:
+          type: string
+          format: uuid
+        merchantId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        unitPrice:
+          type: number
+        imageUrl:
+          type: string
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+      - active
+      - createdAt
+      - merchantId
+      - name
+      - productId
+      - unitPrice
+      - updatedAt
+    SetLogoRequest:
+      type: object
+      properties:
+        storageKey:
+          type: string
+      required:
+      - storageKey
+    MerchantSummary:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+        applicationReference:
+          type: string
+        registrationNumber:
+          type: string
+        status:
+          type: string
+          enum:
+          - DRAFT
+          - SUBMITTED
+          - VERIFICATION
+          - SCREENING
+          - RISK_REVIEW
+          - DECISION_PENDING
+          - SETUP
+          - ACTIVE
+          - MONITORING
+          - ACTION_REQUIRED
+          - REJECTED
+        submittedAt:
+          type: string
+          format: date-time
+        lastUpdatedAt:
+          type: string
+          format: date-time
+        logoStorageKey:
+          type: string
+      required:
+      - applicationId
+      - applicationReference
+      - lastUpdatedAt
+      - registrationNumber
+      - status
     CreateIntentRequest:
       type: object
       properties:
@@ -388,6 +708,46 @@ components:
           type: string
         invoiceId:
           type: string
+    CreateProductRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        unitPrice:
+          type: number
+        imageUrl:
+          type: string
+      required:
+      - name
+      - unitPrice
+    CreateMerchantRequest:
+      type: object
+      properties:
+        legalBusinessName:
+          type: string
+        businessType:
+          type: string
+        registrationNumber:
+          type: string
+        operatingCountry:
+          type: string
+        primaryBusinessAddress:
+          type: string
+        contactFullName:
+          type: string
+        contactEmail:
+          type: string
+        contactPhoneNumber:
+          type: string
+      required:
+      - businessType
+      - contactEmail
+      - contactFullName
+      - contactPhoneNumber
+      - legalBusinessName
+      - operatingCountry
+      - primaryBusinessAddress
+      - registrationNumber
     BankAccountData:
       type: object
       properties:
@@ -533,6 +893,19 @@ components:
       - paymentRequestId
       - status
       - terminal
+    ProductListResponse:
+      type: object
+      properties:
+        merchantId:
+          type: string
+          format: uuid
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductResponse"
+      required:
+      - merchantId
+      - products
     Link:
       type: object
       properties:

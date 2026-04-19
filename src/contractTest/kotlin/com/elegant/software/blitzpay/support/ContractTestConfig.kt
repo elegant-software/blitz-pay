@@ -4,6 +4,8 @@ import com.elegant.software.blitzpay.payments.push.config.ExpoPushProperties
 import com.elegant.software.blitzpay.payments.push.internal.ExpoMessage
 import com.elegant.software.blitzpay.payments.push.internal.ExpoPushClient
 import com.elegant.software.blitzpay.payments.push.internal.ExpoTicket
+import jakarta.persistence.EntityManagerFactory
+import org.mockito.kotlin.mock
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
@@ -21,4 +23,8 @@ class ContractTestConfig {
             override fun send(messages: List<ExpoMessage>): List<ExpoTicket> =
                 messages.map { ExpoTicket(it.to, "contract-ticket-${it.to.hashCode()}", ExpoTicket.Status.OK, null) }
         }
+
+    @Bean(name = ["entityManagerFactory"])
+    @Primary
+    fun mockEntityManagerFactory(): EntityManagerFactory = mock()
 }

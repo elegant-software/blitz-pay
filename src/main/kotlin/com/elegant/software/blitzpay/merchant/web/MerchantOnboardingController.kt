@@ -1,11 +1,11 @@
 package com.elegant.software.blitzpay.merchant.web
 
+import com.elegant.software.blitzpay.merchant.api.MerchantBusinessProfileRequest
 import com.elegant.software.blitzpay.merchant.api.MerchantGateway
+import com.elegant.software.blitzpay.merchant.api.MerchantPrimaryContactRequest
 import com.elegant.software.blitzpay.merchant.api.MerchantSummary
-import com.elegant.software.blitzpay.merchant.domain.BusinessProfile
-import com.elegant.software.blitzpay.merchant.domain.MerchantApplication
-import com.elegant.software.blitzpay.merchant.domain.MerchantOnboardingStatus
-import com.elegant.software.blitzpay.merchant.domain.PrimaryContact
+import com.elegant.software.blitzpay.merchant.api.RegisterMerchantRequest
+import com.elegant.software.blitzpay.merchant.application.MerchantRegistrationService
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*
 import java.util.UUID
 
 data class CreateMerchantRequest(
-    val applicationReference: String,
     val legalBusinessName: String,
     val businessType: String,
     val registrationNumber: String,
@@ -30,36 +29,37 @@ data class CreateMerchantRequest(
 @RequestMapping("/{version:v\\d+(?:\\.\\d+)*}/merchants", version = "1")
 class MerchantOnboardingController(
     private val repository: MerchantApplicationRepository,
-    private val gateway: MerchantGateway
+    private val gateway: MerchantGateway,
+    private val merchantRegistrationService: MerchantRegistrationService
 ) {
 
-    @Operation(summary = "Create a new merchant application in DRAFT status")
+    @Operation(summary = "Register a new merchant (directly ACTIVE, duplicate registration number rejected with 409)")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun create(@RequestBody request: CreateMerchantRequest): MerchantSummary {
-        val application = MerchantApplication(
-            applicationReference = request.applicationReference,
-            businessProfile = BusinessProfile(
-                legalBusinessName = request.legalBusinessName,
-                businessType = request.businessType,
-                registrationNumber = request.registrationNumber,
-                operatingCountry = request.operatingCountry,
-                primaryBusinessAddress = request.primaryBusinessAddress
-            ),
-            primaryContact = PrimaryContact(
-                fullName = request.contactFullName,
-                email = request.contactEmail,
-                phoneNumber = request.contactPhoneNumber
+        val application = merchantRegistrationService.register(
+            RegisterMerchantRequest(
+                businessProfile = MerchantBusinessProfileRequest(
+                    legalBusinessName = request.legalBusinessName,
+                    businessType = request.businessType,
+                    registrationNumber = request.registrationNumber,
+                    operatingCountry = request.operatingCountry,
+                    primaryBusinessAddress = request.primaryBusinessAddress
+                ),
+                primaryContact = MerchantPrimaryContactRequest(
+                    fullName = request.contactFullName,
+                    email = request.contactEmail,
+                    phoneNumber = request.contactPhoneNumber
+                )
             )
         )
-        val saved = repository.save(application)
         return MerchantSummary(
-            applicationId = saved.id,
-            applicationReference = saved.applicationReference,
-            registrationNumber = saved.businessProfile.registrationNumber,
-            status = saved.status,
-            submittedAt = saved.submittedAt,
-            lastUpdatedAt = saved.lastUpdatedAt
+            applicationId = application.id,
+            applicationReference = application.applicationReference,
+            registrationNumber = application.businessProfile.registrationNumber,
+            status = application.status,
+            submittedAt = application.submittedAt,
+            lastUpdatedAt = application.lastUpdatedAt
         )
     }
 
@@ -87,7 +87,7 @@ class MerchantOnboardingController(
     fun get(@PathVariable id: UUID): MerchantSummary {
         val application = repository.findById(id)
             .orElseThrow { NoSuchElementException("Merchant application not found: $id") }
-            
+
         return MerchantSummary(
             applicationId = application.id,
             applicationReference = application.applicationReference,
@@ -97,4 +97,30 @@ class MerchantOnboardingController(
             lastUpdatedAt = application.lastUpdatedAt
         )
     }
+
+    @Operation(
+        summary = "Set merchant logo",
+        description = "Records the S3 storage key of a logo already uploaded by the client. " +
+                "Expected key format: merchant/{applicationId}/logo.{ext}"
+    )
+    @PutMapping("/{id}/logo")
+    fun setLogo(@PathVariable id: UUID, @RequestBody request: SetLogoRequest): MerchantSummary {
+        val application = repository.findById(id)
+            .orElseThrow { NoSuchElementException("Merchant application not found: $id") }
+
+        application.updateLogo(request.storageKey)
+        repository.save(application)
+
+        return MerchantSummary(
+            applicationId = application.id,
+            applicationReference = application.applicationReference,
+            registrationNumber = application.businessProfile.registrationNumber,
+            status = application.status,
+            submittedAt = application.submittedAt,
+            lastUpdatedAt = application.lastUpdatedAt,
+            logoStorageKey = application.businessProfile.logoStorageKey
+        )
+    }
 }
+
+data class SetLogoRequest(val storageKey: String)

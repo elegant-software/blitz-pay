@@ -1,115 +1,104 @@
-# Implementation Plan: Stripe & Braintree Payment APIs
+# Implementation Plan: [FEATURE]
 
-**Branch**: `007-stripe-braintree-payment-apis` | **Date**: 2026-04-18 | **Spec**: [spec.md](spec.md)  
-**Input**: Feature specification from `specs/007-stripe-braintree-payment-apis/spec.md`
+**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
+**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+
+**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
 
 ## Summary
 
-Add two new Spring Modulith modules — `payments.stripe` and `payments.braintree` — that expose HTTP endpoints enabling mobile clients to initiate card payments via Stripe and PayPal/digital-wallet payments via Braintree. Both modules are stateless gateway proxies: they accept requests from the mobile app, delegate to the respective payment provider SDK, and return the credentials or transaction outcomes the mobile SDK needs.
+[Extract from feature spec: primary requirement + technical approach from research]
 
 ## Technical Context
 
-**Language/Version**: Kotlin 2.3.20 on JDK 25  
-**Primary Dependencies**: Spring Boot 4.0.4, Spring WebFlux (reactive), Spring Modulith, `stripe-java` SDK, `braintree-java` SDK  
-**Storage**: No new tables — both modules are stateless proxies; no persistence required for MVP  
-**Testing**: JUnit 5 + Mockito-Kotlin (unit), WebTestClient (contract tests)  
-**Target Platform**: JVM server (same deployment as existing app)  
-**Project Type**: Web service — reactive HTTP API  
-**Performance Goals**: Payment session creation ≤ 3 s p95; Braintree client token ≤ 2 s p95; Braintree checkout ≤ 5 s p95  
-**Constraints**: Secret keys must never appear in response bodies or logs; Braintree must degrade gracefully when unconfigured  
-**Scale/Scope**: Same as existing app — single-instance deployment with HikariCP connection pool already in place
+<!--
+  ACTION REQUIRED: Replace the content in this section with the technical details
+  for the project. The structure here is presented in advisory capacity to guide
+  the iteration process.
+-->
+
+**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
+**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
+**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
+**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
+**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Project Type**: [e.g., library/cli/web-service/mobile-app/compiler/desktop-app or NEEDS CLARIFICATION]  
+**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
+**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
+**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 
 ## Constitution Check
 
-The project constitution file (`constitution.md`) is an unfilled template — no active rules apply. Governance falls back to the architectural conventions in `CLAUDE.md` and `CONTRIBUTING.md`:
+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-| Gate | Status | Notes |
-|------|--------|-------|
-| Spring Modulith module boundary respected | PASS | Two new `payments.*` modules, no direct cross-module bean coupling |
-| No `ddl-auto` schema changes (Liquibase owns schema) | PASS | Both modules are stateless — no new tables |
-| SLF4J logging via `LoggerFactory` | PASS | Must NOT use `mu.KotlinLogging` per project feedback |
-| Reactive WebFlux style consistent with existing code | PASS | Stripe/Braintree SDKs are blocking; wrap with `Schedulers.boundedElastic()` |
-| Contract tests required for new public endpoints | PASS | Three new WebTestClient contract tests needed |
-| API versioning via URL-path (`/v1/...`) | PASS | Follow existing `PathOnlyApiVersionResolver` pattern |
-
-**No gate failures. Proceeding.**
+[Gates determined based on constitution file]
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```text
-specs/007-stripe-braintree-payment-apis/
-├── plan.md              # This file
-├── research.md          # Phase 0 output
-├── data-model.md        # Phase 1 output
-├── quickstart.md        # Phase 1 output
-├── contracts/           # Phase 1 output
-│   ├── stripe-create-intent.json
-│   └── braintree.json
-└── tasks.md             # Phase 2 output (/speckit.tasks — NOT created here)
+specs/[###-feature]/
+├── plan.md              # This file (/speckit.plan command output)
+├── research.md          # Phase 0 output (/speckit.plan command)
+├── data-model.md        # Phase 1 output (/speckit.plan command)
+├── quickstart.md        # Phase 1 output (/speckit.plan command)
+├── contracts/           # Phase 1 output (/speckit.plan command)
+└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
 ```
 
-### Source Code
+### Source Code (repository root)
+<!--
+  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
+  for this feature. Delete unused options and expand the chosen structure with
+  real paths (e.g., apps/admin, packages/something). The delivered plan must
+  not include Option labels.
+-->
 
 ```text
-src/main/kotlin/com/elegant/software/blitzpay/
-├── payments/
-│   ├── stripe/                          # NEW module
-│   │   ├── package-info.kt              # @ApplicationModule declaration
-│   │   ├── api/
-│   │   │   ├── package-info.kt          # @NamedInterface
-│   │   │   └── StripePaymentGateway.kt  # public interface (optional, for future cross-module use)
-│   │   ├── config/
-│   │   │   ├── StripeProperties.kt      # STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY
-│   │   │   ├── StripeConfig.kt          # @Bean Stripe SDK instance
-│   │   │   └── StripeOpenApiConfig.kt
-│   │   └── internal/
-│   │       ├── StripePaymentController.kt   # POST /v1/payments/stripe/create-intent
-│   │       └── StripePaymentService.kt
-│   │
-│   ├── braintree/                       # NEW module
-│   │   ├── package-info.kt              # @ApplicationModule declaration
-│   │   ├── api/
-│   │   │   └── package-info.kt          # @NamedInterface
-│   │   ├── config/
-│   │   │   ├── BraintreeProperties.kt   # BRAINTREE_MERCHANT_ID, PUBLIC_KEY, PRIVATE_KEY, ENV
-│   │   │   ├── BraintreeConfig.kt       # @Bean BraintreeGateway (nullable/optional)
-│   │   │   └── BraintreeOpenApiConfig.kt
-│   │   └── internal/
-│   │       ├── BraintreePaymentController.kt  # POST /v1/payments/braintree/client-token
-│   │       │                                  # POST /v1/payments/braintree/checkout
-│   │       └── BraintreePaymentService.kt
+# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
+src/
+├── models/
+├── services/
+├── cli/
+└── lib/
 
-src/contractTest/kotlin/com/elegant/software/blitzpay/
-├── payments/
-│   ├── stripe/
-│   │   └── StripePaymentControllerContractTest.kt
-│   └── braintree/
-│       └── BraintreePaymentControllerContractTest.kt
+tests/
+├── contract/
+├── integration/
+└── unit/
 
-src/test/kotlin/com/elegant/software/blitzpay/
-├── payments/
-│   ├── stripe/
-│   │   └── StripePaymentServiceTest.kt
-│   └── braintree/
-│       └── BraintreePaymentServiceTest.kt
+# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
+backend/
+├── src/
+│   ├── models/
+│   ├── services/
+│   └── api/
+└── tests/
+
+frontend/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   └── services/
+└── tests/
+
+# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
+api/
+└── [same as backend above]
+
+ios/ or android/
+└── [platform-specific structure: feature modules, UI flows, platform tests]
 ```
 
-**Structure Decision**: Two sibling modules `payments.stripe` and `payments.braintree` under the existing `payments` parent package, mirroring `payments.truelayer`. Both are stateless; no persistence sub-package needed. Blocking SDK calls wrapped in `Schedulers.boundedElastic()` to stay WebFlux-compliant.
+**Structure Decision**: [Document the selected structure and reference the real
+directories captured above]
 
 ## Complexity Tracking
 
-No constitution violations — table omitted.
+> **Fill ONLY if Constitution Check has violations that must be justified**
 
----
-
-## Phase 0: Research
-
-See [research.md](research.md).
-
----
-
-## Phase 1: Design
-
-See [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md).
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|-------------------------------------|
+| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
