@@ -58,7 +58,7 @@ class InvoiceControllerTest {
         whenever(invoiceService.generatePdf(eq(TestFixtureLoader.invoiceData()))).thenReturn(pdfBytes)
 
         webTestClient.post()
-            .uri("/v1/invoices")
+            .uri("/v1/invoices/pdf")
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_PDF)
             .bodyValue(TestFixtureLoader.invoiceRequestJson())

@@ -1,0 +1,34 @@
+{
+  "scenarioId": "merchant-canonical",
+  "description": "Canonical merchant application scenario shared across domain and service tests.",
+  "domain": "merchant",
+  "tags": [
+    "canonical",
+    "happy-path"
+  ],
+  "inputData": {
+    "applicationReference": "MO-2026-001",
+    "legalBusinessName": "Acme GmbH",
+    "businessType": "LIMITED_COMPANY",
+    "registrationNumber": "HRB123456",
+    "operatingCountry": "DE",
+    "primaryBusinessAddress": "Alexanderplatz 1, Berlin",
+    "contactFullName": "Mina Example",
+    "contactEmail": "mina@example.com",
+    "contactPhoneNumber": "+49123456789",
+    "beneficialOwner": {
+      "fullName": "Mina Example",
+      "countryOfResidence": "DE",
+      "ownershipPercentage": 100
+    },
+    "businessRegistrationDocument": {
+      "fileName": "registration.pdf",
+      "storageKeyTemplate": "merchant/{ref}/registration.pdf"
+    }
+  },
+  "expectations": {
+    "redactedRegistrationNumber": "HRB***",
+    "redactedEmail": "m***@example.com",
+    "redactedPhoneSuffix": "6789"
+  }
+}

@@ -1,5 +1,7 @@
 package com.elegant.software.blitzpay.merchant.domain
 
+import jakarta.persistence.AttributeOverride
+import jakarta.persistence.AttributeOverrides
 import jakarta.persistence.CollectionTable
 import jakarta.persistence.Column
 import jakarta.persistence.ElementCollection
@@ -66,6 +68,12 @@ class MerchantApplication(
     var reviewDecisions: MutableList<ReviewDecision> = mutableListOf()
 
     @Embedded
+    @AttributeOverrides(
+        AttributeOverride(name = "level",      column = Column(name = "risk_level")),
+        AttributeOverride(name = "score",      column = Column(name = "risk_score")),
+        AttributeOverride(name = "rationale",  column = Column(name = "risk_rationale")),
+        AttributeOverride(name = "assessedAt", column = Column(name = "risk_assessed_at"))
+    )
     var riskAssessment: RiskAssessment? = null
 
     @OneToOne(fetch = FetchType.EAGER, optional = true, cascade = [CascadeType.ALL], orphanRemoval = true)
@@ -128,6 +136,11 @@ class MerchantApplication(
 
     fun attachRiskAssessment(assessment: RiskAssessment) {
         riskAssessment = assessment
+        touch()
+    }
+
+    fun updateLogo(storageKey: String) {
+        businessProfile = businessProfile.copy(logoStorageKey = storageKey)
         touch()
     }
 

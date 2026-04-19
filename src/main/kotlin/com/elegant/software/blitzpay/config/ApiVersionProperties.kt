@@ -12,6 +12,7 @@ data class ApiVersionProperties(
         val qrpay: String = "1",
         val truelayer: String = "1",
         val payments: String = "1",
-        val mobileObservability: String = "1"
+        val mobileObservability: String = "1",
+        val merchant: String = "1"
     )
 }
