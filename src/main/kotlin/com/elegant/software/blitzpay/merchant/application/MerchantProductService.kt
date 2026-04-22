@@ -7,6 +7,7 @@ import com.elegant.software.blitzpay.merchant.api.UpdateProductRequest
 import com.elegant.software.blitzpay.merchant.domain.MerchantProduct
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantProductRepository
+import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
 import com.elegant.software.blitzpay.storage.StorageService
 import jakarta.persistence.EntityManager
 import org.hibernate.Session
@@ -21,6 +22,7 @@ import java.util.UUID
 class MerchantProductService(
     private val productRepository: MerchantProductRepository,
     private val merchantApplicationRepository: MerchantApplicationRepository,
+    private val merchantBranchRepository: MerchantBranchRepository,
     private val entityManager: EntityManager,
     private val storageService: StorageService
 ) {
@@ -30,7 +32,11 @@ class MerchantProductService(
         requireMerchantExists(merchantId)
         validateProductFields(request.name, request.description, request.unitPrice)
         val productId = UUID.randomUUID()
-        val imageStorageKey = image?.let { uploadImage(merchantId, productId, it) }
+        val imageStorageKey = image?.let { uploadImage(merchantId, productId, it, request.branchId) }
+
+        require(merchantBranchRepository.existsByMerchantApplicationIdAndIdAndActiveTrue(merchantId, request.branchId)) {
+            "Merchant branch not found or does not belong to merchant: ${request.branchId}"
+        }
 
         val product = MerchantProduct(
             id = productId,
@@ -38,7 +44,8 @@ class MerchantProductService(
             name = request.name.trim(),
             description = ProductImagePolicy.normalizeDescription(request.description),
             unitPrice = request.unitPrice,
-            imageStorageKey = imageStorageKey
+            imageStorageKey = imageStorageKey,
+            merchantBranchId = request.branchId
         )
         val saved = try {
             productRepository.save(product)
@@ -51,18 +58,19 @@ class MerchantProductService(
     }
 
     @Transactional(readOnly = true)
-    fun list(merchantId: UUID): ProductListResponse {
+    fun list(merchantId: UUID, merchantBranchId: UUID): ProductListResponse {
         requireMerchantExists(merchantId)
         enableTenantFilter(merchantId)
-        val products = productRepository.findAllByActiveTrue().map { it.toResponse(merchantId) }
+        val products = productRepository.findAllByActiveTrueAndMerchantBranchId(merchantBranchId)
+            .map { it.toResponse(merchantId) }
         return ProductListResponse(merchantId = merchantId, products = products)
     }
 
     @Transactional(readOnly = true)
-    fun get(merchantId: UUID, productId: UUID): ProductResponse {
+    fun get(merchantId: UUID, productId: UUID, merchantBranchId: UUID): ProductResponse {
         requireMerchantExists(merchantId)
         enableTenantFilter(merchantId)
-        val product = productRepository.findByIdAndActiveTrue(productId)
+        val product = productRepository.findByIdAndActiveTrueAndMerchantBranchId(productId, merchantBranchId)
             .orElseThrow { NoSuchElementException("Product not found: $productId") }
         return product.toResponse(merchantId)
     }
@@ -76,13 +84,21 @@ class MerchantProductService(
             .orElseThrow { NoSuchElementException("Product not found: $productId") }
 
         val previousImageStorageKey = product.imageStorageKey
-        val newImageStorageKey = image?.let { uploadImage(merchantId, productId, it) } ?: previousImageStorageKey
+        val newImageStorageKey = image?.let { uploadImage(merchantId, productId, it, request.branchId) } ?: previousImageStorageKey
         product.update(
             name = request.name.trim(),
             description = ProductImagePolicy.normalizeDescription(request.description),
             unitPrice = request.unitPrice,
             imageStorageKey = newImageStorageKey
         )
+        // handle branch reassignment if provided
+        val newBranchId = request.branchId
+        if (newBranchId != product.merchantBranchId) {
+            require(merchantBranchRepository.existsByMerchantApplicationIdAndIdAndActiveTrue(merchantId, newBranchId)) {
+                "Merchant branch not found or does not belong to merchant: $newBranchId"
+            }
+            product.merchantBranchId = newBranchId
+        }
         val saved = try {
             productRepository.save(product)
         } catch (ex: RuntimeException) {
@@ -95,10 +111,10 @@ class MerchantProductService(
         return saved.toResponse(merchantId)
     }
 
-    fun deactivate(merchantId: UUID, productId: UUID) {
+    fun deactivate(merchantId: UUID, productId: UUID, merchantBranchId: UUID) {
         requireMerchantExists(merchantId)
         enableTenantFilter(merchantId)
-        val product = productRepository.findByIdAndActiveTrue(productId)
+        val product = productRepository.findByIdAndActiveTrueAndMerchantBranchId(productId, merchantBranchId)
             .orElseThrow { NoSuchElementException("Product not found or already inactive: $productId") }
 
         product.deactivate()
@@ -126,8 +142,8 @@ class MerchantProductService(
         require(unitPrice >= BigDecimal.ZERO) { "unitPrice must be >= 0" }
     }
 
-    private fun uploadImage(merchantId: UUID, productId: UUID, image: ProductImageUpload): String {
-        val storageKey = "merchants/$merchantId/products/$productId/image.${image.extension}"
+    private fun uploadImage(merchantId: UUID, productId: UUID, image: ProductImageUpload, merchantBranchId: UUID): String {
+        val storageKey = "merchants/$merchantId/branches/$merchantBranchId/products/$productId/image.${image.extension}"
         storageService.upload(storageKey, image.contentType, image.bytes)
         return storageKey
     }
@@ -147,6 +163,7 @@ class MerchantProductService(
     private fun MerchantProduct.toResponse(merchantId: UUID) = ProductResponse(
         productId = id,
         merchantId = merchantId,
+        branchId = merchantBranchId!!,
         name = name,
         description = description,
         unitPrice = unitPrice,

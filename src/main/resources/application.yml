@@ -31,6 +31,13 @@ spring:
   threads:
     virtual:
       enabled: true
+  ai:
+    mcp:
+      server:
+        enabled: true
+        name: blitzpay-mcp
+        version: 1.0.0
+        protocol: STREAMABLE
 
 server:
   tomcat:

@@ -7,6 +7,9 @@ import org.springframework.data.repository.query.Param
 import java.util.UUID
 
 interface MerchantBranchRepository : JpaRepository<MerchantBranch, UUID> {
+    fun findByNameAndMerchantApplicationIdAndActiveTrue(name: String, merchantApplicationId: UUID): MerchantBranch?
+    fun findByNameAndMerchantApplicationId(name: String, merchantApplicationId: UUID): MerchantBranch?
+
     fun findAllByMerchantApplicationIdAndActiveTrue(merchantApplicationId: UUID): List<MerchantBranch>
     fun findByIdAndActiveTrue(id: UUID): MerchantBranch?
     fun existsByMerchantApplicationIdAndIdAndActiveTrue(merchantApplicationId: UUID, id: UUID): Boolean

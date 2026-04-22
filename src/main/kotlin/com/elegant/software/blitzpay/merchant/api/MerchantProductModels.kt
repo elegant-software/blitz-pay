@@ -6,12 +6,14 @@ import java.util.UUID
 
 data class CreateProductRequest(
     val name: String,
+    val branchId: java.util.UUID,
     val unitPrice: BigDecimal,
     val description: String? = null
 )
 
 data class UpdateProductRequest(
     val name: String,
+    val branchId: java.util.UUID,
     val unitPrice: BigDecimal,
     val description: String? = null
 )
@@ -19,6 +21,7 @@ data class UpdateProductRequest(
 data class ProductResponse(
     val productId: UUID,
     val merchantId: UUID,
+    val branchId: UUID,
     val name: String,
     val description: String?,
     val unitPrice: BigDecimal,

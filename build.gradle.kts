@@ -1,5 +1,6 @@
 import org.springframework.boot.gradle.tasks.bundling.BootJar
 
+
 plugins {
     alias(libs.plugins.skillsjars)
     alias(libs.plugins.kotlin.jvm)
@@ -97,17 +98,13 @@ dependencies {
     implementation("org.springframework.modulith:spring-modulith-starter-core")
     implementation("org.springframework.modulith:spring-modulith-starter-jpa")
     implementation(libs.springdoc.openapi.starter.webflux.ui)
-    // TrueLayer Java SDK
-    implementation(libs.truelayer.java)
-    implementation(libs.truelayer.signing) // official signing lib
-    implementation(libs.nimbus.jose.jwt) // Required for signature verification
-    // Mustang Project – EU-standard ZUGFeRD / Factur-X invoice generation
-    implementation(libs.mustang.library)
-    // Thymeleaf templating engine for invoice PDF rendering
-    implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
-    // Flying Saucer – converts Thymeleaf-rendered HTML to PDF
-    implementation(libs.flying.saucer.pdf)
 
+    // ----------------------------
+    // Modulith: `merchant`
+    // Purpose: Expose merchant product update as MCP
+    // ----------------------------
+    implementation("org.springframework.ai:spring-ai-starter-mcp-server")
+    implementation ("org.springframework.ai:spring-ai-starter-mcp-server-webflux")
     // ----------------------------
     // Runtime support (used across modules)
     // ----------------------------
@@ -136,6 +133,7 @@ dependencies {
 dependencyManagement {
     imports {
         mavenBom("org.springframework.modulith:spring-modulith-bom:${libs.versions.spring.modulith.get()}")
+        mavenBom("org.springframework.ai:spring-ai-bom:${libs.versions.spring.ai.get()}")
     }
 }
 

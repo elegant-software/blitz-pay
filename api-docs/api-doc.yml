@@ -3,7 +3,7 @@ info:
   title: OpenAPI definition
   version: v0
 servers:
-- url: http://localhost:50934
+- url: http://localhost:63182
   description: Generated server url
 tags:
 - name: Braintree
@@ -51,6 +51,12 @@ paths:
         schema:
           type: string
           format: uuid
+      - name: branchId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
       responses:
         "200":
           description: OK
@@ -84,6 +90,8 @@ paths:
               properties:
                 name:
                   type: string
+                branchId:
+                  type: string
                 unitPrice:
                   type: string
                 description:
@@ -116,6 +124,12 @@ paths:
       - name: productId
         in: path
         required: true
+        schema:
+          type: string
+          format: uuid
+      - name: branchId
+        in: query
+        required: false
         schema:
           type: string
           format: uuid
@@ -324,6 +338,12 @@ paths:
         schema:
           type: string
           format: uuid
+      - name: branchId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
       responses:
         "200":
           description: OK
@@ -350,6 +370,8 @@ paths:
               type: object
               properties:
                 name:
+                  type: string
+                branchId:
                   type: string
                 unitPrice:
                   type: string
@@ -791,6 +813,9 @@ components:
           type: string
           format: uuid
         merchantId:
+          type: string
+          format: uuid
+        branchId:
           type: string
           format: uuid
         name:

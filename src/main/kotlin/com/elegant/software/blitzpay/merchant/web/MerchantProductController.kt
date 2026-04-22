@@ -34,6 +34,7 @@ class MerchantProductController(
     fun create(
         @PathVariable merchantId: UUID,
         @RequestPart("name") name: String,
+        @RequestPart("branchId") branchId: String,
         @RequestPart("unitPrice") unitPrice: String,
         @RequestPart("description", required = false) description: String?,
         @RequestPart("image", required = false) image: FilePart?
@@ -43,7 +44,12 @@ class MerchantProductController(
                 Mono.fromCallable {
                     merchantProductService.create(
                         merchantId,
-                        CreateProductRequest(name = name, description = description, unitPrice = BigDecimal(unitPrice)),
+                        CreateProductRequest(
+                            name = name,
+                            branchId = UUID.fromString(branchId),
+                            unitPrice = BigDecimal(unitPrice),
+                            description = description
+                        ),
                         upload.orElse(null)
                     )
                 }.subscribeOn(Schedulers.boundedElastic())
@@ -52,8 +58,8 @@ class MerchantProductController(
 
     @Operation(summary = "List all active products for the merchant")
     @GetMapping
-    fun list(@PathVariable merchantId: UUID): Mono<ResponseEntity<ProductListResponse>> =
-        Mono.fromCallable { merchantProductService.list(merchantId) }
+    fun list(@PathVariable merchantId: UUID, @RequestParam("branchId") branchId: UUID): Mono<ResponseEntity<ProductListResponse>> =
+        Mono.fromCallable { merchantProductService.list(merchantId, branchId) }
             .subscribeOn(Schedulers.boundedElastic())
             .map { ResponseEntity.ok(it) }
 
@@ -61,9 +67,10 @@ class MerchantProductController(
     @GetMapping("/{productId}")
     fun get(
         @PathVariable merchantId: UUID,
-        @PathVariable productId: UUID
+        @PathVariable productId: UUID,
+        @RequestParam("branchId") branchId: UUID
     ): Mono<ResponseEntity<ProductResponse>> =
-        Mono.fromCallable { merchantProductService.get(merchantId, productId) }
+        Mono.fromCallable { merchantProductService.get(merchantId, productId, branchId) }
             .subscribeOn(Schedulers.boundedElastic())
             .map { ResponseEntity.ok(it) }
 
@@ -73,6 +80,7 @@ class MerchantProductController(
         @PathVariable merchantId: UUID,
         @PathVariable productId: UUID,
         @RequestPart("name") name: String,
+        @RequestPart("branchId") branchId: String,
         @RequestPart("unitPrice") unitPrice: String,
         @RequestPart("description", required = false) description: String?,
         @RequestPart("image", required = false) image: FilePart?
@@ -83,7 +91,12 @@ class MerchantProductController(
                     merchantProductService.update(
                         merchantId,
                         productId,
-                        UpdateProductRequest(name = name, description = description, unitPrice = BigDecimal(unitPrice)),
+                        UpdateProductRequest(
+                            name = name,
+                            branchId = UUID.fromString(branchId),
+                            unitPrice = BigDecimal(unitPrice),
+                            description = description
+                        ),
                         upload.orElse(null)
                     )
                 }.subscribeOn(Schedulers.boundedElastic())
@@ -94,9 +107,10 @@ class MerchantProductController(
     @DeleteMapping("/{productId}")
     fun deactivate(
         @PathVariable merchantId: UUID,
-        @PathVariable productId: UUID
+        @PathVariable productId: UUID,
+        @RequestParam("branchId") branchId: UUID
     ): Mono<ResponseEntity<Void>> =
-        Mono.fromCallable { merchantProductService.deactivate(merchantId, productId) }
+        Mono.fromCallable { merchantProductService.deactivate(merchantId, productId, branchId) }
             .subscribeOn(Schedulers.boundedElastic())
             .map { ResponseEntity.noContent().build<Void>() }
 

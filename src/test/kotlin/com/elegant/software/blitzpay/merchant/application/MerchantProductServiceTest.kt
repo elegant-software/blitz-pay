@@ -29,14 +29,22 @@ class MerchantProductServiceTest {
 
     private val productRepository = mock<MerchantProductRepository>()
     private val merchantApplicationRepository = mock<MerchantApplicationRepository>()
+    private val merchantBranchRepository = mock<com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository>()
     private val entityManager = mock<EntityManager>()
     private val storageService = mock<StorageService>()
     private val session = mock<Session>()
     private val hibernateFilter = mock<Filter>()
     private val nativeQuery = mock<Query>()
 
-    private val service = MerchantProductService(productRepository, merchantApplicationRepository, entityManager, storageService)
+    private val service = MerchantProductService(
+        productRepository,
+        merchantApplicationRepository,
+        merchantBranchRepository,
+        entityManager,
+        storageService
+    )
     private val merchantId = UUID.randomUUID()
+    private val branchId = UUID.randomUUID()
 
     @BeforeEach
     fun setUp() {
@@ -47,6 +55,7 @@ class MerchantProductServiceTest {
         whenever(nativeQuery.setParameter(any<String>(), any())).thenReturn(nativeQuery)
         whenever(nativeQuery.singleResult).thenReturn(merchantId.toString())
         whenever(merchantApplicationRepository.existsById(merchantId)).thenReturn(true)
+        whenever(merchantBranchRepository.existsByMerchantApplicationIdAndIdAndActiveTrue(merchantId, branchId)).thenReturn(true)
         whenever(storageService.presignDownload(any(), any())).thenAnswer { "https://signed.example/${it.arguments[0]}" }
     }
 
@@ -54,6 +63,7 @@ class MerchantProductServiceTest {
     fun `create saves product with correct fields`() {
         val request = CreateProductRequest(
             name = "Coffee Blend",
+            branchId = branchId,
             description = "**Medium roast**",
             unitPrice = BigDecimal("12.50")
         )
@@ -70,7 +80,7 @@ class MerchantProductServiceTest {
 
     @Test
     fun `create allows zero-price products`() {
-        val request = CreateProductRequest(name = "Free Sample", unitPrice = BigDecimal.ZERO)
+        val request = CreateProductRequest(name = "Free Sample", branchId = branchId, unitPrice = BigDecimal.ZERO)
         whenever(productRepository.save(any<MerchantProduct>())).thenAnswer { it.arguments[0] }
 
         val response = service.create(merchantId, request)
@@ -80,7 +90,7 @@ class MerchantProductServiceTest {
 
     @Test
     fun `create rejects negative price`() {
-        val request = CreateProductRequest(name = "Invalid", unitPrice = BigDecimal("-1.00"))
+        val request = CreateProductRequest(name = "Invalid", branchId = branchId, unitPrice = BigDecimal("-1.00"))
 
         assertFailsWith<IllegalArgumentException> {
             service.create(merchantId, request)
@@ -89,7 +99,7 @@ class MerchantProductServiceTest {
 
     @Test
     fun `create rejects blank product name`() {
-        val request = CreateProductRequest(name = "   ", unitPrice = BigDecimal("5.00"))
+        val request = CreateProductRequest(name = "   ", branchId = branchId, unitPrice = BigDecimal("5.00"))
 
         assertFailsWith<IllegalArgumentException> {
             service.create(merchantId, request)
@@ -100,6 +110,7 @@ class MerchantProductServiceTest {
     fun `create rejects overlong description`() {
         val request = CreateProductRequest(
             name = "Coffee",
+            branchId = branchId,
             description = "x".repeat(2_001),
             unitPrice = BigDecimal("10.00")
         )
@@ -111,18 +122,18 @@ class MerchantProductServiceTest {
 
     @Test
     fun `create uploads valid image and stores object key`() {
-        val request = CreateProductRequest(name = "Coffee", unitPrice = BigDecimal("10.00"))
+        val request = CreateProductRequest(name = "Coffee", branchId = branchId, unitPrice = BigDecimal("10.00"))
         val upload = ProductImageUpload(contentType = "image/webp", bytes = byteArrayOf(1, 2, 3))
         whenever(productRepository.save(any<MerchantProduct>())).thenAnswer { it.arguments[0] }
 
         val response = service.create(merchantId, request, upload)
 
         verify(storageService).upload(
-            eq("merchants/$merchantId/products/${response.productId}/image.webp"),
+            eq("merchants/$merchantId/branches/$branchId/products/${response.productId}/image.webp"),
             eq("image/webp"),
             eq(byteArrayOf(1, 2, 3))
         )
-        assertEquals("https://signed.example/merchants/$merchantId/products/${response.productId}/image.webp", response.imageUrl)
+        assertEquals("https://signed.example/merchants/$merchantId/branches/$branchId/products/${response.productId}/image.webp", response.imageUrl)
     }
 
     @Test
@@ -133,10 +144,12 @@ class MerchantProductServiceTest {
             merchantApplicationId = merchantId,
             name = "Coffee",
             unitPrice = BigDecimal("10.00"),
-            imageStorageKey = "old-key"
+            imageStorageKey = "old-key",
+            merchantBranchId = branchId
         )
         val request = UpdateProductRequest(
             name = "Coffee Updated",
+            branchId = branchId,
             description = "_Updated_",
             unitPrice = BigDecimal("12.00")
         )
@@ -147,13 +160,13 @@ class MerchantProductServiceTest {
         val response = service.update(merchantId, productId, request, upload)
 
         verify(storageService).upload(
-            eq("merchants/$merchantId/products/$productId/image.png"),
+            eq("merchants/$merchantId/branches/$branchId/products/$productId/image.png"),
             eq("image/png"),
             eq(byteArrayOf(4, 5, 6))
         )
         assertEquals("Coffee Updated", response.name)
         assertEquals("_Updated_", response.description)
-        assertEquals("https://signed.example/merchants/$merchantId/products/$productId/image.png", response.imageUrl)
+        assertEquals("https://signed.example/merchants/$merchantId/branches/$branchId/products/$productId/image.png", response.imageUrl)
     }
 
     @Test
@@ -174,7 +187,7 @@ class MerchantProductServiceTest {
 
     @Test
     fun `storage upload failure does not persist product`() {
-        val request = CreateProductRequest(name = "Coffee", unitPrice = BigDecimal("10.00"))
+        val request = CreateProductRequest(name = "Coffee", branchId = branchId, unitPrice = BigDecimal("10.00"))
         val upload = ProductImageUpload(contentType = "image/png", bytes = byteArrayOf(1))
         whenever(storageService.upload(any(), any(), any())).thenThrow(IllegalStateException("storage down"))
 
@@ -190,13 +203,14 @@ class MerchantProductServiceTest {
             merchantApplicationId = merchantId,
             name = "Coffee",
             unitPrice = BigDecimal("10.00"),
-            imageStorageKey = "merchants/$merchantId/products/product/image.jpg"
+            imageStorageKey = "merchants/$merchantId/branches/$branchId/products/product/image.jpg",
+            merchantBranchId = branchId
         )
-        whenever(productRepository.findAllByActiveTrue()).thenReturn(listOf(product))
+        whenever(productRepository.findAllByActiveTrueAndMerchantBranchId(branchId)).thenReturn(listOf(product))
 
-        val response = service.list(merchantId)
+        val response = service.list(merchantId, branchId)
 
-        assertEquals("https://signed.example/merchants/$merchantId/products/product/image.jpg", response.products.single().imageUrl)
+        assertEquals("https://signed.example/merchants/$merchantId/branches/$branchId/products/product/image.jpg", response.products.single().imageUrl)
     }
 
     @Test
@@ -207,12 +221,13 @@ class MerchantProductServiceTest {
             merchantApplicationId = merchantId,
             name = "Coffee",
             unitPrice = BigDecimal("10.00"),
-            imageStorageKey = "missing"
+            imageStorageKey = "missing",
+            merchantBranchId = branchId
         )
-        whenever(productRepository.findByIdAndActiveTrue(productId)).thenReturn(Optional.of(product))
+        whenever(productRepository.findByIdAndActiveTrueAndMerchantBranchId(productId, branchId)).thenReturn(Optional.of(product))
         whenever(storageService.presignDownload(eq("missing"), any())).thenThrow(IllegalStateException("not found"))
 
-        val response = service.get(merchantId, productId)
+        val response = service.get(merchantId, productId, branchId)
 
         assertEquals(null, response.imageUrl)
     }
@@ -220,7 +235,7 @@ class MerchantProductServiceTest {
     @Test
     fun `create fails when merchant does not exist`() {
         whenever(merchantApplicationRepository.existsById(merchantId)).thenReturn(false)
-        val request = CreateProductRequest(name = "Coffee", unitPrice = BigDecimal("10.00"))
+        val request = CreateProductRequest(name = "Coffee", branchId = branchId, unitPrice = BigDecimal("10.00"))
 
         assertFailsWith<IllegalArgumentException> {
             service.create(merchantId, request)
@@ -230,20 +245,20 @@ class MerchantProductServiceTest {
     @Test
     fun `get throws when product not found`() {
         val productId = UUID.randomUUID()
-        whenever(productRepository.findByIdAndActiveTrue(productId)).thenReturn(Optional.empty())
+        whenever(productRepository.findByIdAndActiveTrueAndMerchantBranchId(productId, branchId)).thenReturn(Optional.empty())
 
         assertFailsWith<NoSuchElementException> {
-            service.get(merchantId, productId)
+            service.get(merchantId, productId, branchId)
         }
     }
 
     @Test
     fun `deactivate throws when product already inactive`() {
         val productId = UUID.randomUUID()
-        whenever(productRepository.findByIdAndActiveTrue(productId)).thenReturn(Optional.empty())
+        whenever(productRepository.findByIdAndActiveTrueAndMerchantBranchId(productId, branchId)).thenReturn(Optional.empty())
 
         assertFailsWith<NoSuchElementException> {
-            service.deactivate(merchantId, productId)
+            service.deactivate(merchantId, productId, branchId)
         }
     }
 }

@@ -8,6 +8,8 @@ import org.springframework.data.repository.query.Param
 import java.util.UUID
 
 interface MerchantApplicationRepository : JpaRepository<MerchantApplication, UUID> {
+    fun findByBusinessProfileLegalBusinessName(legalBusinessName: String): MerchantApplication?
+
     fun findByApplicationReference(applicationReference: String): MerchantApplication?
 
     fun existsByBusinessProfileRegistrationNumberAndStatusIn(

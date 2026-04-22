@@ -24,6 +24,13 @@ class PathOnlyApiVersionResolver : ApiVersionResolver {
     private val versionPattern = Regex("^v(\\d+(?:\\.\\d+)*)$")
 
     override fun resolveVersion(exchange: org.springframework.web.server.ServerWebExchange): String? {
+        val path = exchange.request.path.value()
+
+        // ✅ EXCLUDE MCP endpoint completely
+        if (path.startsWith("/mcp")) {
+            return null
+        }
+
         val firstSegment = exchange.request.path.pathWithinApplication().elements()
             .filterIsInstance<PathContainer.PathSegment>()
             .firstOrNull()

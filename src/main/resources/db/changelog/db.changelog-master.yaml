@@ -23,3 +23,5 @@ databaseChangeLog:
       file: db/changelog/20260421-003-product-image-storage-key-normalization.sql
   - include:
       file: db/changelog/20260421-004-merchant-location-place-enrichment.sql
+  - include:
+      file: db/changelog/20260422-001-add-branch-indexes.sql
