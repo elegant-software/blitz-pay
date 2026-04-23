@@ -24,36 +24,29 @@
             "description": "Human-readable branch name.",
             "example": "Downtown Branch"
           },
-          "stripeSecretKey": {
+          "contactFullName": {
             "type": "string",
             "required": false,
-            "description": "Branch-level Stripe secret key override. Never returned in responses."
+            "description": "Operational branch contact name."
           },
-          "stripePublishableKey": {
+          "contactEmail": {
             "type": "string",
             "required": false,
-            "description": "Branch-level Stripe publishable key override."
+            "description": "Operational branch contact email."
           },
-          "braintreeMerchantId": {
+          "contactPhoneNumber": {
             "type": "string",
             "required": false,
-            "description": "Branch-level Braintree merchant ID override."
+            "description": "Operational branch contact phone number."
           },
-          "braintreePublicKey": {
-            "type": "string",
+          "activePaymentChannels": {
+            "type": "array",
             "required": false,
-            "description": "Branch-level Braintree public key override."
-          },
-          "braintreePrivateKey": {
-            "type": "string",
-            "required": false,
-            "description": "Branch-level Braintree private key override. Never returned in responses."
-          },
-          "braintreeEnvironment": {
-            "type": "string",
-            "required": false,
-            "enum": ["sandbox", "production"],
-            "description": "Defaults to 'sandbox' if not specified."
+            "items": {
+              "type": "string",
+              "enum": ["PAYPAL", "STRIPE", "TRUELAYER"]
+            },
+            "description": "Branch-level enabled payment channels."
           }
         }
       },
@@ -66,13 +59,15 @@
             "merchantId": { "type": "string", "format": "uuid" },
             "name": { "type": "string" },
             "active": { "type": "boolean" },
-            "hasStripeCredentials": {
-              "type": "boolean",
-              "description": "True if branch-level Stripe credentials are configured. Keys are never returned."
-            },
-            "hasBraintreeCredentials": {
-              "type": "boolean",
-              "description": "True if branch-level Braintree credentials are configured. Keys are never returned."
+            "contactFullName": { "type": "string" },
+            "contactEmail": { "type": "string" },
+            "contactPhoneNumber": { "type": "string" },
+            "activePaymentChannels": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["PAYPAL", "STRIPE", "TRUELAYER"]
+              }
             },
             "createdAt": { "type": "string", "format": "date-time" },
             "updatedAt": { "type": "string", "format": "date-time" }
@@ -88,7 +83,7 @@
         }
       },
       "security": {
-        "note": "Secret keys and private keys are write-only — they are stored but never returned in any response."
+        "note": "Payment provider credentials are platform-managed; merchant branch APIs only select the active payment channel."
       }
     },
     {

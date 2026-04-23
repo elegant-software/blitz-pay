@@ -7,14 +7,14 @@ import jakarta.persistence.Column
 import jakarta.persistence.ElementCollection
 import jakarta.persistence.Embedded
 import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
 import jakarta.persistence.CascadeType
+import jakarta.persistence.Enumerated
+import jakarta.persistence.EnumType
 import java.time.Instant
 import java.util.UUID
 
@@ -46,25 +46,6 @@ class MerchantApplication(
     @Column
     var lastUpdatedAt: Instant = createdAt,
 
-    // Stripe merchant-level default credentials (branch may override)
-    @Column(name = "stripe_secret_key", length = 512)
-    var stripeSecretKey: String? = null,
-
-    @Column(name = "stripe_publishable_key", length = 512)
-    var stripePublishableKey: String? = null,
-
-    // Braintree merchant-level default credentials (branch may override)
-    @Column(name = "braintree_merchant_id")
-    var braintreeMerchantId: String? = null,
-
-    @Column(name = "braintree_public_key")
-    var braintreePublicKey: String? = null,
-
-    @Column(name = "braintree_private_key", length = 512)
-    var braintreePrivateKey: String? = null,
-
-    @Column(name = "braintree_environment", length = 64)
-    var braintreeEnvironment: String? = null,
 ) {
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
@@ -86,6 +67,15 @@ class MerchantApplication(
         joinColumns = [JoinColumn(name = "merchant_application_id")]
     )
     var reviewDecisions: MutableList<ReviewDecision> = mutableListOf()
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+        name = "merchant_application_payment_channels",
+        joinColumns = [JoinColumn(name = "merchant_application_id")]
+    )
+    @Column(name = "payment_channel", nullable = false, length = 32)
+    @Enumerated(EnumType.STRING)
+    var activePaymentChannels: MutableSet<MerchantPaymentChannel> = linkedSetOf()
 
     @Embedded
     @AttributeOverrides(
@@ -170,6 +160,29 @@ class MerchantApplication(
     fun updateLocation(newLocation: MerchantLocation) {
         location = newLocation
         touch()
+    }
+
+    fun updateProfile(
+        legalBusinessName: String,
+        primaryBusinessAddress: String,
+        primaryContact: PrimaryContact,
+        activePaymentChannels: Set<MerchantPaymentChannel> = this.activePaymentChannels,
+        nextStatus: MerchantOnboardingStatus? = null,
+        changedAt: Instant = Instant.now()
+    ) {
+        businessProfile = businessProfile.copy(
+            legalBusinessName = legalBusinessName,
+            primaryBusinessAddress = primaryBusinessAddress
+        )
+        this.primaryContact = primaryContact
+        this.activePaymentChannels = activePaymentChannels.toMutableSet()
+
+        if (nextStatus != null && nextStatus != status) {
+            transitionTo(nextStatus, changedAt)
+            return
+        }
+
+        touch(changedAt)
     }
 
     fun clearLocation() {

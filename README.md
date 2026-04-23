@@ -24,6 +24,14 @@
 
 `./gradlew contractTest` runs the API contract suite against a dedicated `contract-test` Spring profile.
 
+To regenerate the checked-in OpenAPI document at `api-docs/api-doc.yml`, run:
+
+```bash
+./gradlew contractTest --tests com.elegant.software.blitzpay.contract.OpenApiGeneratorTest
+```
+
+This test fetches `/api-docs.yaml` from the running contract-test application context and writes the result to `api-docs/api-doc.yml`.
+
 Important notes:
 - The contract suite is intentionally isolated from production infrastructure.
 - The `contract-test` profile excludes datasource, JPA, and Modulith event persistence auto-configuration.
@@ -98,4 +106,3 @@ Security and repo hygiene notes
 ```
 
 - Prefer storing secrets in a secure vault or CI secret manager for production deployments.
-

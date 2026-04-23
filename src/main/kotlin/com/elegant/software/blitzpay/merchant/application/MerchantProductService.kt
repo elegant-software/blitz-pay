@@ -1,7 +1,6 @@
 package com.elegant.software.blitzpay.merchant.application
 
 import com.elegant.software.blitzpay.merchant.api.CreateProductRequest
-import com.elegant.software.blitzpay.merchant.api.ProductListResponse
 import com.elegant.software.blitzpay.merchant.api.ProductResponse
 import com.elegant.software.blitzpay.merchant.api.UpdateProductRequest
 import com.elegant.software.blitzpay.merchant.domain.MerchantProduct
@@ -54,16 +53,16 @@ class MerchantProductService(
             throw ex
         }
         log.info("Product created: id={} merchant={}", saved.id, merchantId)
-        return saved.toResponse(merchantId)
+        return saved.toResponse()
     }
 
     @Transactional(readOnly = true)
-    fun list(merchantId: UUID, merchantBranchId: UUID): ProductListResponse {
+    fun list(merchantId: UUID, merchantBranchId: UUID): List<ProductResponse> {
         requireMerchantExists(merchantId)
         enableTenantFilter(merchantId)
         val products = productRepository.findAllByActiveTrueAndMerchantBranchId(merchantBranchId)
-            .map { it.toResponse(merchantId) }
-        return ProductListResponse(merchantId = merchantId, products = products)
+            .map { it.toResponse() }
+        return products
     }
 
     @Transactional(readOnly = true)
@@ -72,7 +71,7 @@ class MerchantProductService(
         enableTenantFilter(merchantId)
         val product = productRepository.findByIdAndActiveTrueAndMerchantBranchId(productId, merchantBranchId)
             .orElseThrow { NoSuchElementException("Product not found: $productId") }
-        return product.toResponse(merchantId)
+        return product.toResponse()
     }
 
     fun update(merchantId: UUID, productId: UUID, request: UpdateProductRequest, image: ProductImageUpload? = null): ProductResponse {
@@ -108,7 +107,7 @@ class MerchantProductService(
             throw ex
         }
         log.info("Product updated: id={} merchant={}", productId, merchantId)
-        return saved.toResponse(merchantId)
+        return saved.toResponse()
     }
 
     fun deactivate(merchantId: UUID, productId: UUID, merchantBranchId: UUID) {
@@ -160,9 +159,8 @@ class MerchantProductService(
                 .getOrNull()
         }
 
-    private fun MerchantProduct.toResponse(merchantId: UUID) = ProductResponse(
+    private fun MerchantProduct.toResponse() = ProductResponse(
         productId = id,
-        merchantId = merchantId,
         branchId = merchantBranchId!!,
         name = name,
         description = description,
