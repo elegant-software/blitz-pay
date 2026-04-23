@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - Kotlin 2.3.20 on Java 25, Spring Boot 4.0.4, Spring WebFlux (reactive)
 - Spring Modulith for module enforcement and cross-module event publishing
-- PostgreSQL 16 with Hibernate (`ddl-auto: update`, no migration framework)
+- PostgreSQL 16 with Hibernate (`ddl-auto: none`) + Liquibase for all schema migrations
 - TrueLayer Java SDK for payment gateway integration
 - Mustang Project + Flying Saucer for ZUGFeRD/Factur-X invoice generation
 
@@ -68,7 +68,9 @@ Because Kotlin lacks `package-info.java`, module metadata is declared via a dedi
 
 ## Contributor Guide
 
-Full contribution conventions — commit style, architecture principles, Spring Boot / Modulith / JPA / Liquibase best practices, CI/CD setup, and coding convention references — are in **`CONTRIBUTING.md`**.
+**[`CONSTITUTION.md`](CONSTITUTION.md)** is the governing rules document — read it before making any change. It contains non-negotiable conventions for schema, modules, testing, security, and code style, plus a full index of all `reference/` best-practice documents.
+
+Full contribution workflow conventions (commit style, CI, PR process) are in **`CONTRIBUTING.md`**.
 
 ## Commit Convention
 
@@ -76,9 +78,9 @@ Semantic commits: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`. Summaries: sh
 
 ## Active Technologies
 - Kotlin 2.3.20 on Java 25 (unchanged) + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith, Hibernate/JPA on PostgreSQL 16, TrueLayer Java SDK (unchanged). New: Reactor `WebClient` against the Expo Push HTTPS API (`https://exp.host/--/api/v2/push/send`) — no additional SDK; a thin in-repo client keeps the dependency surface minimal. (006-push-notifications)
-- PostgreSQL via JPA (`ddl-auto: update`, no migration framework — matches current project convention). Two new tables: `payment_status` (authoritative current state per payment request) and `device_registration` (Expo push tokens per payment request / payer). Optional `push_delivery_attempt` for observability; kept in-memory-only if retention cost is a concern. (006-push-notifications)
+- PostgreSQL via JPA (`ddl-auto: none`) + Liquibase. Two new tables: `payment_status` (authoritative current state per payment request) and `device_registration` (Expo push tokens per payment request / payer). Optional `push_delivery_attempt` for observability; kept in-memory-only if retention cost is a concern. (006-push-notifications)
 - Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith, Hibernate/JPA, `stripe-java` 28.x, `braintree-java` 3.43.0 (001-merchant-onboarding)
-- PostgreSQL 16 — `ddl-auto: update`; two new tables (`merchant_branches`), two modified tables (`merchant_applications`, `merchant_products`) (001-merchant-onboarding)
+- PostgreSQL 16 — `ddl-auto: none` + Liquibase; two new tables (`merchant_branches`), two modified tables (`merchant_applications`, `merchant_products`) (001-merchant-onboarding)
 
 ## Recent Changes
 - 006-push-notifications: Added Kotlin 2.3.20 on Java 25 (unchanged) + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith, Hibernate/JPA on PostgreSQL 16, TrueLayer Java SDK (unchanged). New: Reactor `WebClient` against the Expo Push HTTPS API (`https://exp.host/--/api/v2/push/send`) — no additional SDK; a thin in-repo client keeps the dependency surface minimal.
