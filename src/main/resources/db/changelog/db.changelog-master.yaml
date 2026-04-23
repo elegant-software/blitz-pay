@@ -25,3 +25,13 @@ databaseChangeLog:
       file: db/changelog/20260421-004-merchant-location-place-enrichment.sql
   - include:
       file: db/changelog/20260422-001-add-branch-indexes.sql
+  - include:
+      file: db/changelog/20260423-001-merchant-branch-contact.sql
+  - include:
+      file: db/changelog/20260423-002-active-payment-channel.sql
+  - include:
+      file: db/changelog/20260423-003-drop-merchant-provider-credentials.sql
+  - include:
+      file: db/changelog/20260424-001-branch-image-storage-key.sql
+  - include:
+      file: db/changelog/20260424-002-branch-merchant-fk-cascade.sql

@@ -1,10 +1,17 @@
 package com.elegant.software.blitzpay.merchant.domain
 
 import jakarta.persistence.Column
+import jakarta.persistence.CollectionTable
 import jakarta.persistence.Embedded
+import jakarta.persistence.ElementCollection
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
+import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.Index
+import jakarta.persistence.JoinColumn
+import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import java.time.Instant
 import java.util.UUID
@@ -21,6 +28,10 @@ class MerchantBranch(
 
     @Column(name = "merchant_application_id", nullable = false, updatable = false)
     val merchantApplicationId: UUID,
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "merchant_application_id", insertable = false, updatable = false)
+    val merchantApplication: MerchantApplication? = null,
 
     @Column(nullable = false)
     var name: String,
@@ -43,28 +54,29 @@ class MerchantBranch(
     @Column(name = "country")
     var country: String? = null,
 
-    // Stripe credentials — override merchant-level defaults when non-null
-    @Column(name = "stripe_secret_key", length = 512)
-    var stripeSecretKey: String? = null,
+    @Column(name = "contact_full_name")
+    var contactFullName: String? = null,
 
-    @Column(name = "stripe_publishable_key", length = 512)
-    var stripePublishableKey: String? = null,
+    @Column(name = "contact_email")
+    var contactEmail: String? = null,
 
-    // Braintree credentials — override merchant-level defaults when non-null
-    @Column(name = "braintree_merchant_id")
-    var braintreeMerchantId: String? = null,
+    @Column(name = "contact_phone_number")
+    var contactPhoneNumber: String? = null,
 
-    @Column(name = "braintree_public_key")
-    var braintreePublicKey: String? = null,
-
-    @Column(name = "braintree_private_key", length = 512)
-    var braintreePrivateKey: String? = null,
-
-    @Column(name = "braintree_environment", length = 64)
-    var braintreeEnvironment: String? = null,
+    @Column(name = "image_storage_key")
+    var imageStorageKey: String? = null,
 
     @Embedded
     var location: MerchantLocation? = null,
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+        name = "merchant_branch_payment_channels",
+        joinColumns = [JoinColumn(name = "merchant_branch_id")]
+    )
+    @Column(name = "payment_channel", nullable = false, length = 32)
+    @Enumerated(EnumType.STRING)
+    var activePaymentChannels: MutableSet<MerchantPaymentChannel> = linkedSetOf(),
 
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant = Instant.now(),
@@ -77,21 +89,38 @@ class MerchantBranch(
         updatedAt = at
     }
 
-    fun updateCredentials(
-        stripeSecretKey: String? = this.stripeSecretKey,
-        stripePublishableKey: String? = this.stripePublishableKey,
-        braintreeMerchantId: String? = this.braintreeMerchantId,
-        braintreePublicKey: String? = this.braintreePublicKey,
-        braintreePrivateKey: String? = this.braintreePrivateKey,
-        braintreeEnvironment: String? = this.braintreeEnvironment,
+    fun updateDetails(
+        name: String,
+        active: Boolean,
+        addressLine1: String?,
+        addressLine2: String?,
+        city: String?,
+        postalCode: String?,
+        country: String?,
+        contactFullName: String?,
+        contactEmail: String?,
+        contactPhoneNumber: String?,
+        activePaymentChannels: Set<MerchantPaymentChannel>,
+        location: MerchantLocation?,
         at: Instant = Instant.now(),
     ) {
-        this.stripeSecretKey = stripeSecretKey
-        this.stripePublishableKey = stripePublishableKey
-        this.braintreeMerchantId = braintreeMerchantId
-        this.braintreePublicKey = braintreePublicKey
-        this.braintreePrivateKey = braintreePrivateKey
-        this.braintreeEnvironment = braintreeEnvironment
+        this.name = name
+        this.active = active
+        this.addressLine1 = addressLine1
+        this.addressLine2 = addressLine2
+        this.city = city
+        this.postalCode = postalCode
+        this.country = country
+        this.contactFullName = contactFullName
+        this.contactEmail = contactEmail
+        this.contactPhoneNumber = contactPhoneNumber
+        this.activePaymentChannels = activePaymentChannels.toMutableSet()
+        this.location = location
         this.updatedAt = at
+    }
+
+    fun updateImage(storageKey: String, at: Instant = Instant.now()) {
+        imageStorageKey = storageKey
+        updatedAt = at
     }
 }

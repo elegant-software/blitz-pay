@@ -15,11 +15,13 @@ import com.elegant.software.blitzpay.merchant.domain.SupportingMaterial
 import com.elegant.software.blitzpay.merchant.domain.SupportingMaterialType
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
 import com.elegant.software.blitzpay.payments.QuickpayApplication
+import com.truelayer.java.TrueLayerClient
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.transaction.annotation.Transactional
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
@@ -35,6 +37,8 @@ import kotlin.test.assertTrue
 class MerchantApplicationRepositoryTest(
     @Autowired private val merchantApplicationRepository: MerchantApplicationRepository
 ) {
+    @MockitoBean
+    private lateinit var trueLayerClient: TrueLayerClient
     companion object {
         @Container
         private val postgres = PostgreSQLContainer("postgres:17-alpine")

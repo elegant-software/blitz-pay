@@ -3,7 +3,7 @@ info:
   title: OpenAPI definition
   version: v0
 servers:
-- url: http://localhost:63182
+- url: http://localhost:61988
   description: Generated server url
 tags:
 - name: Braintree
@@ -25,10 +25,10 @@ tags:
     url: https://docs.spring.io/spring-boot/docs/current/actuator-api/html/
 - name: Merchant Location
   description: Geolocation and geofencing for merchants
-- name: Merchant Products
-  description: Product catalog management for merchants
 - name: Merchant Branches
   description: Manage branches under a merchant
+- name: Merchant Products
+  description: Product catalog management for merchants
 - name: QR Payments
   description: Operations related to QR payments
 paths:
@@ -53,7 +53,7 @@ paths:
           format: uuid
       - name: branchId
         in: query
-        required: false
+        required: true
         schema:
           type: string
           format: uuid
@@ -100,6 +100,7 @@ paths:
                   type: string
                   format: binary
               required:
+              - branchId
               - name
               - unitPrice
       responses:
@@ -129,7 +130,7 @@ paths:
           format: uuid
       - name: branchId
         in: query
-        required: false
+        required: true
         schema:
           type: string
           format: uuid
@@ -201,6 +202,116 @@ paths:
       responses:
         "200":
           description: OK
+  /{version}/merchants/{merchantId}/branches/{branchId}/image:
+    put:
+      tags:
+      - Merchant Branches
+      summary: Set branch image
+      operationId: setImage
+      parameters:
+      - name: merchantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: branchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetBranchImageRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/BranchResponse"
+  /{version}/merchants/{merchantId}/branches/{branchId}:
+    get:
+      tags:
+      - Merchant Branches
+      summary: Get a branch by ID
+      operationId: get_1
+      parameters:
+      - name: merchantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: branchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/BranchResponse"
+    put:
+      tags:
+      - Merchant Branches
+      summary: Update a branch under a merchant
+      operationId: update_1
+      parameters:
+      - name: merchantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: branchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBranchRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/BranchResponse"
+    delete:
+      tags:
+      - Merchant Branches
+      summary: Soft-delete a branch (sets active = false)
+      operationId: delete
+      parameters:
+      - name: merchantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: branchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "204":
+          description: No Content
   /{version}/merchants/{id}/logo:
     put:
       tags:
@@ -229,6 +340,51 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/MerchantSummary"
+  /{version}/merchants/{id}:
+    get:
+      tags:
+      - Merchant Onboarding
+      summary: Get merchant application details
+      operationId: get_2
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MerchantDetailsResponse"
+    put:
+      tags:
+      - Merchant Onboarding
+      summary: Update editable merchant details and optional status
+      operationId: update_2
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMerchantRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MerchantDetailsResponse"
   /{version}/webhooks/truelayer:
     post:
       tags:
@@ -340,7 +496,7 @@ paths:
           format: uuid
       - name: branchId
         in: query
-        required: false
+        required: true
         schema:
           type: string
           format: uuid
@@ -350,7 +506,9 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/ProductListResponse"
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductResponse"
     post:
       tags:
       - Merchant Products
@@ -381,6 +539,7 @@ paths:
                   type: string
                   format: binary
               required:
+              - branchId
               - name
               - unitPrice
       responses:
@@ -409,7 +568,9 @@ paths:
           content:
             '*/*':
               schema:
-                type: object
+                type: array
+                items:
+                  $ref: "#/components/schemas/BranchResponse"
     post:
       tags:
       - Merchant Branches
@@ -434,7 +595,7 @@ paths:
           content:
             '*/*':
               schema:
-                type: object
+                $ref: "#/components/schemas/BranchResponse"
   /{version}/merchants/{id}/activate:
     post:
       tags:
@@ -577,52 +738,6 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/PaymentStatusResponse"
-  /{version}/merchants/{merchantId}/branches/{branchId}:
-    get:
-      tags:
-      - Merchant Branches
-      summary: Get a branch by ID
-      operationId: get_1
-      parameters:
-      - name: merchantId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: branchId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                type: object
-  /{version}/merchants/{id}:
-    get:
-      tags:
-      - Merchant Onboarding
-      summary: Get merchant application details
-      operationId: get_2
-      parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      responses:
-        "200":
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/MerchantSummary"
   /{version}/merchants/nearby:
     get:
       tags:
@@ -812,9 +927,6 @@ components:
         productId:
           type: string
           format: uuid
-        merchantId:
-          type: string
-          format: uuid
         branchId:
           type: string
           format: uuid
@@ -836,8 +948,8 @@ components:
           format: date-time
       required:
       - active
+      - branchId
       - createdAt
-      - merchantId
       - name
       - productId
       - unitPrice
@@ -915,6 +1027,138 @@ components:
       - latitude
       - longitude
       - merchantId
+    SetBranchImageRequest:
+      type: object
+      properties:
+        storageKey:
+          type: string
+      required:
+      - storageKey
+    BranchResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        merchantId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        active:
+          type: boolean
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+        city:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+        contactFullName:
+          type: string
+        contactEmail:
+          type: string
+        contactPhoneNumber:
+          type: string
+        activePaymentChannels:
+          type: array
+          items:
+            type: string
+            enum:
+            - PAYPAL
+            - STRIPE
+            - TRUELAYER
+          uniqueItems: true
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        geofenceRadiusMeters:
+          type: integer
+          format: int32
+        googlePlaceId:
+          type: string
+        placeFormattedAddress:
+          type: string
+        placeRating:
+          type: number
+          format: double
+        placeReviewCount:
+          type: integer
+          format: int32
+        placeEnrichmentStatus:
+          type: string
+        placeEnrichedAt:
+          type: string
+          format: date-time
+        imageUrl:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+      - active
+      - activePaymentChannels
+      - createdAt
+      - id
+      - merchantId
+      - name
+      - updatedAt
+    UpdateBranchRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        active:
+          type: boolean
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+        city:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+        contactFullName:
+          type: string
+        contactEmail:
+          type: string
+        contactPhoneNumber:
+          type: string
+        activePaymentChannels:
+          type: array
+          items:
+            type: string
+            enum:
+            - PAYPAL
+            - STRIPE
+            - TRUELAYER
+          uniqueItems: true
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        geofenceRadiusMeters:
+          type: integer
+          format: int32
+        googlePlaceId:
+          type: string
+      required:
+      - active
+      - activePaymentChannels
+      - name
     SetLogoRequest:
       type: object
       properties:
@@ -958,6 +1202,120 @@ components:
       - applicationId
       - applicationReference
       - lastUpdatedAt
+      - registrationNumber
+      - status
+    UpdateMerchantRequest:
+      type: object
+      properties:
+        legalBusinessName:
+          type: string
+        primaryBusinessAddress:
+          type: string
+        contactFullName:
+          type: string
+        contactEmail:
+          type: string
+        contactPhoneNumber:
+          type: string
+        activePaymentChannels:
+          type: array
+          items:
+            type: string
+            enum:
+            - PAYPAL
+            - STRIPE
+            - TRUELAYER
+          uniqueItems: true
+        status:
+          type: string
+          enum:
+          - DRAFT
+          - SUBMITTED
+          - VERIFICATION
+          - SCREENING
+          - RISK_REVIEW
+          - DECISION_PENDING
+          - SETUP
+          - ACTIVE
+          - MONITORING
+          - ACTION_REQUIRED
+          - REJECTED
+      required:
+      - activePaymentChannels
+      - contactEmail
+      - contactFullName
+      - contactPhoneNumber
+      - legalBusinessName
+      - primaryBusinessAddress
+    MerchantDetailsResponse:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+        applicationReference:
+          type: string
+        registrationNumber:
+          type: string
+        businessType:
+          type: string
+        operatingCountry:
+          type: string
+        legalBusinessName:
+          type: string
+        primaryBusinessAddress:
+          type: string
+        contactFullName:
+          type: string
+        contactEmail:
+          type: string
+        contactPhoneNumber:
+          type: string
+        activePaymentChannels:
+          type: array
+          items:
+            type: string
+            enum:
+            - PAYPAL
+            - STRIPE
+            - TRUELAYER
+          uniqueItems: true
+        status:
+          type: string
+          enum:
+          - DRAFT
+          - SUBMITTED
+          - VERIFICATION
+          - SCREENING
+          - RISK_REVIEW
+          - DECISION_PENDING
+          - SETUP
+          - ACTIVE
+          - MONITORING
+          - ACTION_REQUIRED
+          - REJECTED
+        submittedAt:
+          type: string
+          format: date-time
+        lastUpdatedAt:
+          type: string
+          format: date-time
+        logoStorageKey:
+          type: string
+        logoUrl:
+          type: string
+      required:
+      - activePaymentChannels
+      - applicationId
+      - applicationReference
+      - businessType
+      - contactEmail
+      - contactFullName
+      - contactPhoneNumber
+      - lastUpdatedAt
+      - legalBusinessName
+      - operatingCountry
+      - primaryBusinessAddress
       - registrationNumber
       - status
     CreateIntentRequest:
@@ -1045,6 +1403,21 @@ components:
           type: string
         country:
           type: string
+        contactFullName:
+          type: string
+        contactEmail:
+          type: string
+        contactPhoneNumber:
+          type: string
+        activePaymentChannels:
+          type: array
+          items:
+            type: string
+            enum:
+            - PAYPAL
+            - STRIPE
+            - TRUELAYER
+          uniqueItems: true
         latitude:
           type: number
           format: double
@@ -1056,19 +1429,8 @@ components:
           format: int32
         googlePlaceId:
           type: string
-        stripeSecretKey:
-          type: string
-        stripePublishableKey:
-          type: string
-        braintreeMerchantId:
-          type: string
-        braintreePublicKey:
-          type: string
-        braintreePrivateKey:
-          type: string
-        braintreeEnvironment:
-          type: string
       required:
+      - activePaymentChannels
       - name
     CreateMerchantRequest:
       type: object
@@ -1243,19 +1605,6 @@ components:
       - paymentRequestId
       - status
       - terminal
-    ProductListResponse:
-      type: object
-      properties:
-        merchantId:
-          type: string
-          format: uuid
-        products:
-          type: array
-          items:
-            $ref: "#/components/schemas/ProductResponse"
-      required:
-      - merchantId
-      - products
     NearbyMerchantResponse:
       type: object
       properties:

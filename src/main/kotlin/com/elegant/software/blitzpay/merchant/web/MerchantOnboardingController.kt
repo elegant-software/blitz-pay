@@ -1,10 +1,13 @@
 package com.elegant.software.blitzpay.merchant.web
 
 import com.elegant.software.blitzpay.merchant.api.MerchantBusinessProfileRequest
+import com.elegant.software.blitzpay.merchant.api.MerchantDetailsResponse
 import com.elegant.software.blitzpay.merchant.api.MerchantGateway
 import com.elegant.software.blitzpay.merchant.api.MerchantPrimaryContactRequest
 import com.elegant.software.blitzpay.merchant.api.MerchantSummary
 import com.elegant.software.blitzpay.merchant.api.RegisterMerchantRequest
+import com.elegant.software.blitzpay.merchant.api.UpdateMerchantRequest
+import com.elegant.software.blitzpay.merchant.application.MerchantManagementService
 import com.elegant.software.blitzpay.merchant.application.MerchantRegistrationService
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
 import io.swagger.v3.oas.annotations.Operation
@@ -30,7 +33,8 @@ data class CreateMerchantRequest(
 class MerchantOnboardingController(
     private val repository: MerchantApplicationRepository,
     private val gateway: MerchantGateway,
-    private val merchantRegistrationService: MerchantRegistrationService
+    private val merchantRegistrationService: MerchantRegistrationService,
+    private val merchantManagementService: MerchantManagementService
 ) {
 
     @Operation(summary = "Register a new merchant (directly ACTIVE, duplicate registration number rejected with 409)")
@@ -84,19 +88,12 @@ class MerchantOnboardingController(
 
     @Operation(summary = "Get merchant application details")
     @GetMapping("/{id}")
-    fun get(@PathVariable id: UUID): MerchantSummary {
-        val application = repository.findById(id)
-            .orElseThrow { NoSuchElementException("Merchant application not found: $id") }
+    fun get(@PathVariable id: UUID): MerchantDetailsResponse = merchantManagementService.get(id)
 
-        return MerchantSummary(
-            applicationId = application.id,
-            applicationReference = application.applicationReference,
-            registrationNumber = application.businessProfile.registrationNumber,
-            status = application.status,
-            submittedAt = application.submittedAt,
-            lastUpdatedAt = application.lastUpdatedAt
-        )
-    }
+    @Operation(summary = "Update editable merchant details and optional status")
+    @PutMapping("/{id}")
+    fun update(@PathVariable id: UUID, @RequestBody request: UpdateMerchantRequest): MerchantDetailsResponse =
+        merchantManagementService.update(id, request)
 
     @Operation(
         summary = "Set merchant logo",

@@ -20,7 +20,6 @@ data class UpdateProductRequest(
 
 data class ProductResponse(
     val productId: UUID,
-    val merchantId: UUID,
     val branchId: UUID,
     val name: String,
     val description: String?,
@@ -29,9 +28,4 @@ data class ProductResponse(
     val active: Boolean,
     val createdAt: Instant,
     val updatedAt: Instant
-)
-
-data class ProductListResponse(
-    val merchantId: UUID,
-    val products: List<ProductResponse>
 )

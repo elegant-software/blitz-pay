@@ -1,5 +1,6 @@
 package com.elegant.software.blitzpay.merchant.api
 
+import com.elegant.software.blitzpay.merchant.domain.MerchantPaymentChannel
 import java.time.Instant
 import java.util.UUID
 
@@ -10,16 +11,32 @@ data class CreateBranchRequest(
     val city: String? = null,
     val postalCode: String? = null,
     val country: String? = null,
+    val contactFullName: String? = null,
+    val contactEmail: String? = null,
+    val contactPhoneNumber: String? = null,
+    val activePaymentChannels: Set<MerchantPaymentChannel> = emptySet(),
     val latitude: Double? = null,
     val longitude: Double? = null,
     val geofenceRadiusMeters: Int? = null,
     val googlePlaceId: String? = null,
-    val stripeSecretKey: String? = null,
-    val stripePublishableKey: String? = null,
-    val braintreeMerchantId: String? = null,
-    val braintreePublicKey: String? = null,
-    val braintreePrivateKey: String? = null,
-    val braintreeEnvironment: String? = null,
+)
+
+data class UpdateBranchRequest(
+    val name: String,
+    val active: Boolean = true,
+    val addressLine1: String? = null,
+    val addressLine2: String? = null,
+    val city: String? = null,
+    val postalCode: String? = null,
+    val country: String? = null,
+    val contactFullName: String? = null,
+    val contactEmail: String? = null,
+    val contactPhoneNumber: String? = null,
+    val activePaymentChannels: Set<MerchantPaymentChannel> = emptySet(),
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val geofenceRadiusMeters: Int? = null,
+    val googlePlaceId: String? = null,
 )
 
 data class BranchResponse(
@@ -32,6 +49,10 @@ data class BranchResponse(
     val city: String?,
     val postalCode: String?,
     val country: String?,
+    val contactFullName: String?,
+    val contactEmail: String?,
+    val contactPhoneNumber: String?,
+    val activePaymentChannels: Set<MerchantPaymentChannel>,
     val latitude: Double?,
     val longitude: Double?,
     val geofenceRadiusMeters: Int?,
@@ -41,8 +62,7 @@ data class BranchResponse(
     val placeReviewCount: Int?,
     val placeEnrichmentStatus: String?,
     val placeEnrichedAt: Instant?,
-    val hasStripeCredentials: Boolean,
-    val hasBraintreeCredentials: Boolean,
+    val imageUrl: String?,
     val createdAt: Instant,
     val updatedAt: Instant,
 )

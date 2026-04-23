@@ -3,11 +3,14 @@ package com.elegant.software.blitzpay.merchant.application
 import com.elegant.software.blitzpay.merchant.api.BraintreeCredentials
 import com.elegant.software.blitzpay.merchant.api.MerchantCredentialResolver
 import com.elegant.software.blitzpay.merchant.api.StripeCredentials
-import java.math.BigDecimal
+import com.elegant.software.blitzpay.merchant.domain.MerchantPaymentChannel
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantProductRepository
+import com.elegant.software.blitzpay.payments.braintree.config.BraintreeProperties
+import com.elegant.software.blitzpay.payments.stripe.config.StripeProperties
 import org.springframework.stereotype.Service
+import java.math.BigDecimal
 import java.util.UUID
 
 @Service
@@ -15,47 +18,36 @@ class MerchantCredentialResolverImpl(
     private val merchantApplicationRepository: MerchantApplicationRepository,
     private val merchantBranchRepository: MerchantBranchRepository,
     private val merchantProductRepository: MerchantProductRepository,
+    private val stripeProperties: StripeProperties,
+    private val braintreeProperties: BraintreeProperties,
 ) : MerchantCredentialResolver {
 
     override fun resolveStripe(merchantId: UUID, branchId: UUID?): StripeCredentials? {
-        if (branchId != null) {
-            val branch = merchantBranchRepository.findByIdAndActiveTrue(branchId)
-            if (branch?.stripeSecretKey != null && branch.stripePublishableKey != null) {
-                return StripeCredentials(branch.stripeSecretKey!!, branch.stripePublishableKey!!)
-            }
+        if (!isChannelEnabled(merchantId, branchId, MerchantPaymentChannel.STRIPE)) {
+            return null
         }
-        val merchant = merchantApplicationRepository.findById(merchantId).orElse(null) ?: return null
-        if (merchant.stripeSecretKey != null && merchant.stripePublishableKey != null) {
-            return StripeCredentials(merchant.stripeSecretKey!!, merchant.stripePublishableKey!!)
+        if (stripeProperties.secretKey.isNotBlank() && stripeProperties.publishableKey.isNotBlank()) {
+            return StripeCredentials(
+                secretKey = stripeProperties.secretKey,
+                publishableKey = stripeProperties.publishableKey
+            )
         }
         return null
     }
 
     override fun resolveBraintree(merchantId: UUID, branchId: UUID?): BraintreeCredentials? {
-        if (branchId != null) {
-            val branch = merchantBranchRepository.findByIdAndActiveTrue(branchId)
-            if (branch?.braintreeMerchantId != null &&
-                branch.braintreePublicKey != null &&
-                branch.braintreePrivateKey != null
-            ) {
-                return BraintreeCredentials(
-                    merchantId = branch.braintreeMerchantId!!,
-                    publicKey = branch.braintreePublicKey!!,
-                    privateKey = branch.braintreePrivateKey!!,
-                    environment = branch.braintreeEnvironment ?: "sandbox",
-                )
-            }
+        if (!isChannelEnabled(merchantId, branchId, MerchantPaymentChannel.PAYPAL)) {
+            return null
         }
-        val merchant = merchantApplicationRepository.findById(merchantId).orElse(null) ?: return null
-        if (merchant.braintreeMerchantId != null &&
-            merchant.braintreePublicKey != null &&
-            merchant.braintreePrivateKey != null
+        if (braintreeProperties.merchantId.isNotBlank() &&
+            braintreeProperties.publicKey.isNotBlank() &&
+            braintreeProperties.privateKey.isNotBlank()
         ) {
             return BraintreeCredentials(
-                merchantId = merchant.braintreeMerchantId!!,
-                publicKey = merchant.braintreePublicKey!!,
-                privateKey = merchant.braintreePrivateKey!!,
-                environment = merchant.braintreeEnvironment ?: "sandbox",
+                merchantId = braintreeProperties.merchantId,
+                publicKey = braintreeProperties.publicKey,
+                privateKey = braintreeProperties.privateKey,
+                environment = braintreeProperties.environment,
             )
         }
         return null
@@ -73,4 +65,27 @@ class MerchantCredentialResolverImpl(
 
     override fun resolveProductPrice(productId: UUID): BigDecimal? =
         merchantProductRepository.findByIdAndActiveTrue(productId).orElse(null)?.unitPrice
+
+    private fun isChannelEnabled(
+        merchantId: UUID,
+        branchId: UUID?,
+        channel: MerchantPaymentChannel
+    ): Boolean {
+        val merchant = merchantApplicationRepository.findById(merchantId).orElse(null) ?: return false
+
+        if (branchId == null) {
+            return channel in merchant.activePaymentChannels
+        }
+
+        val branch = merchantBranchRepository.findByIdAndActiveTrue(branchId) ?: return false
+        if (branch.merchantApplicationId != merchantId) {
+            return false
+        }
+
+        return if (branch.activePaymentChannels.isNotEmpty()) {
+            channel in branch.activePaymentChannels
+        } else {
+            channel in merchant.activePaymentChannels
+        }
+    }
 }

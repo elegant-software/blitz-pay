@@ -74,7 +74,6 @@ class MerchantProductServiceTest {
         assertEquals("Coffee Blend", response.name)
         assertEquals("**Medium roast**", response.description)
         assertEquals(BigDecimal("12.50"), response.unitPrice)
-        assertEquals(merchantId, response.merchantId)
         assertTrue(response.active)
     }
 
@@ -210,7 +209,7 @@ class MerchantProductServiceTest {
 
         val response = service.list(merchantId, branchId)
 
-        assertEquals("https://signed.example/merchants/$merchantId/branches/$branchId/products/product/image.jpg", response.products.single().imageUrl)
+        assertEquals("https://signed.example/merchants/$merchantId/branches/$branchId/products/product/image.jpg", response.single().imageUrl)
     }
 
     @Test

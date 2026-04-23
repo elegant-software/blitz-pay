@@ -1,7 +1,6 @@
 package com.elegant.software.blitzpay.merchant.web
 
 import com.elegant.software.blitzpay.merchant.api.CreateProductRequest
-import com.elegant.software.blitzpay.merchant.api.ProductListResponse
 import com.elegant.software.blitzpay.merchant.api.ProductResponse
 import com.elegant.software.blitzpay.merchant.api.UpdateProductRequest
 import com.elegant.software.blitzpay.merchant.application.MerchantProductService
@@ -58,7 +57,7 @@ class MerchantProductController(
 
     @Operation(summary = "List all active products for the merchant")
     @GetMapping
-    fun list(@PathVariable merchantId: UUID, @RequestParam("branchId") branchId: UUID): Mono<ResponseEntity<ProductListResponse>> =
+    fun list(@PathVariable merchantId: UUID, @RequestParam("branchId") branchId: UUID): Mono<ResponseEntity<List<ProductResponse>>> =
         Mono.fromCallable { merchantProductService.list(merchantId, branchId) }
             .subscribeOn(Schedulers.boundedElastic())
             .map { ResponseEntity.ok(it) }
