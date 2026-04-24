@@ -3,6 +3,8 @@ package com.elegant.software.blitzpay.merchant.application
 import com.elegant.software.blitzpay.merchant.api.SetMerchantLocationRequest
 import com.elegant.software.blitzpay.merchant.domain.BusinessProfile
 import com.elegant.software.blitzpay.merchant.domain.MerchantApplication
+import com.elegant.software.blitzpay.merchant.domain.MerchantBranch
+import com.elegant.software.blitzpay.merchant.domain.MerchantLocation
 import com.elegant.software.blitzpay.merchant.domain.PrimaryContact
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
@@ -12,6 +14,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.util.Optional
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 
 class MerchantLocationServiceTest {
     private val repository = mock<MerchantApplicationRepository>()
@@ -46,5 +49,42 @@ class MerchantLocationServiceTest {
 
         assertEquals("ChIJ-test", response.googlePlaceId)
         assertEquals("PENDING", response.placeEnrichmentStatus)
+    }
+
+    @Test
+    fun `find nearby returns merchant when only branch is within radius`() {
+        val merchant = MerchantApplication(
+            applicationReference = "BLTZ-NEARBY",
+            businessProfile = BusinessProfile(
+                legalBusinessName = "Branch Nearby GmbH",
+                businessType = "LLC",
+                registrationNumber = "DE-NEARBY",
+                operatingCountry = "DE",
+                primaryBusinessAddress = "Legal Strasse 2"
+            ),
+            primaryContact = PrimaryContact("Jane Doe", "jane@example.com", "+491234")
+        )
+
+        val branch = MerchantBranch(
+            merchantApplicationId = merchant.id,
+            name = "Nearby Branch",
+            location = MerchantLocation(
+                latitude = 53.1022777,
+                longitude = 8.9146786,
+                geofenceRadiusMeters = 150
+            )
+        )
+
+        whenever(repository.findNearby(any(), any(), any())).thenReturn(emptyList())
+        whenever(merchantBranchRepository.findAllByActiveTrue()).thenReturn(listOf(branch))
+        whenever(repository.findAllById(any<Set<java.util.UUID>>())).thenReturn(listOf(merchant))
+        whenever(merchantBranchRepository.findAllByMerchantApplicationIdInAndActiveTrue(any())).thenReturn(listOf(branch))
+
+        val response = service.findNearby(53.1022777, 8.9146786, 500.0)
+
+        assertEquals(1, response.merchants.size)
+        assertEquals(merchant.id, response.merchants.first().merchantId)
+        assertNotNull(response.merchants.first().activeBranches.firstOrNull())
+        assertEquals(branch.id, response.merchants.first().activeBranches.first().branchId)
     }
 }

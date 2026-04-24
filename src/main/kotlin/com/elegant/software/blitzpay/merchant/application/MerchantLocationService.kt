@@ -24,6 +24,10 @@ class MerchantLocationService(
     private val merchantBranchRepository: MerchantBranchRepository,
 ) {
     private val log = LoggerFactory.getLogger(MerchantLocationService::class.java)
+    private data class BranchDistance(
+        val branch: com.elegant.software.blitzpay.merchant.domain.MerchantBranch,
+        val distanceMeters: Double?,
+    )
 
     @Transactional
     fun setLocation(merchantId: UUID, request: SetMerchantLocationRequest): MerchantLocationResponse {
@@ -69,32 +73,83 @@ class MerchantLocationService(
     @Transactional(readOnly = true)
     fun findNearby(lat: Double, lng: Double, radiusMeters: Double): NearbyMerchantsResponse {
         require(radiusMeters > 0) { "radiusMeters must be positive" }
-        val merchants = repository.findNearby(lat, lng, radiusMeters)
+        val merchantsById = linkedMapOf<UUID, com.elegant.software.blitzpay.merchant.domain.MerchantApplication>()
+        repository.findNearby(lat, lng, radiusMeters).forEach { merchant ->
+            merchantsById[merchant.id] = merchant
+        }
+
+        val nearbyBranchMerchantIds = merchantBranchRepository.findAllByActiveTrue()
+            .asSequence()
+            .filter { it.location != null }
+            .filter { branch ->
+                val location = requireNotNull(branch.location)
+                haversineMeters(lat, lng, location.latitude, location.longitude) <= radiusMeters
+            }
+            .map { it.merchantApplicationId }
+            .filter { it !in merchantsById }
+            .toSet()
+
+        if (nearbyBranchMerchantIds.isNotEmpty()) {
+            repository.findAllById(nearbyBranchMerchantIds).forEach { merchant ->
+                merchantsById.putIfAbsent(merchant.id, merchant)
+            }
+        }
+
+        val merchants = merchantsById.values.toList()
         val activeBranchesByMerchantId = merchantBranchRepository
-            .findAllByMerchantApplicationIdInAndActiveTrue(merchants.map { it.id })
+            .findAllByMerchantApplicationIdInAndActiveTrue(merchantsById.keys)
             .groupBy { it.merchantApplicationId }
 
         return NearbyMerchantsResponse(
-            merchants = merchants.map { m ->
-                val loc = m.location!!
+            merchants = merchants.mapNotNull { m ->
+                val merchantLocation = m.location
+                val merchantDistance = merchantLocation?.let {
+                    haversineMeters(lat, lng, it.latitude, it.longitude)
+                }?.takeIf { it <= radiusMeters }
+                val branchDistances = activeBranchesByMerchantId[m.id]
+                    .orEmpty()
+                    .map { branch ->
+                        BranchDistance(
+                            branch = branch,
+                            distanceMeters = branch.location?.let {
+                                haversineMeters(lat, lng, it.latitude, it.longitude)
+                            }
+                        )
+                    }
+
+                val nearestBranchDistance = branchDistances
+                    .mapNotNull { it.distanceMeters }
+                    .filter { it <= radiusMeters }
+                    .minOrNull()
+
+                val effectiveDistance = listOfNotNull(merchantDistance, nearestBranchDistance).minOrNull()
+                    ?: return@mapNotNull null
+
+                val effectiveLocation = when {
+                    merchantDistance != null -> requireNotNull(merchantLocation)
+                    else -> branchDistances
+                        .filter { it.distanceMeters != null && it.distanceMeters <= radiusMeters }
+                        .minByOrNull { requireNotNull(it.distanceMeters) }
+                        ?.branch
+                        ?.location
+                } ?: return@mapNotNull null
+
                 NearbyMerchantResponse(
                     merchantId = m.id,
                     legalBusinessName = m.businessProfile.legalBusinessName,
-                    latitude = loc.latitude,
-                    longitude = loc.longitude,
-                    geofenceRadiusMeters = loc.geofenceRadiusMeters,
-                    googlePlaceId = loc.googlePlaceId,
-                    distanceMeters = haversineMeters(lat, lng, loc.latitude, loc.longitude),
-                    activeBranches = activeBranchesByMerchantId[m.id]
-                        .orEmpty()
-                        .map { branch ->
+                    latitude = effectiveLocation.latitude,
+                    longitude = effectiveLocation.longitude,
+                    geofenceRadiusMeters = effectiveLocation.geofenceRadiusMeters,
+                    googlePlaceId = effectiveLocation.googlePlaceId,
+                    distanceMeters = effectiveDistance,
+                    activeBranches = branchDistances
+                        .map { branchDistance ->
+                            val branch = branchDistance.branch
                             val branchLocation = branch.location
                             NearbyBranchResponse(
                                 branchId = branch.id,
                                 name = branch.name,
-                                distanceMeters = branchLocation?.let {
-                                    haversineMeters(lat, lng, it.latitude, it.longitude)
-                                },
+                                distanceMeters = branchDistance.distanceMeters,
                                 latitude = branchLocation?.latitude,
                                 longitude = branchLocation?.longitude,
                                 addressLine1 = branch.addressLine1,
@@ -109,7 +164,7 @@ class MerchantLocationService(
                         }
                         .sortedWith(compareBy(nullsLast()) { it.distanceMeters })
                 )
-            }
+            }.sortedBy { it.distanceMeters }
         )
     }
 

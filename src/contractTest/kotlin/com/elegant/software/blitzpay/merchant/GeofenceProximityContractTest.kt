@@ -240,6 +240,8 @@ class GeofenceProximityContractTest : ContractVerifierBase() {
     fun `GET merchants nearby returns empty activeBranches when no active located branches`() {
         whenever(merchantApplicationRepository.findNearby(any(), any(), any()))
             .thenReturn(listOf(activeMerchant))
+        whenever(merchantBranchRepository.findAllByActiveTrue())
+            .thenReturn(emptyList())
         whenever(merchantBranchRepository.findAllByMerchantApplicationIdInAndActiveTrue(any()))
             .thenReturn(emptyList())
 
@@ -250,5 +252,41 @@ class GeofenceProximityContractTest : ContractVerifierBase() {
             .expectBody()
             .jsonPath("$.merchants[0].activeBranches").isArray
             .jsonPath("$.merchants[0].activeBranches").value<List<*>> { list -> assert(list.isEmpty()) }
+    }
+
+    @Test
+    fun `GET merchants nearby returns merchant when only branch location matches radius`() {
+        val merchantWithoutLocation = MerchantApplication(
+            id = merchantId,
+            applicationReference = "BLTZ-GEO-002",
+            businessProfile = BusinessProfile(
+                legalBusinessName = "Branch Only Merchant GmbH",
+                businessType = "LLC",
+                registrationNumber = "GEO002",
+                operatingCountry = "DE",
+                primaryBusinessAddress = "Berlin"
+            ),
+            primaryContact = PrimaryContact("Max Geo", "max@geo.de", "+49111"),
+            status = MerchantOnboardingStatus.ACTIVE,
+        )
+
+        whenever(merchantApplicationRepository.findNearby(any(), any(), any()))
+            .thenReturn(emptyList())
+        whenever(merchantBranchRepository.findAllByActiveTrue())
+            .thenReturn(listOf(activeBranch))
+        whenever(merchantApplicationRepository.findAllById(any<Set<UUID>>()))
+            .thenReturn(listOf(merchantWithoutLocation))
+        whenever(merchantBranchRepository.findAllByMerchantApplicationIdInAndActiveTrue(any()))
+            .thenReturn(listOf(activeBranch))
+
+        webTestClient.get()
+            .uri("/v1/merchants/nearby?lat=48.8600&lng=2.3400&radiusMeters=1000")
+            .exchange()
+            .expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.merchants[0].merchantId").isEqualTo(merchantId.toString())
+            .jsonPath("$.merchants[0].latitude").isEqualTo(48.8600)
+            .jsonPath("$.merchants[0].longitude").isEqualTo(2.3400)
+            .jsonPath("$.merchants[0].activeBranches[0].branchId").isEqualTo(branchId.toString())
     }
 }

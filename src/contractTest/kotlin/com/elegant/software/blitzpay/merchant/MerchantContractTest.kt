@@ -6,6 +6,7 @@ import com.elegant.software.blitzpay.merchant.domain.MerchantApplication
 import com.elegant.software.blitzpay.merchant.domain.MerchantOnboardingStatus
 import com.elegant.software.blitzpay.merchant.domain.MerchantProduct
 import com.elegant.software.blitzpay.merchant.domain.PrimaryContact
+import com.elegant.software.blitzpay.storage.PresignedUpload
 import jakarta.persistence.Query
 import org.hibernate.Filter
 import org.hibernate.Session
@@ -16,6 +17,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import org.springframework.http.MediaType
 import org.springframework.http.client.MultipartBodyBuilder
+import java.time.Instant
 import java.util.Optional
 import java.util.UUID
 import java.math.BigDecimal
@@ -34,6 +36,13 @@ class MerchantContractTest : ContractVerifierBase() {
         whenever(nativeQuery.setParameter(any<String>(), any())).thenReturn(nativeQuery)
         whenever(nativeQuery.singleResult).thenReturn("contract")
         whenever(storageService.presignDownload(any(), any())).thenAnswer { "https://signed.example/${it.arguments[0]}" }
+        whenever(storageService.presignUpload(any(), any(), any())).thenAnswer {
+            PresignedUpload(
+                storageKey = it.arguments[0] as String,
+                uploadUrl = "https://upload.example/${it.arguments[0]}",
+                expiresAt = Instant.parse("2026-04-24T18:45:00Z")
+            )
+        }
     }
 
     @Test
@@ -178,6 +187,62 @@ class MerchantContractTest : ContractVerifierBase() {
             .jsonPath("$.contactEmail").isEqualTo("after@test.de")
             .jsonPath("$.activePaymentChannels.length()").isEqualTo(2)
             .jsonPath("$.status").isEqualTo(MerchantOnboardingStatus.ACTIVE.name)
+    }
+
+    @Test
+    fun `POST merchant logo upload url returns presigned upload details`() {
+        val application = MerchantApplication(
+            applicationReference = "BLTZ-CONTRACT-LOGO",
+            businessProfile = BusinessProfile(
+                legalBusinessName = "Logo Merchant",
+                businessType = "LLC",
+                registrationNumber = "DE-CONTRACT-LOGO",
+                operatingCountry = "DE",
+                primaryBusinessAddress = "Teststrasse 2, Berlin"
+            ),
+            primaryContact = PrimaryContact(fullName = "Logo User", email = "logo@test.de", phoneNumber = "+49301234567")
+        )
+        whenever(merchantApplicationRepository.findById(application.id))
+            .thenReturn(Optional.of(application))
+
+        webTestClient.post()
+            .uri("/v1/merchants/${application.id}/logo/upload-url")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue("""{"contentType":"image/webp"}""")
+            .exchange()
+            .expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.storageKey").isEqualTo("merchants/${application.id}/logo.webp")
+            .jsonPath("$.uploadUrl").isEqualTo("https://upload.example/merchants/${application.id}/logo.webp")
+            .jsonPath("$.expiresAt").exists()
+    }
+
+    @Test
+    fun `PUT merchant logo stores canonical storage key`() {
+        val application = MerchantApplication(
+            applicationReference = "BLTZ-CONTRACT-LOGO-SET",
+            businessProfile = BusinessProfile(
+                legalBusinessName = "Logo Merchant",
+                businessType = "LLC",
+                registrationNumber = "DE-CONTRACT-LOGO-SET",
+                operatingCountry = "DE",
+                primaryBusinessAddress = "Teststrasse 3, Berlin"
+            ),
+            primaryContact = PrimaryContact(fullName = "Logo User", email = "logo@test.de", phoneNumber = "+49301234567")
+        )
+        whenever(merchantApplicationRepository.findById(application.id))
+            .thenReturn(Optional.of(application))
+        whenever(merchantApplicationRepository.save(any<MerchantApplication>()))
+            .thenAnswer { it.arguments[0] }
+
+        webTestClient.put()
+            .uri("/v1/merchants/${application.id}/logo")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue("""{"storageKey":"merchants/${application.id}/logo.webp"}""")
+            .exchange()
+            .expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.logoStorageKey").isEqualTo("merchants/${application.id}/logo.webp")
     }
 
     @Test

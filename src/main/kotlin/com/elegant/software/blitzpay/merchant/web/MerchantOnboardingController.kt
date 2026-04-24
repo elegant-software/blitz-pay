@@ -3,10 +3,13 @@ package com.elegant.software.blitzpay.merchant.web
 import com.elegant.software.blitzpay.merchant.api.MerchantBusinessProfileRequest
 import com.elegant.software.blitzpay.merchant.api.MerchantDetailsResponse
 import com.elegant.software.blitzpay.merchant.api.MerchantGateway
+import com.elegant.software.blitzpay.merchant.api.MerchantLogoUploadRequest
+import com.elegant.software.blitzpay.merchant.api.MerchantLogoUploadResponse
 import com.elegant.software.blitzpay.merchant.api.MerchantPrimaryContactRequest
 import com.elegant.software.blitzpay.merchant.api.MerchantSummary
 import com.elegant.software.blitzpay.merchant.api.RegisterMerchantRequest
 import com.elegant.software.blitzpay.merchant.api.UpdateMerchantRequest
+import com.elegant.software.blitzpay.merchant.application.MerchantLogoService
 import com.elegant.software.blitzpay.merchant.application.MerchantManagementService
 import com.elegant.software.blitzpay.merchant.application.MerchantRegistrationService
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
@@ -34,7 +37,8 @@ class MerchantOnboardingController(
     private val repository: MerchantApplicationRepository,
     private val gateway: MerchantGateway,
     private val merchantRegistrationService: MerchantRegistrationService,
-    private val merchantManagementService: MerchantManagementService
+    private val merchantManagementService: MerchantManagementService,
+    private val merchantLogoService: MerchantLogoService,
 ) {
 
     @Operation(summary = "Register a new merchant (directly ACTIVE, duplicate registration number rejected with 409)")
@@ -96,28 +100,23 @@ class MerchantOnboardingController(
         merchantManagementService.update(id, request)
 
     @Operation(
+        summary = "Create a merchant logo upload URL",
+        description = "Generates a presigned upload URL for a merchant logo. Supported content types: image/jpeg, image/png, image/webp."
+    )
+    @PostMapping("/{id}/logo/upload-url")
+    fun createLogoUploadUrl(
+        @PathVariable id: UUID,
+        @RequestBody request: MerchantLogoUploadRequest
+    ): MerchantLogoUploadResponse = merchantLogoService.createUploadUrl(id, request.contentType)
+
+    @Operation(
         summary = "Set merchant logo",
         description = "Records the S3 storage key of a logo already uploaded by the client. " +
-                "Expected key format: merchant/{applicationId}/logo.{ext}"
+                "Expected key format: merchants/{applicationId}/logo.{ext}"
     )
     @PutMapping("/{id}/logo")
-    fun setLogo(@PathVariable id: UUID, @RequestBody request: SetLogoRequest): MerchantSummary {
-        val application = repository.findById(id)
-            .orElseThrow { NoSuchElementException("Merchant application not found: $id") }
-
-        application.updateLogo(request.storageKey)
-        repository.save(application)
-
-        return MerchantSummary(
-            applicationId = application.id,
-            applicationReference = application.applicationReference,
-            registrationNumber = application.businessProfile.registrationNumber,
-            status = application.status,
-            submittedAt = application.submittedAt,
-            lastUpdatedAt = application.lastUpdatedAt,
-            logoStorageKey = application.businessProfile.logoStorageKey
-        )
-    }
+    fun setLogo(@PathVariable id: UUID, @RequestBody request: SetLogoRequest): MerchantSummary =
+        merchantLogoService.attachLogo(id, request.storageKey)
 }
 
 data class SetLogoRequest(val storageKey: String)

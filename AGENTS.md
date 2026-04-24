@@ -42,6 +42,8 @@ For coding conventions, architecture patterns, and technology-specific best prac
 - Test resource files under `src/test/resources/` and repository documentation in Markdown
 - Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith, Spring Data JPA/Hibernate, Liquibase, AWS SDK S3 v2, Jackson Kotlin module, Bean Validation (001-merchant-onboarding)
 - PostgreSQL 16 for product metadata; S3-compatible object storage for private product images (`blitzpay.storage.*`, MinIO in local env) (001-merchant-onboarding)
+- Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith, Spring Data JPA/Hibernate, Liquibase, Jackson Kotlin module, Bean Validation (009-order-payment-tracking)
+- PostgreSQL 16 in schema `blitzpay` (009-order-payment-tracking)
 
 ## Recent Changes
 - 001-merchant-onboarding: Added Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith, Spring Data JPA/Hibernate, Liquibase, AWS SDK S3 v2, Jackson Kotlin module, Bean Validation

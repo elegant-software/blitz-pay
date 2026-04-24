@@ -119,6 +119,16 @@ data class MerchantDetailsResponse(
     val logoUrl: String? = null
 )
 
+data class MerchantLogoUploadRequest(
+    val contentType: String
+)
+
+data class MerchantLogoUploadResponse(
+    val storageKey: String,
+    val uploadUrl: String,
+    val expiresAt: Instant
+)
+
 data class MerchantPersonResponse(
     val fullName: String,
     val role: PersonRole,
