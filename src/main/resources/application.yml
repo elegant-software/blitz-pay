@@ -128,7 +128,7 @@ blitzpay:
     allowed-headers:
       - "*"
   storage:
-    endpoint: ${STORAGE_ENDPOINT:http://myserver:7070}
+    endpoint: ${STORAGE_ENDPOINT:https://minio.elegantsoftware.de}
     region: ${STORAGE_REGION:us-east-1}
     access-key: ${STORAGE_ACCESS_KEY:minioadmin}
     secret-key: ${STORAGE_SECRET_KEY:Halil@avina4410}

@@ -1,0 +1,93 @@
+{
+  "contract": "Get Order",
+  "version": "v1",
+  "endpoints": [
+    {
+      "id": "get-order",
+      "method": "GET",
+      "path": "/v1/orders/{orderId}",
+      "description": "Returns the current status and payment-linked state of an existing order.",
+      "request": {
+        "pathParams": {
+          "orderId": {
+            "type": "string",
+            "required": true
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "contentType": "application/json",
+          "body": {
+            "orderId": {
+              "type": "string"
+            },
+            "merchantId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "branchId": {
+              "type": "string",
+              "format": "uuid",
+              "required": false
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "PENDING_PAYMENT",
+                "PAYMENT_IN_PROGRESS",
+                "PAID",
+                "PAYMENT_FAILED",
+                "CANCELLED"
+              ]
+            },
+            "currency": {
+              "type": "string"
+            },
+            "totalAmountMinor": {
+              "type": "integer"
+            },
+            "lastPaymentRequestId": {
+              "type": "string",
+              "format": "uuid",
+              "required": false
+            },
+            "lastPaymentProvider": {
+              "type": "string",
+              "required": false
+            },
+            "paidAt": {
+              "type": "string",
+              "format": "date-time",
+              "required": false
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "productId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "integer"
+                },
+                "unitPriceMinor": {
+                  "type": "integer"
+                },
+                "lineTotalMinor": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "404": {
+          "description": "The order ID does not exist."
+        }
+      }
+    }
+  ]
+}
