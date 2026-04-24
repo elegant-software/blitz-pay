@@ -1,0 +1,79 @@
+{
+  "contract": "Payment Order Reference Updates",
+  "version": "v1",
+  "note": "This feature does not replace existing payment endpoints. It tightens them so every payment references an existing order.",
+  "endpoints": [
+    {
+      "id": "qrpay-request-uses-order-reference",
+      "method": "POST",
+      "path": "/v1/payments/request",
+      "description": "The existing QR/TrueLayer payment request continues to accept orderId, but the field now represents a required pre-created order business reference.",
+      "request": {
+        "contentType": "application/json",
+        "body": {
+          "paymentRequestId": {
+            "type": "string",
+            "format": "uuid",
+            "required": false
+          },
+          "orderId": {
+            "type": "string",
+            "required": true,
+            "description": "Order reference returned by POST /v1/orders."
+          }
+        }
+      }
+    },
+    {
+      "id": "braintree-checkout-uses-order-reference",
+      "method": "POST",
+      "path": "/v1/payments/braintree/checkout",
+      "description": "Braintree checkout adds a required orderId so the transaction can be linked back to the order lifecycle.",
+      "request": {
+        "contentType": "application/json",
+        "body": {
+          "orderId": {
+            "type": "string",
+            "required": true
+          },
+          "nonce": {
+            "type": "string",
+            "required": true
+          },
+          "merchantId": {
+            "type": "string",
+            "format": "uuid",
+            "required": true
+          },
+          "branchId": {
+            "type": "string",
+            "format": "uuid",
+            "required": false
+          },
+          "amount": {
+            "type": "number",
+            "required": false,
+            "description": "Optional override when allowed by the checkout flow. The order remains the primary reference."
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "contentType": "application/json",
+          "body": {
+            "status": {
+              "type": "string"
+            },
+            "transactionId": {
+              "type": "string",
+              "required": false
+            },
+            "orderId": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

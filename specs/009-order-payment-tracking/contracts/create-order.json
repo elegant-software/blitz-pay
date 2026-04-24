@@ -1,0 +1,103 @@
+{
+  "contract": "Create Order",
+  "version": "v1",
+  "endpoints": [
+    {
+      "id": "create-order",
+      "method": "POST",
+      "path": "/v1/orders",
+      "description": "Creates an order from merchant products and returns the canonical order reference to be used across payment flows.",
+      "request": {
+        "contentType": "application/json",
+        "body": {
+          "items": {
+            "type": "array",
+            "required": true,
+            "items": {
+              "productId": {
+                "type": "string",
+                "format": "uuid",
+                "required": true
+              },
+              "quantity": {
+                "type": "integer",
+                "required": true,
+                "minimum": 1
+              }
+            }
+          }
+        }
+      },
+      "responses": {
+        "201": {
+          "contentType": "application/json",
+          "body": {
+            "orderId": {
+              "type": "string",
+              "description": "Canonical business reference for the order and all related payments."
+            },
+            "merchantId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "branchId": {
+              "type": "string",
+              "format": "uuid",
+              "required": false
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "PENDING_PAYMENT",
+                "PAYMENT_IN_PROGRESS",
+                "PAID",
+                "PAYMENT_FAILED",
+                "CANCELLED"
+              ]
+            },
+            "currency": {
+              "type": "string"
+            },
+            "totalAmountMinor": {
+              "type": "integer"
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "productId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "integer"
+                },
+                "unitPriceMinor": {
+                  "type": "integer"
+                },
+                "lineTotalMinor": {
+                  "type": "integer"
+                }
+              }
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "400": {
+          "description": "The order request is malformed, empty, or contains invalid quantities."
+        },
+        "404": {
+          "description": "One or more referenced products are unknown."
+        },
+        "422": {
+          "description": "The referenced products cannot be ordered together because they are inactive or cross merchant boundaries."
+        }
+      }
+    }
+  ]
+}
