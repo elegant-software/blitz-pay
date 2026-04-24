@@ -3,7 +3,6 @@ package com.elegant.software.blitzpay.payments.stripe.internal
 import com.elegant.software.blitzpay.merchant.api.MerchantCredentialResolver
 import com.stripe.exception.StripeException
 import io.swagger.v3.oas.annotations.Operation
-import io.swagger.v3.oas.annotations.tags.Tag
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -25,7 +24,6 @@ data class CreateIntentRequest(
 data class CreateIntentResponse(val paymentIntent: String, val publishableKey: String)
 data class ErrorResponse(val error: String)
 
-@Tag(name = "Stripe", description = "Card payment session creation via Stripe")
 @RestController
 @RequestMapping("/{version:v\\d+(?:\\.\\d+)*}/payments/stripe", version = "1")
 class StripePaymentController(

@@ -95,6 +95,17 @@ Grouped Swagger URLs also point to `/api-docs/...` rather than `/v3/api-docs/...
 
 This is intentional. Reverting to the default `/v3/api-docs` would reintroduce a collision with path-based API version parsing because the first segment would again look like a version.
 
+For grouped docs, note the separation of responsibilities:
+
+- `GroupedOpenApi.group("...")` defines the actual group identifier and therefore the docs URL
+  such as `/api-docs/Invoice`
+- `springdoc.swagger-ui.urls[].name` defines the display label shown in the Swagger UI topbar
+
+With plain Springdoc, removing the YAML entries causes Swagger UI to display the raw
+`GroupedOpenApi.group(...)` values. To avoid duplicating names, this repository centralizes both the
+group IDs and labels in YAML-backed configuration properties, and the `GroupedOpenApi` beans read
+their `group(...)` values from that shared source.
+
 ## Tradeoff
 
 One side effect is that generated OpenAPI paths may appear as `/{version}/...` instead of a literal `/v1/...` path.

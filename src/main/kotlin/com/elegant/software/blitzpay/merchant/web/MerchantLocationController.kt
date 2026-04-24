@@ -6,6 +6,7 @@ import com.elegant.software.blitzpay.merchant.api.SetMerchantLocationRequest
 import com.elegant.software.blitzpay.merchant.application.MerchantLocationService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import reactor.core.publisher.Mono
@@ -18,6 +19,7 @@ import java.util.UUID
 class MerchantLocationController(
     private val merchantLocationService: MerchantLocationService
 ) {
+    private val log = LoggerFactory.getLogger(MerchantLocationController::class.java)
 
     @Operation(
         summary = "Set or update a merchant's location and geofence radius",
@@ -69,7 +71,13 @@ class MerchantLocationController(
         @RequestParam lng: Double,
         @RequestParam(defaultValue = "500") radiusMeters: Double
     ): Mono<ResponseEntity<NearbyMerchantsResponse>> =
-        Mono.fromCallable { merchantLocationService.findNearby(lat, lng, radiusMeters) }
+        Mono.fromCallable {
+            log.info("Nearby merchants requested: lat={} lng={} radiusMeters={}", lat, lng, radiusMeters)
+            merchantLocationService.findNearby(lat, lng, radiusMeters)
+        }
             .subscribeOn(Schedulers.boundedElastic())
-            .map { ResponseEntity.ok(it) }
+            .map {
+                log.info("Nearby merchants response: merchantCount={}", it.merchants.size)
+                ResponseEntity.ok(it)
+            }
 }

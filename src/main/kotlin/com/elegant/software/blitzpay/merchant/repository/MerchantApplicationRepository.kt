@@ -12,6 +12,8 @@ interface MerchantApplicationRepository : JpaRepository<MerchantApplication, UUI
 
     fun findByApplicationReference(applicationReference: String): MerchantApplication?
 
+    fun findAllByStatus(status: MerchantOnboardingStatus): List<MerchantApplication>
+
     fun existsByBusinessProfileRegistrationNumberAndStatusIn(
         registrationNumber: String,
         statuses: Collection<MerchantOnboardingStatus>

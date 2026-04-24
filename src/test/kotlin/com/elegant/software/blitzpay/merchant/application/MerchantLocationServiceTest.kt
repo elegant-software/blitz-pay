@@ -5,6 +5,7 @@ import com.elegant.software.blitzpay.merchant.domain.BusinessProfile
 import com.elegant.software.blitzpay.merchant.domain.MerchantApplication
 import com.elegant.software.blitzpay.merchant.domain.PrimaryContact
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
+import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
@@ -14,7 +15,8 @@ import kotlin.test.assertEquals
 
 class MerchantLocationServiceTest {
     private val repository = mock<MerchantApplicationRepository>()
-    private val service = MerchantLocationService(repository)
+    private val merchantBranchRepository = mock<MerchantBranchRepository>()
+    private val service = MerchantLocationService(repository, merchantBranchRepository)
 
     @Test
     fun `set location stores google place id for asynchronous enrichment`() {

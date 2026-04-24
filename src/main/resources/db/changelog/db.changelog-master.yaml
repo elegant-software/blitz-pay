@@ -35,3 +35,7 @@ databaseChangeLog:
       file: db/changelog/20260424-001-branch-image-storage-key.sql
   - include:
       file: db/changelog/20260424-002-branch-merchant-fk-cascade.sql
+  - include:
+      file: db/changelog/20260424-003-create-proximity-events.sql
+  - include:
+      file: db/changelog/20260424-004-rename-proximity-user-token.sql
