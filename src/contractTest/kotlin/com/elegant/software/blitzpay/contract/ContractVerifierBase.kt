@@ -5,6 +5,7 @@ import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepo
 import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantProductRepository
 import com.elegant.software.blitzpay.merchant.repository.MonitoringRecordRepository
+import com.elegant.software.blitzpay.merchant.repository.ProximityEventRepository
 import com.elegant.software.blitzpay.payments.push.persistence.DeviceRegistrationRepository
 import com.elegant.software.blitzpay.payments.push.persistence.PaymentStatusRepository
 import com.elegant.software.blitzpay.payments.push.persistence.ProcessedWebhookEventRepository
@@ -75,6 +76,9 @@ abstract class ContractVerifierBase {
     protected lateinit var monitoringRecordRepository: MonitoringRecordRepository
 
     @MockitoBean
+    protected lateinit var proximityEventRepository: ProximityEventRepository
+
+    @MockitoBean
     protected lateinit var storageService: StorageService
 
     @MockitoBean
@@ -88,6 +92,8 @@ abstract class ContractVerifierBase {
                 paymentRequestId = requireNotNull(request.paymentRequestId),
                 orderId = request.orderId,
                 paymentId = "contract-test-payment-id",
+                resourceToken = "contract-test-resource-token",
+                redirectReturnUri = request.redirectReturnUri,
                 redirectURI = URI.create("https://contract-test.blitzpay.local/payments/${request.paymentRequestId}")
             )
         }

@@ -1,0 +1,105 @@
+{
+  "contract": "Proximity Events",
+  "version": "v1",
+  "endpoints": [
+    {
+      "id": "record-proximity-event",
+      "method": "POST",
+      "path": "/v1/proximity",
+      "description": "Records a geofence entry or exit event from the mobile. Server deduplicates within a 30-second window. On a recorded enter event, returns full merchant and branch context so the mobile can render merchant details and decide whether to show a local notification — no second API call needed.",
+      "security": {
+        "note": "Authentication is optional. Authenticated requests include a Bearer token; unauthenticated requests must include deviceId for deduplication."
+      },
+      "request": {
+        "contentType": "application/json",
+        "body": {
+          "regionId": {
+            "type": "string",
+            "required": true,
+            "description": "Region identifier as returned by GET /v1/geofence/regions. Format: 'merchant:{uuid}' or 'branch:{uuid}'.",
+            "example": "branch:3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          },
+          "event": {
+            "type": "string",
+            "required": true,
+            "enum": ["enter", "exit"]
+          },
+          "location": {
+            "type": "object",
+            "required": true,
+            "properties": {
+              "latitude": { "type": "number", "format": "double", "required": true },
+              "longitude": { "type": "number", "format": "double", "required": true }
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "required": true,
+            "description": "Client wall-clock time of the geofence event (ISO-8601). Stored for analytics; server uses its own clock for deduplication."
+          },
+          "deviceId": {
+            "type": "string",
+            "required": false,
+            "description": "Stable anonymous device identifier. Required when request is unauthenticated."
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Event processed (recorded or deduplicated)",
+          "contentType": "application/json",
+          "body": {
+            "recorded": {
+              "type": "boolean",
+              "description": "true if the event was persisted; false if deduplicated within the cooldown window or region not found."
+            },
+            "action": {
+              "type": "string",
+              "enum": ["notify", "none"],
+              "description": "'notify' when the event was recorded, event type is 'enter', and the merchant has at least one active payment channel. Mobile should schedule a local notification. 'none' in all other cases."
+            },
+            "merchant": {
+              "type": "object",
+              "required": false,
+              "description": "Present only when recorded=true and event=enter.",
+              "properties": {
+                "merchantId": { "type": "string", "format": "uuid" },
+                "name": { "type": "string" },
+                "logoUrl": { "type": "string", "required": false },
+                "activePaymentChannels": {
+                  "type": "array",
+                  "items": { "type": "string", "enum": ["STRIPE", "PAYPAL", "TRUELAYER"] }
+                },
+                "branches": {
+                  "type": "array",
+                  "description": "Active branches of the merchant, sorted by distance from reported location.",
+                  "items": {
+                    "branchId": { "type": "string", "format": "uuid" },
+                    "name": { "type": "string" },
+                    "distanceMeters": { "type": "number", "format": "double", "required": false },
+                    "addressLine1": { "type": "string", "required": false },
+                    "addressLine2": { "type": "string", "required": false },
+                    "city": { "type": "string", "required": false },
+                    "postalCode": { "type": "string", "required": false },
+                    "country": { "type": "string", "required": false },
+                    "contactFullName": { "type": "string", "required": false },
+                    "contactEmail": { "type": "string", "required": false },
+                    "contactPhoneNumber": { "type": "string", "required": false },
+                    "activePaymentChannels": {
+                      "type": "array",
+                      "items": { "type": "string", "enum": ["STRIPE", "PAYPAL", "TRUELAYER"] }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "422": {
+          "description": "Invalid request (missing required fields, unknown event type)"
+        }
+      }
+    }
+  ]
+}

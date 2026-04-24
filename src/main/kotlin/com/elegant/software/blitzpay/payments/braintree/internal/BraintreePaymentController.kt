@@ -2,7 +2,6 @@ package com.elegant.software.blitzpay.payments.braintree.internal
 
 import com.elegant.software.blitzpay.merchant.api.MerchantCredentialResolver
 import io.swagger.v3.oas.annotations.Operation
-import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
@@ -42,7 +41,6 @@ data class CheckoutFailureResponse(
 )
 data class BraintreeErrorResponse(val error: String)
 
-@Tag(name = "Braintree", description = "PayPal / digital wallet payments via Braintree")
 @RestController
 @RequestMapping("/{version:v\\d+(?:\\.\\d+)*}/payments/braintree", version = "1")
 class BraintreePaymentController(

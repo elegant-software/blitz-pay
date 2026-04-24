@@ -3,13 +3,11 @@ info:
   title: OpenAPI definition
   version: v0
 servers:
-- url: http://localhost:61988
+- url: http://localhost:59833
   description: Generated server url
 tags:
-- name: Braintree
-  description: PayPal / digital wallet payments via Braintree
-- name: Stripe
-  description: Card payment session creation via Stripe
+- name: Geofence
+  description: Geofence region discovery for mobile clients
 - name: Invoices
   description: EU-standard ZUGFeRD / Factur-X invoice generation
 - name: Merchant Onboarding
@@ -23,14 +21,14 @@ tags:
   externalDocs:
     description: Spring Boot Actuator Web API Documentation
     url: https://docs.spring.io/spring-boot/docs/current/actuator-api/html/
+- name: Proximity
+  description: Mobile geofence enter and exit event recording
 - name: Merchant Location
   description: Geolocation and geofencing for merchants
 - name: Merchant Branches
   description: Manage branches under a merchant
 - name: Merchant Products
   description: Product catalog management for merchants
-- name: QR Payments
-  description: Operations related to QR payments
 paths:
   /{version}/merchants/{merchantId}/products/{productId}:
     get:
@@ -403,10 +401,36 @@ paths:
             '*/*':
               schema:
                 type: object
+  /{version}/proximity:
+    post:
+      tags:
+      - Proximity
+      summary: Record a geofence proximity event and return merchant context when
+        applicable
+      operationId: record
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProximityEventRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ProximityResponse"
   /{version}/payments/stripe/create-intent:
     post:
       tags:
-      - Stripe
+      - stripe-payment-controller
       summary: Create a Stripe PaymentIntent and return credentials to the mobile
         SDK.
       operationId: createIntent
@@ -426,7 +450,7 @@ paths:
   /{version}/payments/request:
     post:
       tags:
-      - QR Payments
+      - payment-request-controller
       operationId: createPaymentRequest
       requestBody:
         content:
@@ -446,7 +470,7 @@ paths:
   /{version}/payments/braintree/client-token:
     post:
       tags:
-      - Braintree
+      - braintree-payment-controller
       summary: Generate a Braintree client token for the mobile SDK.
       operationId: clientToken
       requestBody:
@@ -465,7 +489,7 @@ paths:
   /{version}/payments/braintree/checkout:
     post:
       tags:
-      - Braintree
+      - braintree-payment-controller
       summary: Submit a Braintree payment nonce for settlement.
       operationId: checkout
       requestBody:
@@ -775,6 +799,33 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/NearbyMerchantsResponse"
+  /{version}/geofence/regions:
+    get:
+      tags:
+      - Geofence
+      summary: "List active geofence regions, optionally sorted by distance from caller\
+        \ position"
+      operationId: regions
+      parameters:
+      - name: lat
+        in: query
+        required: false
+        schema:
+          type: number
+          format: double
+      - name: lng
+        in: query
+        required: false
+        schema:
+          type: number
+          format: double
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/GeofenceRegionsResponse"
   /actuator/metrics/{requiredMetricName}:
     get:
       tags:
@@ -1318,6 +1369,116 @@ components:
       - primaryBusinessAddress
       - registrationNumber
       - status
+    ProximityEventRequest:
+      type: object
+      properties:
+        regionId:
+          type: string
+        event:
+          type: string
+        location:
+          $ref: "#/components/schemas/ProximityLocation"
+        timestamp:
+          type: string
+        deviceId:
+          type: string
+      required:
+      - event
+      - location
+      - regionId
+      - timestamp
+    ProximityLocation:
+      type: object
+      properties:
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+      required:
+      - latitude
+      - longitude
+    BranchContext:
+      type: object
+      properties:
+        branchId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        distanceMeters:
+          type: number
+          format: double
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+        city:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+        contactFullName:
+          type: string
+        contactEmail:
+          type: string
+        contactPhoneNumber:
+          type: string
+        activePaymentChannels:
+          type: array
+          items:
+            type: string
+            enum:
+            - PAYPAL
+            - STRIPE
+            - TRUELAYER
+          uniqueItems: true
+      required:
+      - activePaymentChannels
+      - branchId
+      - name
+    MerchantContext:
+      type: object
+      properties:
+        merchantId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        logoUrl:
+          type: string
+        activePaymentChannels:
+          type: array
+          items:
+            type: string
+            enum:
+            - PAYPAL
+            - STRIPE
+            - TRUELAYER
+          uniqueItems: true
+        branches:
+          type: array
+          items:
+            $ref: "#/components/schemas/BranchContext"
+      required:
+      - activePaymentChannels
+      - branches
+      - merchantId
+      - name
+    ProximityResponse:
+      type: object
+      properties:
+        recorded:
+          type: boolean
+        action:
+          type: string
+        merchant:
+          $ref: "#/components/schemas/MerchantContext"
+      required:
+      - action
+      - recorded
     CreateIntentRequest:
       type: object
       properties:
@@ -1605,6 +1766,50 @@ components:
       - paymentRequestId
       - status
       - terminal
+    NearbyBranchResponse:
+      type: object
+      properties:
+        branchId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        distanceMeters:
+          type: number
+          format: double
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        addressLine1:
+          type: string
+        city:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+        contactFullName:
+          type: string
+        contactEmail:
+          type: string
+        contactPhoneNumber:
+          type: string
+        activePaymentChannels:
+          type: array
+          items:
+            type: string
+            enum:
+            - PAYPAL
+            - STRIPE
+            - TRUELAYER
+          uniqueItems: true
+      required:
+      - activePaymentChannels
+      - branchId
+      - name
     NearbyMerchantResponse:
       type: object
       properties:
@@ -1627,7 +1832,12 @@ components:
         distanceMeters:
           type: number
           format: double
+        activeBranches:
+          type: array
+          items:
+            $ref: "#/components/schemas/NearbyBranchResponse"
       required:
+      - activeBranches
       - distanceMeters
       - geofenceRadiusMeters
       - latitude
@@ -1643,6 +1853,47 @@ components:
             $ref: "#/components/schemas/NearbyMerchantResponse"
       required:
       - merchants
+    GeofenceRegionResponse:
+      type: object
+      properties:
+        regionId:
+          type: string
+        regionType:
+          type: string
+        sourceId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        radiusMeters:
+          type: integer
+          format: int32
+        distanceMeters:
+          type: number
+          format: double
+      required:
+      - displayName
+      - latitude
+      - longitude
+      - radiusMeters
+      - regionId
+      - regionType
+      - sourceId
+    GeofenceRegionsResponse:
+      type: object
+      properties:
+        regions:
+          type: array
+          items:
+            $ref: "#/components/schemas/GeofenceRegionResponse"
+      required:
+      - regions
     Link:
       type: object
       properties:

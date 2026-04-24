@@ -81,6 +81,7 @@ For technology-specific patterns and detailed best practices, refer to:
 |---|---|
 | Architecture guidelines (module layout, dependency rules) | [`reference/architecture-guidelines.md`](reference/architecture-guidelines.md) |
 | API versioning (URL-path strategy, version resolver, Swagger compat) | [`reference/api-versioning-guide.md`](reference/api-versioning-guide.md) |
+| MCP servers (tools, resources, prompts, contract documentation) | [`reference/mcp-server-best-practices.md`](reference/mcp-server-best-practices.md) |
 | Spring Boot (`@ConfigurationProperties`, injection, reactive stack) | [`reference/spring-boot-best-practices.md`](reference/spring-boot-best-practices.md) |
 | Spring Modulith (module boundaries, events, verification) | [`reference/spring-modulith-best-practices.md`](reference/spring-modulith-best-practices.md) |
 | Spring Data JPA (entities, repositories, transactions) | [`reference/spring-data-jpa-best-practices.md`](reference/spring-data-jpa-best-practices.md) |

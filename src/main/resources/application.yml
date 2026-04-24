@@ -54,29 +54,6 @@ springdoc:
   api-docs:
     path: /api-docs
   show-actuator: true
-  swagger-ui:
-    urlsPrimaryName: Invoice
-    urls:
-      - name: Invoice
-        url: /api-docs/Invoice
-      - name: QRPay
-        url: /api-docs/QRPay
-      - name: TrueLayer
-        url: /api-docs/TrueLayer
-      - name: Support
-        url: /api-docs/Support
-      - name: General
-        url: /api-docs/General
-      - name: Push
-        url: /api-docs/Push
-      - name: Stripe
-        url: /api-docs/Stripe
-      - name: Braintree
-        url: /api-docs/Braintree
-      - name: Merchant
-        url: /api-docs/Merchant
-      - name: Actuator
-        url: /api-docs/Actuator
 api:
   default-version: 1
   versions:
@@ -113,6 +90,31 @@ braintree:
   environment: ${BRAINTREE_ENVIRONMENT:sandbox}
 
 blitzpay:
+  openapi:
+    primary-group-label: Invoice
+    groups:
+      invoice:
+        label: Invoice
+      qrpay:
+        label: Payments - QRPay
+      truelayer:
+        label: Payments - TrueLayer
+      support:
+        label: Support
+      general:
+        label: Payments - General
+      push-notifications:
+        label: Payments - Push Notifications
+      stripe:
+        label: Payments - Stripe
+      braintree:
+        label: Payments - Braintree
+      mobile-geofencing:
+        label: Mobile-Geofencing
+      merchant:
+        label: Operations-Merchant
+      actuator:
+        label: Monitoring-Actuator
   cors:
     allowed-origins:
       - ${FRONTEND_ORIGIN:http://localhost:4200}
@@ -138,6 +140,8 @@ blitzpay:
     base-url: ${GOOGLE_MAPS_BASE_URL:https://maps.googleapis.com}
     enrichment-interval-ms: ${GOOGLE_MAPS_ENRICHMENT_INTERVAL_MS:300000}
     batch-size: ${GOOGLE_MAPS_BATCH_SIZE:50}
+  geofence:
+    proximity-cooldown-seconds: ${GEOFENCE_PROXIMITY_COOLDOWN_SECONDS:30}
   expo:
     access-token: ${EXPO_ACCESS_TOKEN:}
     base-url: ${EXPO_PUSH_URL:https://exp.host/--/api/v2/push/send}

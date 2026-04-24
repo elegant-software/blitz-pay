@@ -171,6 +171,82 @@ Sends batched log events from the app; the server forwards them to the OTLP/Loki
 
 ---
 
+## 7. Geofencing and Nearby Merchants
+
+### Recommended mobile flow
+
+Use the APIs for two distinct jobs:
+
+- **Geofencing**: background enter/exit detection
+- **Nearby merchant discovery**: foreground lookup based on the user's current location
+
+These are related, but they are not the same thing.
+
+### A. Fetch geofence regions for device registration
+
+**`GET /v1/geofence/regions`**
+
+Returns active merchant and branch regions that the mobile app can register with the OS geofencing APIs.
+
+Optional query parameters:
+
+- `lat`
+- `lng`
+
+If the app provides `lat` and `lng`, the server sorts regions by proximity so the mobile app can choose the nearest regions within platform limits.
+
+### B. Post enter/exit events from the mobile OS
+
+**`POST /v1/proximity`**
+
+The mobile app should call this endpoint when iOS or Android reports a geofence transition.
+
+Typical use:
+
+- `enter`: record the event and return merchant context for the triggered area
+- `exit`: record the event and return `action: none`
+
+Important: this endpoint is for a **triggered geofence event**, not for general merchant search.
+It returns the merchant context for the triggered region, not a generic list of all merchants around the user.
+
+### C. Use nearby lookup when the user is actively browsing merchants
+
+**`GET /v1/merchants/nearby?lat=...&lng=...&radiusMeters=...`**
+
+When the user opens a discovery screen or explicitly looks for nearby merchants, the mobile app should fetch the device's current location and call this endpoint directly.
+
+This is the correct API for "show merchants around where the user is now".
+
+### Current-location guidance
+
+Do **not** treat geofence enter/exit events as a reliable substitute for the user's current location:
+
+- geofence APIs report transitions, not continuous live position
+- transition delivery can be delayed by the OS
+- a geofence event tells you which region fired, not the full set of merchants around the user
+- background geofencing and foreground location lookup have different power, privacy, and UX constraints
+
+### Server-side location persistence
+
+The server currently records **proximity events** for analytics and deduplication, but it should **not** persist a continuously updated "current user location" by default.
+
+That is the recommended default for three reasons:
+
+- it is not required for geofence-triggered merchant context
+- it is not required for nearby lookup, because the mobile client can send fresh coordinates on demand
+- it reduces privacy and retention risk
+
+Only introduce server-side "last known user location" storage if there is a separate, explicit product requirement for:
+
+- cross-device location continuity
+- server-driven location timelines
+- analytics that require exact last-known position
+- asynchronous server-side matching independent of a client request
+
+Without one of those requirements, on-demand client coordinates are the cleaner design.
+
+---
+
 ## Push notification payload (Expo)
 
 When a payment status changes, the server sends an Expo push notification to all registered tokens for that `paymentRequestId`. The mobile app should handle the notification and either display it directly or trigger a poll to `/v1/payments/{paymentRequestId}` for the latest state.
@@ -188,4 +264,7 @@ The push is triggered for every status transition: `PENDING` → `EXECUTED` → 
 | `POST /v1/devices` | `payments/push/api/DeviceRegistrationController.kt` |
 | `DELETE /v1/devices/{token}` | `payments/push/api/DeviceRegistrationController.kt` |
 | `GET /v1/payments/{id}` | `payments/push/api/PaymentStatusController.kt` |
+| `GET /v1/geofence/regions` | `merchant/web/GeofenceController.kt` |
+| `POST /v1/proximity` | `merchant/web/ProximityController.kt` |
+| `GET /v1/merchants/nearby` | `merchant/web/MerchantLocationController.kt` |
 | `POST /v1/observability/mobile-logs` | `mobileobservability/MobileLogsController.kt` |

@@ -8,7 +8,7 @@ import org.springframework.web.reactive.function.client.WebClient
 
 @Configuration
 @EnableScheduling
-@EnableConfigurationProperties(GoogleMapsProperties::class)
+@EnableConfigurationProperties(GoogleMapsProperties::class, GeofenceProperties::class)
 class GoogleMapsConfig {
     @Bean
     fun googleMapsWebClient(properties: GoogleMapsProperties): WebClient =

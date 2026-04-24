@@ -3,7 +3,6 @@ package com.elegant.software.blitzpay.payments.qrpay
 import com.elegant.software.blitzpay.payments.support.PaymentUpdateBus
 import com.elegant.software.blitzpay.payments.truelayer.api.PaymentGateway
 import com.elegant.software.blitzpay.payments.truelayer.api.PaymentRequested
-import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -11,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.util.*
 
-@Tag(name = "QR Payments", description = "Operations related to QR payments")
 @RestController
 @RequestMapping("/{version:v\\d+(?:\\.\\d+)*}/payments", version = "1")
 

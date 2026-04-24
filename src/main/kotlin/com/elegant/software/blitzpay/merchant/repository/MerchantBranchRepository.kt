@@ -11,6 +11,8 @@ interface MerchantBranchRepository : JpaRepository<MerchantBranch, UUID> {
     fun findByNameAndMerchantApplicationId(name: String, merchantApplicationId: UUID): MerchantBranch?
 
     fun findAllByMerchantApplicationIdAndActiveTrue(merchantApplicationId: UUID): List<MerchantBranch>
+    fun findAllByActiveTrue(): List<MerchantBranch>
+    fun findAllByMerchantApplicationIdInAndActiveTrue(merchantIds: Collection<UUID>): List<MerchantBranch>
     fun findByIdAndActiveTrue(id: UUID): MerchantBranch?
     fun existsByMerchantApplicationIdAndIdAndActiveTrue(merchantApplicationId: UUID, id: UUID): Boolean
 

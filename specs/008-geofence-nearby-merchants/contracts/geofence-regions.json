@@ -1,0 +1,71 @@
+{
+  "contract": "Geofence Regions",
+  "version": "v1",
+  "endpoints": [
+    {
+      "id": "get-geofence-regions",
+      "method": "GET",
+      "path": "/v1/geofence/regions",
+      "description": "Returns all active geofence regions (one per merchant with location set, one per branch with location set). When caller coordinates are provided, regions are ordered by ascending distance. Mobile uses this to register OS geofence regions, taking the nearest 20 (iOS hard limit).",
+      "request": {
+        "queryParams": {
+          "lat": {
+            "type": "number",
+            "format": "double",
+            "required": false,
+            "description": "Caller latitude. When provided together with lng, regions are sorted by distance ascending."
+          },
+          "lng": {
+            "type": "number",
+            "format": "double",
+            "required": false,
+            "description": "Caller longitude."
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "List of active geofence regions",
+          "contentType": "application/json",
+          "body": {
+            "regions": {
+              "type": "array",
+              "items": {
+                "regionId": {
+                  "type": "string",
+                  "description": "Stable region identifier. Format: 'merchant:{uuid}' for merchant-level regions, 'branch:{uuid}' for branch-level regions.",
+                  "example": "branch:3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                },
+                "regionType": {
+                  "type": "string",
+                  "enum": ["MERCHANT", "BRANCH"]
+                },
+                "sourceId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "merchantApplicationId or merchantBranchId depending on regionType."
+                },
+                "displayName": {
+                  "type": "string",
+                  "description": "Human-readable label (merchant legal name or branch name)."
+                },
+                "latitude": { "type": "number", "format": "double" },
+                "longitude": { "type": "number", "format": "double" },
+                "radiusMeters": {
+                  "type": "integer",
+                  "description": "Geofence radius in metres."
+                },
+                "distanceMeters": {
+                  "type": "number",
+                  "format": "double",
+                  "required": false,
+                  "description": "Distance from caller position. Present only when lat/lng query params were supplied."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

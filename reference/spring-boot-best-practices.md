@@ -145,6 +145,19 @@ Swagger UI would send that literally, causing 404s. Each `GroupedOpenApi` uses t
 `rewriteVersionPaths()` utility (in `config/OpenApiExtensions.kt`) to replace `/{version}/`
 with the concrete version (e.g., `/v1/`) at spec-generation time.
 
+**Group naming rule:** Springdoc still requires a `group(...)` value in each `GroupedOpenApi` bean,
+because that value defines the actual docs endpoint (`/api-docs/{group}`). In this repository, the
+source of truth for both group IDs and display labels is YAML-backed configuration properties, not
+hardcoded strings inside the config classes.
+
+Use a typed `@ConfigurationProperties` model for OpenAPI groups and have both of these read from it:
+
+- `GroupedOpenApi.group(...)` for the stable docs endpoint ID
+- `springdoc.swagger-ui.urls[].name` for the user-facing Swagger UI label
+
+This keeps the definitions in one place while still satisfying Springdoc's requirement that group IDs
+exist in code at bean construction time.
+
 See `reference/api-versioning-guide.md` for the full API versioning design.
 
 ---

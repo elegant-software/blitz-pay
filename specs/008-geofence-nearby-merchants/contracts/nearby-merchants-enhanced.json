@@ -1,0 +1,62 @@
+{
+  "contract": "Nearby Merchants (Enhanced)",
+  "version": "v1",
+  "note": "Additive enhancement to the existing GET /v1/merchants/nearby endpoint. All existing fields are preserved; activeBranches is added to each merchant result.",
+  "endpoints": [
+    {
+      "id": "get-nearby-merchants-enhanced",
+      "method": "GET",
+      "path": "/v1/merchants/nearby",
+      "description": "Returns merchants within the given radius, each enriched with their active branches (sorted by distance). Branches without location data are included in the list but will have distanceMeters omitted.",
+      "request": {
+        "queryParams": {
+          "lat": { "type": "number", "format": "double", "required": true },
+          "lng": { "type": "number", "format": "double", "required": true },
+          "radiusMeters": { "type": "number", "format": "double", "required": true }
+        }
+      },
+      "responses": {
+        "200": {
+          "contentType": "application/json",
+          "body": {
+            "merchants": {
+              "type": "array",
+              "items": {
+                "merchantId": { "type": "string", "format": "uuid" },
+                "legalBusinessName": { "type": "string" },
+                "latitude": { "type": "number", "format": "double" },
+                "longitude": { "type": "number", "format": "double" },
+                "geofenceRadiusMeters": { "type": "integer" },
+                "googlePlaceId": { "type": "string", "required": false },
+                "distanceMeters": { "type": "number", "format": "double" },
+                "activeBranches": {
+                  "type": "array",
+                  "description": "Active branches belonging to this merchant. Empty list if none exist.",
+                  "items": {
+                    "branchId": { "type": "string", "format": "uuid" },
+                    "name": { "type": "string" },
+                    "distanceMeters": { "type": "number", "format": "double", "required": false, "description": "Omitted when branch has no location set." },
+                    "latitude": { "type": "number", "format": "double", "required": false },
+                    "longitude": { "type": "number", "format": "double", "required": false },
+                    "addressLine1": { "type": "string", "required": false },
+                    "city": { "type": "string", "required": false },
+                    "postalCode": { "type": "string", "required": false },
+                    "country": { "type": "string", "required": false },
+                    "contactFullName": { "type": "string", "required": false },
+                    "contactEmail": { "type": "string", "required": false },
+                    "contactPhoneNumber": { "type": "string", "required": false },
+                    "activePaymentChannels": {
+                      "type": "array",
+                      "items": { "type": "string", "enum": ["STRIPE", "PAYPAL", "TRUELAYER"] }
+                    },
+                    "imageUrl": { "type": "string", "required": false }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

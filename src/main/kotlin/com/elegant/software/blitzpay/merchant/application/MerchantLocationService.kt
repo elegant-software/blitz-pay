@@ -1,11 +1,13 @@
 package com.elegant.software.blitzpay.merchant.application
 
 import com.elegant.software.blitzpay.merchant.api.MerchantLocationResponse
+import com.elegant.software.blitzpay.merchant.api.NearbyBranchResponse
 import com.elegant.software.blitzpay.merchant.api.NearbyMerchantResponse
 import com.elegant.software.blitzpay.merchant.api.NearbyMerchantsResponse
 import com.elegant.software.blitzpay.merchant.api.SetMerchantLocationRequest
 import com.elegant.software.blitzpay.merchant.domain.MerchantLocation
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
+import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -18,7 +20,8 @@ import kotlin.math.sin
 
 @Service
 class MerchantLocationService(
-    private val repository: MerchantApplicationRepository
+    private val repository: MerchantApplicationRepository,
+    private val merchantBranchRepository: MerchantBranchRepository,
 ) {
     private val log = LoggerFactory.getLogger(MerchantLocationService::class.java)
 
@@ -67,6 +70,10 @@ class MerchantLocationService(
     fun findNearby(lat: Double, lng: Double, radiusMeters: Double): NearbyMerchantsResponse {
         require(radiusMeters > 0) { "radiusMeters must be positive" }
         val merchants = repository.findNearby(lat, lng, radiusMeters)
+        val activeBranchesByMerchantId = merchantBranchRepository
+            .findAllByMerchantApplicationIdInAndActiveTrue(merchants.map { it.id })
+            .groupBy { it.merchantApplicationId }
+
         return NearbyMerchantsResponse(
             merchants = merchants.map { m ->
                 val loc = m.location!!
@@ -77,7 +84,30 @@ class MerchantLocationService(
                     longitude = loc.longitude,
                     geofenceRadiusMeters = loc.geofenceRadiusMeters,
                     googlePlaceId = loc.googlePlaceId,
-                    distanceMeters = haversineMeters(lat, lng, loc.latitude, loc.longitude)
+                    distanceMeters = haversineMeters(lat, lng, loc.latitude, loc.longitude),
+                    activeBranches = activeBranchesByMerchantId[m.id]
+                        .orEmpty()
+                        .map { branch ->
+                            val branchLocation = branch.location
+                            NearbyBranchResponse(
+                                branchId = branch.id,
+                                name = branch.name,
+                                distanceMeters = branchLocation?.let {
+                                    haversineMeters(lat, lng, it.latitude, it.longitude)
+                                },
+                                latitude = branchLocation?.latitude,
+                                longitude = branchLocation?.longitude,
+                                addressLine1 = branch.addressLine1,
+                                city = branch.city,
+                                postalCode = branch.postalCode,
+                                country = branch.country,
+                                contactFullName = branch.contactFullName,
+                                contactEmail = branch.contactEmail,
+                                contactPhoneNumber = branch.contactPhoneNumber,
+                                activePaymentChannels = branch.activePaymentChannels.toSet(),
+                            )
+                        }
+                        .sortedWith(compareBy(nullsLast()) { it.distanceMeters })
                 )
             }
         )

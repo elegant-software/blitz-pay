@@ -81,6 +81,8 @@ Semantic commits: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`. Summaries: sh
 - PostgreSQL via JPA (`ddl-auto: none`) + Liquibase. Two new tables: `payment_status` (authoritative current state per payment request) and `device_registration` (Expo push tokens per payment request / payer). Optional `push_delivery_attempt` for observability; kept in-memory-only if retention cost is a concern. (006-push-notifications)
 - Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith, Hibernate/JPA, `stripe-java` 28.x, `braintree-java` 3.43.0 (001-merchant-onboarding)
 - PostgreSQL 16 — `ddl-auto: none` + Liquibase; two new tables (`merchant_branches`), two modified tables (`merchant_applications`, `merchant_products`) (001-merchant-onboarding)
+- Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux (reactive controllers with `Mono` wrappers), Spring Modulith, Hibernate/JPA, Liquibase (008-geofence-nearby-merchants)
+- PostgreSQL 16 (`blitzpay` schema), `ddl-auto: none` — all schema changes via Liquibase (008-geofence-nearby-merchants)
 
 ## Recent Changes
 - 006-push-notifications: Added Kotlin 2.3.20 on Java 25 (unchanged) + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith, Hibernate/JPA on PostgreSQL 16, TrueLayer Java SDK (unchanged). New: Reactor `WebClient` against the Expo Push HTTPS API (`https://exp.host/--/api/v2/push/send`) — no additional SDK; a thin in-repo client keeps the dependency surface minimal.
