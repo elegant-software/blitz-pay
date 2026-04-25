@@ -14,3 +14,4 @@ data:
   # Not sensitive — just the in-container path to the mounted PEM file.
   # The actual PEM content is in the blitz-pay-truelayer-pem Secret (volume mount).
   TRUELAYER_PRIVATE_KEY_PATH: {{ printf "%s/%s" .Values.privateKey.mountPath .Values.privateKey.secretKey | quote }}
+  WHISPER_BASE_URL: {{ .Values.config.whisperBaseUrl | quote }}

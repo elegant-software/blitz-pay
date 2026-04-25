@@ -62,6 +62,7 @@ api:
     truelayer: 1
     payments: 1
     merchant: 1
+    voice: 1
 
 truelayer:
   apiBase: ${TRUELAYER_API_BASE:https://api.truelayer-sandbox.com}
@@ -113,6 +114,8 @@ blitzpay:
         label: Mobile-Geofencing
       merchant:
         label: Operations-Merchant
+      voice:
+        label: Voice
       actuator:
         label: Monitoring-Actuator
   cors:
@@ -149,3 +152,19 @@ blitzpay:
     request-timeout-ms: ${EXPO_TIMEOUT_MS:10000}
     max-batch-size: ${EXPO_MAX_BATCH:100}
     receipt-delay-minutes: ${EXPO_RECEIPT_DELAY_MIN:15}
+  voice:
+    enabled: ${VOICE_ENABLED:true}
+    max-duration-seconds: ${VOICE_MAX_DURATION_SECONDS:60}
+    max-upload-bytes: ${VOICE_MAX_UPLOAD_BYTES:26214400}
+    request-timeout-ms: ${VOICE_REQUEST_TIMEOUT_MS:60000}
+    accepted-content-types:
+      - audio/mpeg
+      - audio/mp4
+      - audio/webm
+      - audio/wav
+      - audio/ogg
+      - audio/m4a
+    whisper:
+      api-key: ${OPENAI_API_KEY:}
+      base-url: ${WHISPER_BASE_URL:http://localhost:8000/v1}
+      model: ${WHISPER_MODEL:whisper-1}

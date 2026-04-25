@@ -39,3 +39,5 @@ databaseChangeLog:
       file: db/changelog/20260424-003-create-proximity-events.sql
   - include:
       file: db/changelog/20260424-004-rename-proximity-user-token.sql
+  - include:
+      file: db/changelog/20260425-001-push-payment-voice-context.sql

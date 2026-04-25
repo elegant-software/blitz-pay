@@ -88,6 +88,7 @@ config:
   truelayerEnv: sandbox
   truelayerHttpLogs: "false"
   truelayerWebhookJku: http://localhost:8080/.well-known/jwks.json
+  whisperBaseUrl: http://whisper:8000/v1
 
 # ---------------------------------------------------------------------------
 # Resource requests and limits

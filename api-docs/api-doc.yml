@@ -3,11 +3,13 @@ info:
   title: OpenAPI definition
   version: v0
 servers:
-- url: http://localhost:59833
+- url: http://localhost:55032
   description: Generated server url
 tags:
 - name: Geofence
   description: Geofence region discovery for mobile clients
+- name: Voice
+  description: Voice query processing for authenticated mobile clients
 - name: Invoices
   description: EU-standard ZUGFeRD / Factur-X invoice generation
 - name: Merchant Onboarding
@@ -316,7 +318,7 @@ paths:
       - Merchant Onboarding
       summary: Set merchant logo
       description: "Records the S3 storage key of a logo already uploaded by the client.\
-        \ Expected key format: merchant/{applicationId}/logo.{ext}"
+        \ Expected key format: merchants/{applicationId}/logo.{ext}"
       operationId: setLogo
       parameters:
       - name: id
@@ -401,6 +403,34 @@ paths:
             '*/*':
               schema:
                 type: object
+  /{version}/voice/query:
+    post:
+      tags:
+      - Voice
+      summary: Submit a voice recording and receive a transcription
+      operationId: query
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                audio:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoiceTranscriptionResponse"
   /{version}/proximity:
     post:
       tags:
@@ -452,6 +482,12 @@ paths:
       tags:
       - payment-request-controller
       operationId: createPaymentRequest
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
@@ -620,6 +656,34 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/BranchResponse"
+  /{version}/merchants/{id}/logo/upload-url:
+    post:
+      tags:
+      - Merchant Onboarding
+      summary: Create a merchant logo upload URL
+      description: "Generates a presigned upload URL for a merchant logo. Supported\
+        \ content types: image/jpeg, image/png, image/webp."
+      operationId: createLogoUploadUrl
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MerchantLogoUploadRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MerchantLogoUploadResponse"
   /{version}/merchants/{id}/activate:
     post:
       tags:
@@ -1369,6 +1433,15 @@ components:
       - primaryBusinessAddress
       - registrationNumber
       - status
+    VoiceTranscriptionResponse:
+      type: object
+      properties:
+        transcript:
+          type: string
+        language:
+          type: string
+      required:
+      - transcript
     ProximityEventRequest:
       type: object
       properties:
@@ -1385,7 +1458,6 @@ components:
       required:
       - event
       - location
-      - regionId
       - timestamp
     ProximityLocation:
       type: object
@@ -1513,6 +1585,8 @@ components:
           type: string
         redirectReturnUri:
           type: string
+        payerRef:
+          type: string
       required:
       - amountMinorUnits
       - currency
@@ -1593,6 +1667,27 @@ components:
       required:
       - activePaymentChannels
       - name
+    MerchantLogoUploadRequest:
+      type: object
+      properties:
+        contentType:
+          type: string
+      required:
+      - contentType
+    MerchantLogoUploadResponse:
+      type: object
+      properties:
+        storageKey:
+          type: string
+        uploadUrl:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+      required:
+      - expiresAt
+      - storageKey
+      - uploadUrl
     CreateMerchantRequest:
       type: object
       properties:

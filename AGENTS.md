@@ -44,6 +44,9 @@ For coding conventions, architecture patterns, and technology-specific best prac
 - PostgreSQL 16 for product metadata; S3-compatible object storage for private product images (`blitzpay.storage.*`, MinIO in local env) (001-merchant-onboarding)
 - Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith, Spring Data JPA/Hibernate, Liquibase, Jackson Kotlin module, Bean Validation (009-order-payment-tracking)
 - PostgreSQL 16 in schema `blitzpay` (009-order-payment-tracking)
+- Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith, Spring Data JPA/Hibernate, Liquibase, Jackson Kotlin module, Bean Validation, Spring AI BOM-managed client libraries (010-voice-transcription-response)
+- PostgreSQL 16 in schema `blitzpay` for payment-context metadata only; voice audio/transcripts are processed in-flight and not persisted (010-voice-transcription-response)
 
 ## Recent Changes
 - 001-merchant-onboarding: Added Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith, Spring Data JPA/Hibernate, Liquibase, AWS SDK S3 v2, Jackson Kotlin module, Bean Validation
+- 010-voice-transcription-response: Added voice query processing scaffolding with provider-agnostic STT and TTS adapters, plus payment-context enrichment for spoken responses

@@ -60,7 +60,6 @@ The application expects the following environment variables to be set before run
   - Example: `<YOUR_MERCHANT_ACCOUNT_ID>`
 - TRUELAYER_PRIVATE_KEY_PATH: Path (relative to project root or absolute) to the private key file used for signing (PEM)
   - Example: `path/to/your-private-key.pem`
-
 Note: Real credential values have been intentionally redacted in this README. Never commit secrets into the repository.
 
 Suggested minimal `.env` file (do NOT commit this to version control):

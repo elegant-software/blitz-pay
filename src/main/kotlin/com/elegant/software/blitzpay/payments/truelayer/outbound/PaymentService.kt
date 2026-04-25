@@ -78,8 +78,13 @@ class PaymentService(
                     .name("Andrea")
                     .email("andrea@truelayer.com")
                     .build()
-            ).metadata(mapOf("paymentRequestId" to paymentRequest.paymentRequestId.toString(),
-                "orderId" to paymentRequest.orderId))
+            ).metadata(
+                buildMap {
+                    put("paymentRequestId", paymentRequest.paymentRequestId.toString())
+                    put("orderId", paymentRequest.orderId)
+                    paymentRequest.payerRef?.let { put("payerRef", it) }
+                }
+            )
             .build()
 
         log.info(

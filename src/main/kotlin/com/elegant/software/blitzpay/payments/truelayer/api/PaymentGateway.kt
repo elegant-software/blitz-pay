@@ -15,7 +15,8 @@ interface PaymentGateway {
         val amountMinorUnits: Long,
         val currency: String,
         val userDisplayName: String,
-        val redirectReturnUri: String
+        val redirectReturnUri: String,
+        var payerRef: String? = null,
     )
     data class PaymentResult(
         val paymentRequestId: UUID,

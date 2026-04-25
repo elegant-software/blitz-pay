@@ -1,0 +1,107 @@
+# =============================================================================
+# Whisper ASR — local speech-to-text service for blitzpay-staging
+#
+# Provides an OpenAI-compatible REST API:
+#   POST http://whisper:8000/v1/audio/transcriptions
+#
+# Point the Spring app at it by setting:
+#   WHISPER_BASE_URL=http://whisper:8000/v1
+#   OPENAI_API_KEY=   (leave blank — no auth required for the in-cluster service)
+#
+# Image: custom FastAPI server (k8s/whisper/) wrapping openai-whisper + ffmpeg.
+# Build and push before applying:
+#   docker build -t ghcr.io/medimohammadise/whisper-service:latest k8s/whisper/
+#   docker push ghcr.io/medimohammadise/whisper-service:latest
+# Model is downloaded once to the PVC on first startup.
+# =============================================================================
+
+# PVC caches the downloaded model so restarts do not re-fetch from HuggingFace.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: whisper-model-cache
+  namespace: blitzpay-staging
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whisper
+  namespace: blitzpay-staging
+  labels:
+    app: whisper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: whisper
+  strategy:
+    type: Recreate   # PVC is ReadWriteOnce
+  template:
+    metadata:
+      labels:
+        app: whisper
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      containers:
+        - name: whisper
+          image: ghcr.io/elegant-software/whisper-service:latest
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            # "base" balances accuracy and CPU speed; swap for "small" or "large-v3"
+            # if the cluster has enough RAM and you need higher accuracy.
+            - name: WHISPER_MODEL
+              value: "base"
+          volumeMounts:
+            - name: model-cache
+              mountPath: /root/.cache/whisper
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30   # allow time for first model download
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+      volumes:
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: whisper-model-cache
+---
+# ClusterIP — reachable only from within the cluster.
+# No ingress: the transcription API must not be exposed externally.
+apiVersion: v1
+kind: Service
+metadata:
+  name: whisper
+  namespace: blitzpay-staging
+  labels:
+    app: whisper
+spec:
+  selector:
+    app: whisper
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000

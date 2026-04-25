@@ -105,6 +105,7 @@ dependencies {
     // ----------------------------
     implementation("org.springframework.ai:spring-ai-starter-mcp-server")
     implementation ("org.springframework.ai:spring-ai-starter-mcp-server-webflux")
+    implementation("org.springframework.ai:spring-ai-openai")
     // ----------------------------
     // Runtime support (used across modules)
     // ----------------------------

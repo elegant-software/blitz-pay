@@ -13,7 +13,7 @@ import java.time.Instant
 import java.util.UUID
 
 @Entity
-@Table(name = "payment_status")
+@Table(name = "push_payment_status")
 class PaymentStatusEntity(
     @Id
     @Column(name = "payment_request_id", nullable = false)
@@ -32,9 +32,23 @@ class PaymentStatusEntity(
     @Column(name = "updated_at", nullable = false)
     var updatedAt: Instant = Instant.now(),
 
+    @Column(name = "payer_ref", length = 512)
+    var payerRef: String? = null,
+
+    @Column(name = "order_id", length = 128)
+    var orderId: String? = null,
+
+    @Column(name = "amount_minor_units")
+    var amountMinorUnits: Long? = null,
+
+    @Column(name = "currency", length = 3)
+    var currency: String? = null,
+
     @Version
     @Column(name = "version", nullable = false)
     var version: Long = 0,
 )
 
-interface PaymentStatusRepository : JpaRepository<PaymentStatusEntity, UUID>
+interface PaymentStatusRepository : JpaRepository<PaymentStatusEntity, UUID> {
+    fun findTop5ByPayerRefOrderByUpdatedAtDesc(payerRef: String): List<PaymentStatusEntity>
+}

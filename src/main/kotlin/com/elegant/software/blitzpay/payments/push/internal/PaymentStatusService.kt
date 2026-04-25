@@ -1,6 +1,7 @@
 package com.elegant.software.blitzpay.payments.push.internal
 
 import com.elegant.software.blitzpay.payments.push.api.PaymentStatusCode
+import com.elegant.software.blitzpay.payments.push.api.RecentPaymentSummary
 import com.elegant.software.blitzpay.payments.push.api.PaymentStatusResponse
 import com.elegant.software.blitzpay.payments.push.persistence.PaymentStatusEntity
 import com.elegant.software.blitzpay.payments.push.persistence.PaymentStatusRepository
@@ -35,6 +36,52 @@ class PaymentStatusService(
                 lastEventAt = entity.lastEventAt,
             )
         }
+
+    @Transactional
+    fun initialize(
+        paymentRequestId: UUID,
+        payerRef: String?,
+        orderId: String?,
+        amountMinorUnits: Long?,
+        currency: String?,
+    ) {
+        val existing = repository.findById(paymentRequestId).orElse(null)
+        if (existing == null) {
+            repository.save(
+                PaymentStatusEntity(
+                    paymentRequestId = paymentRequestId,
+                    currentStatus = PaymentStatusCode.PENDING,
+                    updatedAt = Instant.now(),
+                    payerRef = payerRef,
+                    orderId = orderId,
+                    amountMinorUnits = amountMinorUnits,
+                    currency = currency,
+                )
+            )
+            return
+        }
+
+        existing.payerRef = payerRef ?: existing.payerRef
+        existing.orderId = orderId ?: existing.orderId
+        existing.amountMinorUnits = amountMinorUnits ?: existing.amountMinorUnits
+        existing.currency = currency ?: existing.currency
+        existing.updatedAt = Instant.now()
+        repository.save(existing)
+    }
+
+    fun findRecentBySubject(subject: String, limit: Int = 5): List<RecentPaymentSummary> =
+        repository.findTop5ByPayerRefOrderByUpdatedAtDesc(subject)
+            .take(limit)
+            .map { entity ->
+                RecentPaymentSummary(
+                    paymentRequestId = entity.paymentRequestId,
+                    status = entity.currentStatus,
+                    updatedAt = entity.updatedAt,
+                    orderId = entity.orderId,
+                    amountMinorUnits = entity.amountMinorUnits,
+                    currency = entity.currency,
+                )
+            }
 
     @Transactional
     fun apply(

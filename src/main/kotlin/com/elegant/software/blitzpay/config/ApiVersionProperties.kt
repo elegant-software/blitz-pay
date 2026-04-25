@@ -13,6 +13,7 @@ data class ApiVersionProperties(
         val truelayer: String = "1",
         val payments: String = "1",
         val mobileObservability: String = "1",
-        val merchant: String = "1"
+        val merchant: String = "1",
+        val voice: String = "1",
     )
 }

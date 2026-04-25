@@ -22,3 +22,4 @@ config:
   truelayerEnv: sandbox
   truelayerHttpLogs: "true"
   truelayerWebhookJku: https://api.staging.blitz-pay.com/.well-known/jwks.json
+  whisperBaseUrl: http://whisper:8000/v1
