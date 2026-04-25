@@ -156,13 +156,14 @@ blitzpay:
     enabled: ${VOICE_ENABLED:true}
     max-duration-seconds: ${VOICE_MAX_DURATION_SECONDS:60}
     max-upload-bytes: ${VOICE_MAX_UPLOAD_BYTES:26214400}
-    request-timeout-ms: ${VOICE_REQUEST_TIMEOUT_MS:10000}
+    request-timeout-ms: ${VOICE_REQUEST_TIMEOUT_MS:60000}
     accepted-content-types:
       - audio/mpeg
       - audio/mp4
       - audio/webm
       - audio/wav
       - audio/ogg
+      - audio/m4a
     whisper:
       api-key: ${OPENAI_API_KEY:}
       base-url: ${WHISPER_BASE_URL:http://localhost:8000/v1}

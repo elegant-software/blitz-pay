@@ -10,6 +10,7 @@ import com.elegant.software.blitzpay.payments.push.persistence.DeviceRegistratio
 import com.elegant.software.blitzpay.payments.push.persistence.PaymentStatusRepository
 import com.elegant.software.blitzpay.payments.push.persistence.ProcessedWebhookEventRepository
 import com.elegant.software.blitzpay.payments.push.persistence.PushDeliveryAttemptRepository
+import com.elegant.software.blitzpay.payments.push.api.PaymentStatusInitializationGateway
 import com.elegant.software.blitzpay.storage.StorageService
 import com.elegant.software.blitzpay.support.ContractTestConfig
 import com.elegant.software.blitzpay.voice.api.VoiceGateway
@@ -22,6 +23,7 @@ import com.elegant.software.blitzpay.payments.truelayer.support.JwksService
 import com.truelayer.java.TrueLayerClient
 import org.junit.jupiter.api.BeforeEach
 import org.mockito.kotlin.any
+import org.mockito.kotlin.doNothing
 import org.mockito.kotlin.whenever
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.server.LocalServerPort
@@ -86,10 +88,14 @@ abstract class ContractVerifierBase {
     protected lateinit var voiceGateway: VoiceGateway
 
     @MockitoBean
+    protected lateinit var paymentStatusInitializationGateway: PaymentStatusInitializationGateway
+
+    @MockitoBean
     protected lateinit var entityManager: EntityManager
 
     @BeforeEach
     fun setupRestAssured() {
+        doNothing().whenever(paymentStatusInitializationGateway).initialize(any(), any(), any(), any(), any())
         whenever(paymentService.startPayment(any())).thenAnswer { invocation ->
             val request = invocation.getArgument<PaymentRequested>(0)
             PaymentResult(
