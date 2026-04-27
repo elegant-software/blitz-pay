@@ -83,6 +83,8 @@ Semantic commits: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`. Summaries: sh
 - PostgreSQL 16 — `ddl-auto: none` + Liquibase; two new tables (`merchant_branches`), two modified tables (`merchant_applications`, `merchant_products`) (001-merchant-onboarding)
 - Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux (reactive controllers with `Mono` wrappers), Spring Modulith, Hibernate/JPA, Liquibase (008-geofence-nearby-merchants)
 - PostgreSQL 16 (`blitzpay` schema), `ddl-auto: none` — all schema changes via Liquibase (008-geofence-nearby-merchants)
+- Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith, Spring AI (BOM already imported), Ollama via `spring-ai-starter-ollama` (new), `spring-ai-openai` (existing — for Whisper) (012-voice-ai-product-rag)
+- PostgreSQL 16 via JPA + Liquibase — no new tables for this feature (012-voice-ai-product-rag)
 
 ## Recent Changes
 - 006-push-notifications: Added Kotlin 2.3.20 on Java 25 (unchanged) + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith, Hibernate/JPA on PostgreSQL 16, TrueLayer Java SDK (unchanged). New: Reactor `WebClient` against the Expo Push HTTPS API (`https://exp.host/--/api/v2/push/send`) — no additional SDK; a thin in-repo client keeps the dependency surface minimal.

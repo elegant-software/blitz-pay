@@ -24,7 +24,7 @@ spec:
             backend:
               service:
                 name: {{ include "blitz-pay.fullname" . }}
-                port:
+              port:
                   number: 9000
           - path: /swagger-ui
             pathType: Prefix

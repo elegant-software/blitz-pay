@@ -6,3 +6,10 @@ management:
   endpoint:
     env:
       show-values: ALWAYS
+
+spring:
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        model: llama3.2

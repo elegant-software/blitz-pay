@@ -1,6 +1,7 @@
 package com.elegant.software.blitzpay.voice.internal
 
 import java.math.BigDecimal
+import java.util.UUID
 
 data class VoiceAudioSubmission(
     val bytes: ByteArray,
@@ -8,6 +9,8 @@ data class VoiceAudioSubmission(
     val filename: String? = null,
     val sizeBytes: Long = bytes.size.toLong(),
     val callerSubject: String,
+    val merchantId: UUID? = null,
+    val branchId: UUID? = null,
 )
 
 data class VoiceTranscription(
@@ -16,7 +19,7 @@ data class VoiceTranscription(
     val durationSeconds: BigDecimal? = null,
 )
 
-data class VoiceTranscriptionResponse(
-    val transcript: String,
-    val language: String? = null,
+data class ProductIntent(
+    val matchedProductIds: List<UUID>,
+    val requestedQuantity: Int?,
 )

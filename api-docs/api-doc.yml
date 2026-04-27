@@ -3,7 +3,7 @@ info:
   title: OpenAPI definition
   version: v0
 servers:
-- url: http://localhost:50029
+- url: http://localhost:65207
   description: Generated server url
 tags:
 - name: Geofence
@@ -407,7 +407,7 @@ paths:
     post:
       tags:
       - Voice
-      summary: Submit a voice recording and receive a transcription
+      summary: Submit a voice recording and receive a transcript or product result
       operationId: query
       parameters:
       - name: Authorization
@@ -424,13 +424,20 @@ paths:
                 audio:
                   type: string
                   format: binary
+                merchantId:
+                  type: string
+                branchId:
+                  type: string
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/VoiceTranscriptionResponse"
+                oneOf:
+                - $ref: "#/components/schemas/NoMatch"
+                - $ref: "#/components/schemas/ProductResult"
+                - $ref: "#/components/schemas/Transcript"
   /{version}/proximity:
     post:
       tags:
@@ -1433,13 +1440,68 @@ components:
       - primaryBusinessAddress
       - registrationNumber
       - status
-    VoiceTranscriptionResponse:
+    AssistantResponse:
+      discriminator:
+        propertyName: type
+      properties:
+        type:
+          type: string
+      required:
+      - type
+    NoMatch:
+      allOf:
+      - $ref: "#/components/schemas/AssistantResponse"
+      - type: object
+        properties:
+          message:
+            type: string
+      required:
+      - message
+    ProductMatch:
       type: object
       properties:
-        transcript:
+        productId:
           type: string
-        language:
+          format: uuid
+        branchId:
           type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        unitPrice:
+          type: number
+        imageUrl:
+          type: string
+      required:
+      - branchId
+      - name
+      - productId
+      - unitPrice
+    ProductResult:
+      allOf:
+      - $ref: "#/components/schemas/AssistantResponse"
+      - type: object
+        properties:
+          products:
+            type: array
+            items:
+              $ref: "#/components/schemas/ProductMatch"
+          requestedQuantity:
+            type: integer
+            format: int32
+      required:
+      - products
+    Transcript:
+      allOf:
+      - $ref: "#/components/schemas/AssistantResponse"
+      - type: object
+        properties:
+          transcript:
+            type: string
+          language:
+            type: string
       required:
       - transcript
     ProximityEventRequest:

@@ -16,10 +16,15 @@ data class VoiceProperties(
     ),
     val requestTimeoutMs: Long = 10_000,
     val whisper: Whisper = Whisper(),
+    val ollama: Ollama = Ollama(),
 ) {
     data class Whisper(
         val apiKey: String = "",
         val baseUrl: String = "https://api.openai.com/v1",
         val model: String = "whisper-1",
+    )
+
+    data class Ollama(
+        val timeoutMs: Long = 4_000,
     )
 }
