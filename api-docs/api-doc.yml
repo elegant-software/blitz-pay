@@ -3,7 +3,7 @@ info:
   title: OpenAPI definition
   version: v0
 servers:
-- url: http://localhost:55032
+- url: http://localhost:50029
   description: Generated server url
 tags:
 - name: Geofence
