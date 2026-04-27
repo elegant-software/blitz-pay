@@ -1,5 +1,6 @@
 package com.elegant.software.blitzpay.voice.web
 
+import com.elegant.software.blitzpay.voice.api.AssistantResponse
 import com.elegant.software.blitzpay.voice.api.VoiceGateway
 import com.elegant.software.blitzpay.voice.config.VoiceProperties
 import com.elegant.software.blitzpay.voice.internal.MissingAudioException
@@ -8,7 +9,6 @@ import com.elegant.software.blitzpay.voice.internal.PayloadTooLargeException
 import com.elegant.software.blitzpay.voice.internal.UnsupportedAudioFormatException
 import com.elegant.software.blitzpay.voice.internal.VoiceAudioSubmission
 import com.elegant.software.blitzpay.voice.internal.VoiceException
-import com.elegant.software.blitzpay.voice.internal.VoiceTranscriptionResponse
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import java.util.Base64
+import java.util.UUID
 
 @Tag(name = "Voice", description = "Voice query processing for authenticated mobile clients")
 @RestController
@@ -37,7 +38,7 @@ class VoiceQueryController(
 ) {
     private val objectMapper = jacksonObjectMapper()
 
-    @Operation(summary = "Submit a voice recording and receive a transcription")
+    @Operation(summary = "Submit a voice recording and receive a transcript or product result")
     @PostMapping(
         "/query",
         consumes = [MediaType.MULTIPART_FORM_DATA_VALUE],
@@ -46,7 +47,9 @@ class VoiceQueryController(
     fun query(
         @RequestPart("audio", required = false) audio: FilePart?,
         @RequestHeader(name = "Authorization", required = false) authorization: String?,
-    ): Mono<ResponseEntity<VoiceTranscriptionResponse>> =
+        @RequestPart("merchantId", required = false) merchantId: String?,
+        @RequestPart("branchId", required = false) branchId: String?,
+    ): Mono<ResponseEntity<AssistantResponse>> =
         Mono.fromCallable {
             val callerSubject = extractCallerSubject(authorization)
             val audioPart = audio ?: throw MissingAudioException()
@@ -72,6 +75,8 @@ class VoiceQueryController(
                         filename = audioPart.filename(),
                         sizeBytes = bytes.size.toLong(),
                         callerSubject = callerSubject,
+                        merchantId = merchantId?.let { runCatching { UUID.fromString(it) }.getOrNull() },
+                        branchId = branchId?.let { runCatching { UUID.fromString(it) }.getOrNull() },
                     )
                 )
 

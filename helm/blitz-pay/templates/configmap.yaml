@@ -16,3 +16,5 @@ data:
   TRUELAYER_PRIVATE_KEY_PATH: {{ printf "%s/%s" .Values.privateKey.mountPath .Values.privateKey.secretKey | quote }}
   WHISPER_BASE_URL: {{ .Values.config.whisperBaseUrl | quote }}
   FRONTEND_ORIGIN: {{ .Values.config.frontendOrigin | quote }}
+  OLLAMA_BASE_URL: {{ .Values.config.ollamaBaseUrl | quote }}
+  OLLAMA_MODEL: {{ .Values.config.ollamaModel | quote }}

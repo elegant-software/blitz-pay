@@ -1,11 +1,11 @@
 package com.elegant.software.blitzpay.voice.web
 
+import com.elegant.software.blitzpay.voice.api.AssistantResponse
 import com.elegant.software.blitzpay.voice.api.VoiceGateway
 import com.elegant.software.blitzpay.voice.config.VoiceProperties
 import com.elegant.software.blitzpay.voice.internal.MissingAuthorizationException
 import com.elegant.software.blitzpay.voice.internal.PayloadTooLargeException
 import com.elegant.software.blitzpay.voice.internal.UnsupportedAudioFormatException
-import com.elegant.software.blitzpay.voice.internal.VoiceTranscriptionResponse
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.any
@@ -17,6 +17,7 @@ import org.springframework.http.MediaType
 import org.springframework.http.codec.multipart.FilePart
 import reactor.core.publisher.Flux
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 
 class VoiceQueryControllerTest {
     private val voiceGateway = mock<VoiceGateway>()
@@ -26,9 +27,9 @@ class VoiceQueryControllerTest {
     )
 
     @Test
-    fun `returns transcript JSON for valid authenticated multipart request`() {
+    fun `returns TRANSCRIPT JSON for valid authenticated multipart request`() {
         whenever(voiceGateway.process(any())).thenReturn(
-            VoiceTranscriptionResponse(
+            AssistantResponse.Transcript(
                 transcript = "What is my latest payment?",
                 language = "en",
             )
@@ -37,12 +38,15 @@ class VoiceQueryControllerTest {
         val response = controller.query(
             audio = filePart("audio.mp4", "audio/mp4", byteArrayOf(1, 2, 3, 4)),
             authorization = bearerToken("user-123"),
+            merchantId = null,
+            branchId = null,
         ).block()!!
 
         assertEquals(200, response.statusCode.value())
         assertEquals(MediaType.APPLICATION_JSON, response.headers.contentType)
-        assertEquals("What is my latest payment?", response.body?.transcript)
-        assertEquals("en", response.body?.language)
+        val body = assertIs<AssistantResponse.Transcript>(response.body)
+        assertEquals("What is my latest payment?", body.transcript)
+        assertEquals("en", body.language)
     }
 
     @Test
@@ -51,6 +55,8 @@ class VoiceQueryControllerTest {
             controller.query(
                 audio = filePart("audio.mp4", "audio/mp4", byteArrayOf(1, 2)),
                 authorization = null,
+                merchantId = null,
+                branchId = null,
             ).block()
         }
 
@@ -63,6 +69,8 @@ class VoiceQueryControllerTest {
             controller.query(
                 audio = filePart("audio.txt", "text/plain", "bad".toByteArray()),
                 authorization = bearerToken("user-123"),
+                merchantId = null,
+                branchId = null,
             ).block()
         }
 
@@ -75,6 +83,8 @@ class VoiceQueryControllerTest {
             controller.query(
                 audio = filePart("audio.mp4", "audio/mp4", byteArrayOf(1, 2, 3, 4, 5, 6, 7, 8, 9)),
                 authorization = bearerToken("user-123"),
+                merchantId = null,
+                branchId = null,
             ).block()
         }
 

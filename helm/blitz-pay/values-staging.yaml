@@ -24,3 +24,5 @@ config:
   truelayerHttpLogs: "true"
   truelayerWebhookJku: https://api.staging.blitz-pay.com/.well-known/jwks.json
   whisperBaseUrl: http://whisper:8000/v1
+  ollamaBaseUrl: http://ollama:11434
+  ollamaModel: llama3.2
