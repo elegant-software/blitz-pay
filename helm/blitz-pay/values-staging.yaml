@@ -17,8 +17,8 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
 
 config:
-  springProfilesActive: prod
-  frontendOrigin: https://blitzpay-admin-dashboard-staging.elegantsoftware.de
+  springProfilesActive: staging
+  frontendOrigin: https://blitzpay-admin-dashboard.elegantsoftware.de
   truelayerApiBase: https://api.truelayer-sandbox.com
   truelayerEnv: sandbox
   truelayerHttpLogs: "true"
