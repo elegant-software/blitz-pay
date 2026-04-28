@@ -3,8 +3,12 @@ package com.elegant.software.blitzpay.merchant.mcp
 import com.elegant.software.blitzpay.merchant.api.*
 import com.elegant.software.blitzpay.merchant.application.MerchantBranchService
 import com.elegant.software.blitzpay.merchant.application.MerchantProductService
+import com.elegant.software.blitzpay.merchant.application.MerchantRegistrationService
 import com.elegant.software.blitzpay.merchant.application.ProductImagePolicy
 import com.elegant.software.blitzpay.merchant.application.ProductImageUpload
+import com.elegant.software.blitzpay.merchant.api.RegisterMerchantRequest
+import com.elegant.software.blitzpay.merchant.api.MerchantBusinessProfileRequest
+import com.elegant.software.blitzpay.merchant.api.MerchantPrimaryContactRequest
 import com.elegant.software.blitzpay.merchant.domain.MerchantBranch
 import com.elegant.software.blitzpay.merchant.domain.MerchantLocation
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
@@ -26,6 +30,7 @@ import java.util.*
 class MerchantProductTools(
     private val merchantProductService: MerchantProductService,
     private val merchantBranchService: MerchantBranchService,
+    private val merchantRegistrationService: MerchantRegistrationService,
     private val merchantApplicationRepository: MerchantApplicationRepository,
     private val merchantBranchRepository: MerchantBranchRepository,
     private val merchantProductRepository: MerchantProductRepository
@@ -81,6 +86,52 @@ class MerchantProductTools(
     fun getMerchantIdByName(merchantName: String): String {
         return merchantApplicationRepository.findByBusinessProfileLegalBusinessName(merchantName)?.id?.toString()
             ?: throw IllegalArgumentException("Merchant not found with name: $merchantName")
+    }
+
+    @McpTool(
+        name = "merchant_id_by_name_or_create",
+        description = "Get or create a merchant ID by merchant name and ensure the merchant has a default branch"
+    )
+    fun getOrCreateMerchantId(
+        merchantName: String,
+        registrationNumber: String? = null,
+        businessType: String = "RETAIL",
+        operatingCountry: String = "US",
+        primaryBusinessAddress: String = "Unknown",
+        contactFullName: String = "Merchant Owner",
+        contactEmail: String? = null,
+        contactPhoneNumber: String = "0000000000",
+        defaultBranchName: String = "Main Branch"
+    ): String {
+        val existing = merchantApplicationRepository.findByBusinessProfileLegalBusinessName(merchantName)
+        if (existing != null) {
+            ensureBranchExists(existing.id, defaultBranchName)
+            return existing.id.toString()
+        }
+
+        val normalizedRegistrationNumber = registrationNumber?.trim()?.takeIf { it.isNotEmpty() }
+            ?: "MCP-${UUID.randomUUID().toString().replace("-", "").take(12).uppercase()}"
+        val generatedContactEmail = contactEmail?.trim()?.takeIf { it.isNotEmpty() }
+            ?: "${merchantName.lowercase().replace(Regex("[^a-z0-9]+"), ".").trim('.')}.merchant@example.com"
+
+        val created = merchantRegistrationService.register(
+            RegisterMerchantRequest(
+                businessProfile = MerchantBusinessProfileRequest(
+                    legalBusinessName = merchantName,
+                    businessType = businessType,
+                    registrationNumber = normalizedRegistrationNumber,
+                    operatingCountry = operatingCountry,
+                    primaryBusinessAddress = primaryBusinessAddress
+                ),
+                primaryContact = MerchantPrimaryContactRequest(
+                    fullName = contactFullName,
+                    email = generatedContactEmail,
+                    phoneNumber = contactPhoneNumber
+                )
+            )
+        )
+        ensureBranchExists(created.id, defaultBranchName)
+        return created.id.toString()
     }
 
     @McpTool(
@@ -168,12 +219,7 @@ class MerchantProductTools(
                 geofenceRadiusMeters = geofenceRadiusMeters,
                 googlePlaceId = googlePlaceId
             )
-        ).also { created ->
-            merchantBranchRepository.findById(created.id).ifPresent { branch ->
-                branch.deactivate()
-                merchantBranchRepository.save(branch)
-            }
-        }.id.toString()
+        ).id.toString()
     }
 
     @McpTool(
@@ -246,12 +292,7 @@ class MerchantProductTools(
                 description = description
             ),
             image
-        ).also { created ->
-            merchantProductRepository.findById(created.productId).ifPresent { product ->
-                product.deactivate()
-                merchantProductRepository.save(product)
-            }
-        }.productId.toString()
+        ).productId.toString()
     }
 
     private fun productImageUploadOrNull(
@@ -263,23 +304,27 @@ class MerchantProductTools(
         cropWidth: Int?,
         cropHeight: Int?
     ): ProductImageUpload? {
-        require(imageBase64 == null || imageFilePath == null) {
+        val normalizedBase64 = imageBase64?.trim()?.takeIf { it.isNotEmpty() }
+        val normalizedFilePath = imageFilePath?.trim()?.takeIf { it.isNotEmpty() }
+        val normalizedContentType = imageContentType?.trim()?.takeIf { it.isNotEmpty() }
+
+        require(normalizedBase64 == null || normalizedFilePath == null) {
             "Provide either imageBase64 or imageFilePath, not both"
         }
-        if (imageBase64 == null && imageFilePath == null) {
-            require(listOf(imageContentType, cropX, cropY, cropWidth, cropHeight).all { it == null }) {
+        if (normalizedBase64 == null && normalizedFilePath == null) {
+            require(listOf(normalizedContentType, cropX, cropY, cropWidth, cropHeight).all { it == null }) {
                 "imageBase64 or imageFilePath is required when imageContentType or crop parameters are provided"
             }
             return null
         }
 
-        val imagePath = imageFilePath?.let { Path.of(it).normalize() }
-        val contentType = imageContentType
+        val imagePath = normalizedFilePath?.let { Path.of(it).normalize() }
+        val contentType = normalizedContentType
             ?: imagePath?.let { Files.probeContentType(it) }
             ?: throw IllegalArgumentException("imageContentType is required when it cannot be inferred from imageFilePath")
         ProductImagePolicy.extensionFor(contentType)
         val originalBytes = when {
-            imageBase64 != null -> Base64.getDecoder().decode(imageBase64.substringAfter("base64,", imageBase64))
+            normalizedBase64 != null -> Base64.getDecoder().decode(normalizedBase64.substringAfter("base64,", normalizedBase64))
             imagePath != null -> Files.readAllBytes(imagePath)
             else -> error("No product image source provided")
         }
@@ -361,6 +406,17 @@ class MerchantProductTools(
             geofenceRadiusMeters,
             googlePlaceId
         ).any { it != null }
+    }
+
+    private fun ensureBranchExists(merchantId: UUID, defaultBranchName: String) {
+        require(defaultBranchName.isNotBlank()) { "defaultBranchName must not be blank" }
+        val existingBranch = merchantBranchRepository.findByNameAndMerchantApplicationId(defaultBranchName, merchantId)
+        if (existingBranch == null) {
+            merchantBranchService.create(
+                merchantId,
+                CreateBranchRequest(name = defaultBranchName)
+            )
+        }
     }
 
     private fun MerchantBranch.applyBranchDetails(
