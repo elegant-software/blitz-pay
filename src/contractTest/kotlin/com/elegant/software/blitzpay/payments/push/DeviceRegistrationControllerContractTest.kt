@@ -4,7 +4,7 @@ import com.elegant.software.blitzpay.contract.ContractVerifierBase
 import com.elegant.software.blitzpay.payments.push.api.DeviceRegistrationRequest
 import com.elegant.software.blitzpay.payments.push.api.DeviceRegistrationResponse
 import com.elegant.software.blitzpay.payments.push.internal.DeviceRegistrationService
-import com.elegant.software.blitzpay.payments.push.internal.PaymentRequestNotFoundException
+import com.elegant.software.blitzpay.payments.push.internal.OrderNotFoundException
 import com.elegant.software.blitzpay.payments.push.internal.RegistrationOutcome
 import com.elegant.software.blitzpay.payments.push.persistence.DevicePlatform
 import org.junit.jupiter.api.Test
@@ -22,14 +22,14 @@ class DeviceRegistrationControllerContractTest : ContractVerifierBase() {
 
     @Test
     fun `returns 201 when token is new`() {
-        val paymentRequestId = UUID.randomUUID()
+        val orderId = "ORD-ABC123456789"
         val token = "ExponentPushToken[abc123]"
         val id = UUID.randomUUID()
         whenever(deviceRegistrationService.register(any())).thenReturn(
             RegistrationOutcome(
                 response = DeviceRegistrationResponse(
                     id = id,
-                    paymentRequestId = paymentRequestId,
+                    orderId = orderId,
                     expoPushToken = token,
                     platform = DevicePlatform.IOS,
                 ),
@@ -41,7 +41,7 @@ class DeviceRegistrationControllerContractTest : ContractVerifierBase() {
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(
                 """
-                {"paymentRequestId":"$paymentRequestId","expoPushToken":"$token","platform":"IOS"}
+                {"orderId":"$orderId","expoPushToken":"$token","platform":"IOS"}
                 """.trimIndent()
             )
             .exchange()
@@ -53,14 +53,14 @@ class DeviceRegistrationControllerContractTest : ContractVerifierBase() {
 
     @Test
     fun `returns 200 when token already exists`() {
-        val paymentRequestId = UUID.randomUUID()
+        val orderId = "ORD-ABC123456789"
         val token = "ExponentPushToken[existing]"
         val id = UUID.randomUUID()
         whenever(deviceRegistrationService.register(any())).thenReturn(
             RegistrationOutcome(
                 response = DeviceRegistrationResponse(
                     id = id,
-                    paymentRequestId = paymentRequestId,
+                    orderId = orderId,
                     expoPushToken = token,
                     platform = DevicePlatform.ANDROID,
                 ),
@@ -72,7 +72,7 @@ class DeviceRegistrationControllerContractTest : ContractVerifierBase() {
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(
                 """
-                {"paymentRequestId":"$paymentRequestId","expoPushToken":"$token","platform":"ANDROID"}
+                {"orderId":"$orderId","expoPushToken":"$token","platform":"ANDROID"}
                 """.trimIndent()
             )
             .exchange()
@@ -83,12 +83,12 @@ class DeviceRegistrationControllerContractTest : ContractVerifierBase() {
 
     @Test
     fun `returns 400 on malformed token`() {
-        val paymentRequestId = UUID.randomUUID()
+        val orderId = "ORD-ABC123456789"
         webTestClient.post().uri("/v1/devices")
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(
                 """
-                {"paymentRequestId":"$paymentRequestId","expoPushToken":"not-a-valid-token"}
+                {"orderId":"$orderId","expoPushToken":"not-a-valid-token"}
                 """.trimIndent()
             )
             .exchange()
@@ -96,17 +96,17 @@ class DeviceRegistrationControllerContractTest : ContractVerifierBase() {
     }
 
     @Test
-    fun `returns 404 when payment request unknown`() {
-        val paymentRequestId = UUID.randomUUID()
+    fun `returns 404 when order unknown`() {
+        val orderId = "ORD-MISSING12345"
         val token = "ExponentPushToken[xyz]"
-        doThrow(PaymentRequestNotFoundException(paymentRequestId))
+        doThrow(OrderNotFoundException(orderId))
             .whenever(deviceRegistrationService).register(any<DeviceRegistrationRequest>())
 
         webTestClient.post().uri("/v1/devices")
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(
                 """
-                {"paymentRequestId":"$paymentRequestId","expoPushToken":"$token"}
+                {"orderId":"$orderId","expoPushToken":"$token"}
                 """.trimIndent()
             )
             .exchange()

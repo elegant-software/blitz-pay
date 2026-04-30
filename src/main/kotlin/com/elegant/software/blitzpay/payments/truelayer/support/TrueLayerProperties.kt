@@ -4,10 +4,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties("truelayer")
 data class TrueLayerProperties(
-    // Legacy fields (kept for backward compatibility)
-    val apiBase: String,
-    val accessToken: String,
-
     // Webhook validation
     val webhookJku: String,
     val webhookAudience: String? = null,
@@ -21,6 +17,8 @@ data class TrueLayerProperties(
     val httpLogs: Boolean = false,
 
     // Payments
-    val merchantAccountId: String
+    val merchantAccountId: String,
+    val mockProviderId: String = "mock-payments-de-redirect",
+    val mockSchemeId: String = "sepa_credit_transfer",
 )
 

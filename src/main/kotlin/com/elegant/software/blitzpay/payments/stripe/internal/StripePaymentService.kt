@@ -11,7 +11,11 @@ import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import java.util.UUID
 
-data class StripeIntentResult(val clientSecret: String, val publishableKey: String)
+data class StripeIntentResult(
+    val clientSecret: String,
+    val paymentIntentId: String,
+    val publishableKey: String,
+)
 
 @Service
 class StripePaymentService {
@@ -24,6 +28,8 @@ class StripePaymentService {
         credentials: StripeCredentials,
         merchantId: UUID,
         branchId: UUID?,
+        orderId: String,
+        paymentRequestId: UUID,
         productId: UUID?,
     ): Mono<StripeIntentResult> = Mono.fromCallable {
         require(amount > 0 && amount.isFinite()) { "amount must be a positive number" }
@@ -35,6 +41,8 @@ class StripePaymentService {
                 PaymentIntentCreateParams.AutomaticPaymentMethods.builder().setEnabled(true).build()
             )
             .putMetadata("merchantId", merchantId.toString())
+            .putMetadata("orderId", orderId)
+            .putMetadata("paymentRequestId", paymentRequestId.toString())
             .apply { branchId?.let { putMetadata("branchId", it.toString()) } }
             .apply { productId?.let { putMetadata("productId", it.toString()) } }
             .build()
@@ -44,11 +52,12 @@ class StripePaymentService {
         try {
             val intent = PaymentIntent.create(params, requestOptions)
             log.info(
-                "stripe create_intent id={} amount={} currency={} merchantId={} branchId={} productId={}",
-                intent.id, amount, currency.lowercase(), merchantId, branchId, productId,
+                "stripe create_intent id={} amount={} currency={} merchantId={} branchId={} orderId={} paymentRequestId={} productId={}",
+                intent.id, amount, currency.lowercase(), merchantId, branchId, orderId, paymentRequestId, productId,
             )
             StripeIntentResult(
                 clientSecret = requireNotNull(intent.clientSecret) { "Stripe returned null clientSecret" },
+                paymentIntentId = intent.id,
                 publishableKey = credentials.publishableKey,
             )
         } catch (ex: StripeException) {

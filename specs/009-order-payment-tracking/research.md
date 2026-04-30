@@ -34,11 +34,12 @@
 
 ## 4. Order Status Model
 
-**Decision**: Use an explicit order payment lifecycle: `PENDING_PAYMENT`, `PAYMENT_IN_PROGRESS`, `PAID`, `PAYMENT_FAILED`, `CANCELLED`.
+**Decision**: Use a five-value lifecycle enum: `CREATED`, `PAYMENT_INITIATED`, `PAID`, `FAILED`, `CANCELLED`.
 
-**Rationale**: The user request is centered on tracking payment delivery, so the status model should stay business-facing and compact. `PENDING_PAYMENT` is the initial state after order creation. Provider updates then move the order forward without exposing raw provider-specific status codes to callers.
+**Rationale**: `CREATED` captures the window between order persistence and payment dispatch — a distinct and observable state, especially for merchant-created orders where payment is deferred until the customer scans the QR code. `PAYMENT_INITIATED` replaces the former `PAYMENT_IN_PROGRESS` to align with the fact that payment is initiated as part of, or immediately after, order creation. `FAILED` and `CANCELLED` are kept separate to support retry logic and audit trails. `PAID` is terminal.
 
 **Alternatives considered**:
+- `PENDING_PAYMENT` as initial state: rejected because it conflates "not yet dispatched" and "dispatched but not confirmed", making the merchant QR code flow ambiguous.
 - Mirror payment provider status values directly on the order: rejected because it leaks provider semantics and complicates client behavior.
 - Keep only `PENDING` and `PAID`: rejected because it loses important failure and in-progress states needed for support and retry handling.
 
@@ -49,11 +50,11 @@
 **Rationale**: The payments push module already emits normalized payment status events keyed by `paymentRequestId`. The order module can remain provider-agnostic by linking payment requests back to orders and translating those updates into order status transitions.
 
 **Mapped transitions**:
-- `PENDING` -> `PENDING_PAYMENT`
-- `EXECUTED` -> `PAYMENT_IN_PROGRESS`
-- `SETTLED` -> `PAID`
-- `FAILED` -> `PAYMENT_FAILED`
-- `EXPIRED` -> `PAYMENT_FAILED`
+- `PENDING` → order stays `PAYMENT_INITIATED`
+- `EXECUTED` → order stays `PAYMENT_INITIATED` (provider executing but not settled)
+- `SETTLED` → `PAID`
+- `FAILED` → `FAILED`
+- `EXPIRED` → `FAILED`
 
 **Alternatives considered**:
 - Poll payment status endpoints from the order module: rejected because event-driven updates are already available and avoid duplicated coordination logic.
@@ -70,9 +71,31 @@
 
 ## 7. Order Creation Interface
 
-**Decision**: Add dedicated order endpoints for create and read operations: `POST /v1/orders` and `GET /v1/orders/{orderId}`.
+**Decision**: Two dedicated creation endpoints based on actor: `POST /v1/orders` (shopper) and `POST /v1/merchant/orders` (merchant). Read operations: `GET /v1/orders` (shopper list), `GET /v1/orders/{orderId}` (shopper detail), `GET /v1/merchant/orders` (merchant branch list).
 
-**Rationale**: Order creation and order status lookup are new external capabilities and should be modeled explicitly as first-class API contracts instead of being hidden inside payment endpoints.
+**Rationale**: Shopper and merchant creation paths are fundamentally different — they differ in who authenticates, what payment trigger fires, and what the response contains. Keeping them on separate paths keeps authorization, validation, and response shape cleanly separated. Read endpoints likewise split by actor to enforce scoping rules (branch-scoped for merchant, identity-scoped for shopper).
 
 **Alternatives considered**:
-- Implicitly create orders inside payment initiation endpoints: rejected because it couples order persistence to a single payment path and prevents unpaid orders from existing as standalone business records.
+- Single `POST /v1/orders` endpoint for both actors with a role-based dispatcher: rejected because the response shapes differ (payment reference vs QR code) and shared authorization logic would be harder to reason about.
+- Implicitly create orders inside payment initiation endpoints: rejected because it couples order persistence to a single payment path and prevents merchant-created QR orders from existing independently.
+
+## 8. Payment Initiation as Part of Order Creation
+
+**Decision**: Payment is automatically triggered at order creation time, not as a separate client call. The trigger mechanism depends on the creator type.
+
+- **Shopper-created orders**: `POST /v1/orders` includes a `paymentMethod` field. The `order` module dispatches a payment initiation request to the appropriate provider immediately after persisting the order. The order transitions from `CREATED` to `PAYMENT_INITIATED` in the same request scope. The response includes the order details and a provider-specific payment reference (e.g., TrueLayer payment link, Braintree client token).
+- **Merchant-created orders**: `POST /v1/merchant/orders` does not accept a `paymentMethod`. Instead, the `order` module generates a QR code linking to the order ID and returns it in the response. The order stays in `CREATED` until the customer scans the QR code via their app, at which point the existing `payments.qrpay` module initiates payment and the order transitions to `PAYMENT_INITIATED`.
+
+**Rationale**: This design keeps payment initiation as a consequence of order creation without coupling order persistence to any single payment path. It enables retries (for failed payments), QR-based deferred payment, and multi-provider routing all from a consistent order lifecycle.
+
+**Alternatives considered**:
+- Require a separate `POST /v1/payments/initiate` call after order creation: rejected because clients would need to coordinate two calls, introducing a window of partially-created orders with no payment in flight.
+
+## 9. Creator Identity Capture
+
+**Decision**: Store `created_by_id` (user identity string) and `creator_type` (`MERCHANT` | `SHOPPER`) on every order row at creation time.
+
+**Rationale**: Creator identity is required for correct scoping on read endpoints: `GET /v1/orders` must filter by `created_by_id` for shoppers; `GET /v1/merchant/orders` must filter by `merchant_branch_id`. The `creator_type` field makes it possible to distinguish merchant-created (QR flow) orders from shopper-created (direct payment) orders at a glance, and is needed for `paymentRetryAllowed` logic (QR orders in `CREATED` status are still awaiting first scan, not failed retries).
+
+**Alternatives considered**:
+- Infer creator type from presence of payment method in the order: rejected because it conflates creation time data with payment state, and makes future reporting harder.

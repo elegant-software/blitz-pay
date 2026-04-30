@@ -21,6 +21,8 @@ object LogContext {
     const val EVENT_ID = "eventId"
     const val WEBHOOK_ID = "webhookId"
     const val ORDER_ID = "orderId"
+    const val PROVIDER = "provider"
+    const val PAYMENT_INTENT_ID = "paymentIntentId"
 
     inline fun <T> with(vararg entries: Pair<String, Any?>, block: () -> T): T {
         val prior = HashMap<String, String?>(entries.size)

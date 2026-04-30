@@ -4,6 +4,8 @@ import com.elegant.software.blitzpay.merchant.domain.MerchantApplication
 import com.elegant.software.blitzpay.merchant.domain.MerchantOnboardingStatus
 import com.elegant.software.blitzpay.merchant.domain.ReviewOutcome
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
+import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
+import com.elegant.software.blitzpay.merchant.repository.MerchantProductRepository
 import com.elegant.software.blitzpay.merchant.support.MerchantObservabilitySupport
 import com.elegant.software.blitzpay.merchant.support.MerchantTestFixtureLoader
 import org.junit.jupiter.api.Test
@@ -22,10 +24,19 @@ import kotlin.test.assertNotNull
 class MerchantOnboardingServiceTest {
 
     private val repository = mock<MerchantApplicationRepository>()
+    private val merchantProductRepository = mock<MerchantProductRepository>()
+    private val merchantBranchRepository = mock<MerchantBranchRepository>()
     private val auditTrail = mock<MerchantAuditTrail>()
     private val observabilitySupport = mock<MerchantObservabilitySupport>()
     private val validator = MerchantApplicationValidator()
-    private val service = MerchantOnboardingService(repository, validator, auditTrail, observabilitySupport)
+    private val service = MerchantOnboardingService(
+        repository,
+        merchantProductRepository,
+        merchantBranchRepository,
+        validator,
+        auditTrail,
+        observabilitySupport
+    )
 
     @Test
     fun `submit validates application and persists submitted status`() {

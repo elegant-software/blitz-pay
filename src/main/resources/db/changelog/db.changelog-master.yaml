@@ -47,3 +47,13 @@ databaseChangeLog:
       file: db/changelog/20260428-004-merchant-products-add-category-fk.sql
   - include:
       file: db/changelog/20260429-001-product-code-support.sql
+  - include:
+      file: db/changelog/20260430-001-create-order-tables.sql
+  - include:
+      file: db/changelog/20260502-001-order-creator-identity.sql
+  - include:
+      file: db/changelog/20260502-002-widen-event-publication-columns.sql
+  - include:
+      file: db/changelog/20260502-003-name-order-fk-constraints.sql
+  - include:
+      file: db/changelog/20260502-004-device-registration-order-id.sql

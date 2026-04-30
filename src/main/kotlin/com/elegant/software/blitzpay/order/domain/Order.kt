@@ -1,0 +1,99 @@
+package com.elegant.software.blitzpay.order.domain
+
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
+import jakarta.persistence.Id
+import jakarta.persistence.Table
+import java.time.Instant
+import java.util.UUID
+
+@Entity
+@Table(name = "order_orders", schema = "blitzpay")
+class Order(
+    @Id
+    val id: UUID = UUID.randomUUID(),
+
+    @Column(name = "order_id", nullable = false, unique = true, length = 64)
+    val orderId: String,
+
+    @Column(name = "merchant_application_id", nullable = false, updatable = false)
+    val merchantApplicationId: UUID,
+
+    @Column(name = "merchant_branch_id")
+    val merchantBranchId: UUID? = null,
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
+    var status: OrderStatus = OrderStatus.CREATED,
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "creator_type", nullable = false, length = 16)
+    val creatorType: CreatorType,
+
+    @Column(name = "created_by_id", nullable = false, length = 255)
+    val createdById: String,
+
+    @Column(nullable = false, length = 3)
+    val currency: String,
+
+    @Column(name = "total_amount_minor", nullable = false)
+    val totalAmountMinor: Long,
+
+    @Column(name = "item_count", nullable = false)
+    val itemCount: Int,
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    val createdAt: Instant = Instant.now(),
+
+    @Column(name = "updated_at", nullable = false)
+    var updatedAt: Instant = createdAt,
+
+    @Column(name = "paid_at")
+    var paidAt: Instant? = null,
+
+    @Column(name = "last_payment_request_id")
+    var lastPaymentRequestId: UUID? = null,
+
+    @Column(name = "last_payment_provider", length = 32)
+    var lastPaymentProvider: String? = null,
+) {
+    fun markPaymentInProgress(paymentRequestId: UUID, provider: String, at: Instant = Instant.now()) {
+        require(status != OrderStatus.PAID) { "Order is already paid: $orderId" }
+        if (status == OrderStatus.CREATED || status == OrderStatus.FAILED || status == OrderStatus.CANCELLED) {
+            status = OrderStatus.PAYMENT_INITIATED
+        }
+        lastPaymentRequestId = paymentRequestId
+        lastPaymentProvider = provider
+        updatedAt = at
+    }
+
+    fun applyPaymentUpdate(
+        nextStatus: OrderStatus,
+        paymentRequestId: UUID,
+        provider: String?,
+        at: Instant,
+    ): Boolean {
+        if (status == OrderStatus.PAID) return false
+        val allowed = when (status) {
+            OrderStatus.CREATED -> setOf(OrderStatus.PAYMENT_INITIATED, OrderStatus.PAID, OrderStatus.FAILED, OrderStatus.CANCELLED)
+            OrderStatus.PAYMENT_INITIATED -> setOf(OrderStatus.PAID, OrderStatus.FAILED, OrderStatus.CANCELLED)
+            OrderStatus.FAILED -> setOf(OrderStatus.PAYMENT_INITIATED, OrderStatus.CANCELLED)
+            OrderStatus.CANCELLED -> setOf(OrderStatus.PAYMENT_INITIATED)
+            OrderStatus.PAID -> emptySet()
+        }
+        if (nextStatus !in allowed) return false
+        status = nextStatus
+        lastPaymentRequestId = paymentRequestId
+        lastPaymentProvider = provider ?: lastPaymentProvider
+        if (nextStatus == OrderStatus.PAID) paidAt = at
+        updatedAt = at
+        return true
+    }
+
+    companion object {
+        fun nextOrderId(): String =
+            "ORD-" + UUID.randomUUID().toString().replace("-", "").take(12).uppercase()
+    }
+}

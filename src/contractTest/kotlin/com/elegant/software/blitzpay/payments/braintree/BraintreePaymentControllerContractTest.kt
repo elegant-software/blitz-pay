@@ -80,35 +80,43 @@ class BraintreePaymentControllerContractTest : ContractVerifierBase() {
 
     @Test
     fun `checkout returns success response for valid nonce and amount`() {
-        whenever(braintreePaymentService.checkout(any(), any(), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(
-            Mono.just(BraintreeCheckoutResult.Success("tx_abc123", "12.50", "EUR", null, testMerchantId, testBranchId))
+        whenever(braintreePaymentService.checkout(any(), any(), any(), any(), any(), anyOrNull(), any(), anyOrNull(), anyOrNull())).thenReturn(
+            Mono.just(BraintreeCheckoutResult.Success("tx_abc123", "12.50", "EUR", "ORDER-123", null, testMerchantId, testBranchId))
         )
 
         webTestClient.post().uri("/v1/payments/braintree/checkout")
             .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue("""{"nonce": "fake-valid-nonce", "amount": 12.50, "currency": "EUR", "merchantId": "$testMerchantId", "branchId": "$testBranchId"}""")
+            .bodyValue("""{"nonce": "fake-valid-nonce", "amount": 12.50, "currency": "EUR", "orderId": "ORDER-123", "merchantId": "$testMerchantId", "branchId": "$testBranchId"}""")
             .exchange()
             .expectStatus().isOk
             .expectBody()
             .jsonPath("$.status").isEqualTo("succeeded")
+            .jsonPath("$.paymentRequestId").value<String> { paymentRequestId ->
+                require(Regex("[0-9a-fA-F\\-]{36}").matches(paymentRequestId))
+            }
             .jsonPath("$.transactionId").isEqualTo("tx_abc123")
             .jsonPath("$.amount").isEqualTo("12.50")
+            .jsonPath("$.orderId").isEqualTo("ORDER-123")
             .jsonPath("$.merchantId").isEqualTo(testMerchantId.toString())
     }
 
     @Test
     fun `checkout echoes invoiceId in success response`() {
-        whenever(braintreePaymentService.checkout(any(), any(), any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(
-            Mono.just(BraintreeCheckoutResult.Success("tx_inv42", "99.00", "EUR", "INV-2026-00042", testMerchantId, testBranchId))
+        whenever(braintreePaymentService.checkout(any(), any(), any(), any(), any(), anyOrNull(), any(), anyOrNull(), anyOrNull())).thenReturn(
+            Mono.just(BraintreeCheckoutResult.Success("tx_inv42", "99.00", "EUR", "ORDER-123", "INV-2026-00042", testMerchantId, testBranchId))
         )
 
         webTestClient.post().uri("/v1/payments/braintree/checkout")
             .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue("""{"nonce": "fake-valid-nonce", "amount": 99.00, "invoiceId": "INV-2026-00042", "merchantId": "$testMerchantId", "branchId": "$testBranchId"}""")
+            .bodyValue("""{"nonce": "fake-valid-nonce", "amount": 99.00, "orderId": "ORDER-123", "invoiceId": "INV-2026-00042", "merchantId": "$testMerchantId", "branchId": "$testBranchId"}""")
             .exchange()
             .expectStatus().isOk
             .expectBody()
             .jsonPath("$.status").isEqualTo("succeeded")
+            .jsonPath("$.paymentRequestId").value<String> { paymentRequestId ->
+                require(Regex("[0-9a-fA-F\\-]{36}").matches(paymentRequestId))
+            }
+            .jsonPath("$.orderId").isEqualTo("ORDER-123")
             .jsonPath("$.invoiceId").isEqualTo("INV-2026-00042")
     }
 
@@ -116,7 +124,7 @@ class BraintreePaymentControllerContractTest : ContractVerifierBase() {
     fun `checkout returns 400 when nonce is missing`() {
         webTestClient.post().uri("/v1/payments/braintree/checkout")
             .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue("""{"amount": 12.50, "merchantId": "$testMerchantId", "branchId": "$testBranchId"}""")
+            .bodyValue("""{"amount": 12.50, "orderId": "ORDER-123", "merchantId": "$testMerchantId", "branchId": "$testBranchId"}""")
             .exchange()
             .expectStatus().isBadRequest
             .expectBody()
@@ -140,7 +148,7 @@ class BraintreePaymentControllerContractTest : ContractVerifierBase() {
 
         webTestClient.post().uri("/v1/payments/braintree/checkout")
             .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue("""{"nonce": "fake-valid-nonce", "amount": 12.50, "merchantId": "$testMerchantId", "branchId": "$testBranchId"}""")
+            .bodyValue("""{"nonce": "fake-valid-nonce", "amount": 12.50, "orderId": "ORDER-123", "merchantId": "$testMerchantId", "branchId": "$testBranchId"}""")
             .exchange()
             .expectStatus().isEqualTo(503)
             .expectBody()

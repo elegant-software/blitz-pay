@@ -61,7 +61,9 @@ curl -s -X POST http://localhost:8080/v1/payments/stripe/create-intent \
 Expected response:
 ```json
 {
-  "paymentIntent": "pi_xxx_secret_yyy",
+  "paymentRequestId": "123e4567-e89b-12d3-a456-426614174000",
+  "clientSecret": "pi_xxx_secret_yyy",
+  "paymentIntent": "pi_xxx",
   "publishableKey": "pk_test_..."
 }
 ```
@@ -86,6 +88,21 @@ Expected response:
 curl -s -X POST http://localhost:8080/v1/payments/braintree/checkout \
   -H "Content-Type: application/json" \
   -d '{"nonce": "fake-valid-nonce", "amount": 12.50, "currency": "EUR", "invoiceId": "INV-001"}' | jq .
+```
+
+Expected response:
+```json
+{
+  "status": "succeeded",
+  "paymentRequestId": "123e4567-e89b-12d3-a456-426614174000",
+  "transactionId": "tx_abc123",
+  "amount": "12.50",
+  "currency": "EUR",
+  "orderId": "ORDER-123",
+  "invoiceId": "INV-001",
+  "merchantId": "00000000-0000-0000-0000-000000000001",
+  "branchId": "00000000-0000-0000-0000-000000000002"
+}
 ```
 
 Expected response (sandbox success):

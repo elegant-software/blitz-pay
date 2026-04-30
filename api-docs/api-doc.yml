@@ -3,19 +3,25 @@ info:
   title: OpenAPI definition
   version: v0
 servers:
-- url: http://localhost:61097
+- url: http://localhost:62721
   description: Generated server url
 tags:
-- name: Geofence
-  description: Geofence region discovery for mobile clients
+- name: Merchant Orders
+  description: Create and list orders for authenticated merchant branches
 - name: Voice
   description: Voice query processing for authenticated mobile clients
 - name: Merchant Product Categories
   description: Manage merchant product categories
-- name: Invoices
-  description: EU-standard ZUGFeRD / Factur-X invoice generation
 - name: Merchant Onboarding
   description: Endpoints for merchant onboarding and lifecycle
+- name: Proximity
+  description: Mobile geofence enter and exit event recording
+- name: Merchant Branches
+  description: Manage branches under a merchant
+- name: Geofence
+  description: Geofence region discovery for mobile clients
+- name: Invoices
+  description: EU-standard ZUGFeRD / Factur-X invoice generation
 - name: Payment Status
   description: Fallback query for authoritative payment status
 - name: Device Registration
@@ -25,12 +31,10 @@ tags:
   externalDocs:
     description: Spring Boot Actuator Web API Documentation
     url: https://docs.spring.io/spring-boot/docs/current/actuator-api/html/
-- name: Proximity
-  description: Mobile geofence enter and exit event recording
+- name: Orders
+  description: Create and inspect orders for shoppers
 - name: Merchant Location
   description: Geolocation and geofencing for merchants
-- name: Merchant Branches
-  description: Manage branches under a merchant
 - name: Merchant Products
   description: Product catalog management for merchants
 paths:
@@ -461,7 +465,57 @@ paths:
           content:
             '*/*':
               schema:
-                type: object
+                $ref: "#/components/schemas/CreateIntentResponse"
+              examples:
+                success:
+                  value:
+                    paymentRequestId: 123e4567-e89b-12d3-a456-426614174000
+                    clientSecret: pi_3Pxx_secret_abc
+                    paymentIntent: pi_3Pxx
+                    publishableKey: pk_test_123
+  /{version}/webhooks/stripe:
+    post:
+      tags:
+      - stripe-webhook-controller
+      operationId: receive_1
+      parameters:
+      - name: Stripe-Signature
+        in: header
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/CheckoutSuccessResponse"
+                - $ref: "#/components/schemas/CheckoutFailureResponse"
+              examples:
+                success:
+                  value:
+                    status: succeeded
+                    paymentRequestId: 123e4567-e89b-12d3-a456-426614174000
+                    transactionId: tx_abc123
+                    amount: "12.50"
+                    currency: EUR
+                    orderId: ORDER-123
+                    invoiceId: INV-2026-00042
+                    merchantId: 00000000-0000-0000-0000-000000000001
+                    branchId: 00000000-0000-0000-0000-000000000002
+                failure:
+                  value:
+                    status: failed
+                    message: Processor declined
+                    code: declined
   /{version}/voice/query:
     post:
       tags:
@@ -560,8 +614,6 @@ paths:
             '*/*':
               schema:
                 type: object
-                additionalProperties:
-                  type: string
   /{version}/payments/braintree/client-token:
     post:
       tags:
@@ -600,12 +652,57 @@ paths:
             '*/*':
               schema:
                 type: object
+  /{version}/orders:
+    get:
+      tags:
+      - Orders
+      summary: List recent orders for the authenticated shopper (last 7 days)
+      operationId: list
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrderSummaryResponse"
+    post:
+      tags:
+      - Orders
+      summary: Create an order and initiate payment via the chosen provider
+      operationId: create
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
   /{version}/merchants/{merchantId}/products:
     get:
       tags:
       - Merchant Products
       summary: List products for the merchant
-      operationId: list
+      operationId: list_1
       parameters:
       - name: merchantId
         in: path
@@ -638,7 +735,7 @@ paths:
       tags:
       - Merchant Products
       summary: Create a product for the merchant
-      operationId: create
+      operationId: create_1
       parameters:
       - name: merchantId
         in: path
@@ -683,7 +780,7 @@ paths:
       tags:
       - Merchant Product Categories
       summary: List all product categories
-      operationId: list_1
+      operationId: list_2
       parameters:
       - name: merchantId
         in: path
@@ -704,7 +801,7 @@ paths:
       tags:
       - Merchant Product Categories
       summary: Create a product category
-      operationId: create_1
+      operationId: create_2
       parameters:
       - name: merchantId
         in: path
@@ -730,7 +827,7 @@ paths:
       tags:
       - Merchant Branches
       summary: List branches for a merchant
-      operationId: list_2
+      operationId: list_3
       parameters:
       - name: merchantId
         in: path
@@ -751,7 +848,7 @@ paths:
       tags:
       - Merchant Branches
       summary: Create a new branch under a merchant
-      operationId: create_2
+      operationId: create_3
       parameters:
       - name: merchantId
         in: path
@@ -826,7 +923,7 @@ paths:
       - Merchant Onboarding
       summary: "Register a new merchant (directly ACTIVE, duplicate registration number\
         \ rejected with 409)"
-      operationId: create_3
+      operationId: create_4
       requestBody:
         content:
           application/json:
@@ -840,6 +937,70 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/MerchantSummary"
+  /{version}/merchant/orders:
+    get:
+      tags:
+      - Merchant Orders
+      summary: "List today's orders for the given branch, with optional status filter"
+      operationId: list_4
+      parameters:
+      - name: branchId
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - CREATED
+          - PAYMENT_INITIATED
+          - PAID
+          - FAILED
+          - CANCELLED
+      - name: timezone
+        in: query
+        required: false
+        schema:
+          type: string
+          default: UTC
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrderResponse"
+    post:
+      tags:
+      - Merchant Orders
+      summary: Create an order from branch products and return a QR code for customer
+        payment
+      operationId: create_5
+      parameters:
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMerchantOrderRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MerchantOrderResponse"
   /{version}/invoices/pdf:
     post:
       tags:
@@ -942,6 +1103,25 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/PaymentStatusResponse"
+  /{version}/orders/{orderId}:
+    get:
+      tags:
+      - Orders
+      summary: Get the latest business status for an order
+      operationId: get_3
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
   /{version}/merchants/nearby:
     get:
       tags:
@@ -1715,6 +1895,8 @@ components:
           format: double
         currency:
           type: string
+        orderId:
+          type: string
         merchantId:
           type: string
           format: uuid
@@ -1724,6 +1906,25 @@ components:
         productId:
           type: string
           format: uuid
+      required:
+      - orderId
+    CreateIntentResponse:
+      type: object
+      properties:
+        paymentRequestId:
+          type: string
+          format: uuid
+        clientSecret:
+          type: string
+        paymentIntent:
+          type: string
+        publishableKey:
+          type: string
+      required:
+      - clientSecret
+      - paymentIntent
+      - paymentRequestId
+      - publishableKey
     PaymentRequested:
       type: object
       properties:
@@ -1768,6 +1969,8 @@ components:
           format: double
         currency:
           type: string
+        orderId:
+          type: string
         invoiceId:
           type: string
         merchantId:
@@ -1779,6 +1982,176 @@ components:
         productId:
           type: string
           format: uuid
+      required:
+      - orderId
+    CheckoutSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        paymentRequestId:
+          type: string
+          format: uuid
+        transactionId:
+          type: string
+        amount:
+          type: string
+        currency:
+          type: string
+        orderId:
+          type: string
+        invoiceId:
+          type: string
+        merchantId:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+      required:
+      - amount
+      - currency
+      - merchantId
+      - orderId
+      - paymentRequestId
+      - status
+      - transactionId
+    CheckoutFailureResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+        code:
+          type: string
+      required:
+      - message
+      - status
+    CreateOrderItemRequest:
+      type: object
+      properties:
+        productId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          format: int32
+      required:
+      - productId
+      - quantity
+    CreateOrderRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateOrderItemRequest"
+        paymentMethod:
+          type: string
+          enum:
+          - TRUELAYER
+          - QRPAY
+          - BRAINTREE
+          - STRIPE
+      required:
+      - items
+      - paymentMethod
+    OrderItemResponse:
+      type: object
+      properties:
+        productId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+        unitPriceMinor:
+          type: integer
+          format: int64
+        lineTotalMinor:
+          type: integer
+          format: int64
+      required:
+      - lineTotalMinor
+      - name
+      - productId
+      - quantity
+      - unitPriceMinor
+    OrderResponse:
+      type: object
+      properties:
+        orderId:
+          type: string
+        merchantId:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - CREATED
+          - PAYMENT_INITIATED
+          - PAID
+          - FAILED
+          - CANCELLED
+        creatorType:
+          type: string
+          enum:
+          - MERCHANT
+          - SHOPPER
+        createdById:
+          type: string
+        currency:
+          type: string
+        totalAmountMinor:
+          type: integer
+          format: int64
+        paymentRetryAllowed:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItemResponse"
+        createdAt:
+          type: string
+          format: date-time
+        lastPaymentRequestId:
+          type: string
+          format: uuid
+        lastPaymentProvider:
+          type: string
+        paidAt:
+          type: string
+          format: date-time
+        paymentReference:
+          $ref: "#/components/schemas/PaymentReferenceResponse"
+      required:
+      - createdAt
+      - createdById
+      - creatorType
+      - currency
+      - items
+      - merchantId
+      - orderId
+      - paymentRetryAllowed
+      - status
+      - totalAmountMinor
+    PaymentReferenceResponse:
+      type: object
+      properties:
+        provider:
+          type: string
+        paymentRequestId:
+          type: string
+          format: uuid
+      required:
+      - paymentRequestId
+      - provider
     CreateProductCategoryRequest:
       type: object
       properties:
@@ -1879,6 +2252,80 @@ components:
       - operatingCountry
       - primaryBusinessAddress
       - registrationNumber
+    CreateMerchantOrderRequest:
+      type: object
+      properties:
+        merchantId:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateOrderItemRequest"
+      required:
+      - items
+      - merchantId
+    MerchantOrderResponse:
+      type: object
+      properties:
+        orderId:
+          type: string
+        merchantId:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - CREATED
+          - PAYMENT_INITIATED
+          - PAID
+          - FAILED
+          - CANCELLED
+        creatorType:
+          type: string
+          enum:
+          - MERCHANT
+          - SHOPPER
+        currency:
+          type: string
+        totalAmountMinor:
+          type: integer
+          format: int64
+        paymentRetryAllowed:
+          type: boolean
+        qrCode:
+          $ref: "#/components/schemas/QrCodeResponse"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItemResponse"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+      - createdAt
+      - creatorType
+      - currency
+      - items
+      - merchantId
+      - orderId
+      - paymentRetryAllowed
+      - qrCode
+      - status
+      - totalAmountMinor
+    QrCodeResponse:
+      type: object
+      properties:
+        paymentUrl:
+          type: string
+      required:
+      - paymentUrl
     BankAccountData:
       type: object
       properties:
@@ -2024,6 +2471,43 @@ components:
       - paymentRequestId
       - status
       - terminal
+    OrderSummaryResponse:
+      type: object
+      properties:
+        orderId:
+          type: string
+        merchantId:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - CREATED
+          - PAYMENT_INITIATED
+          - PAID
+          - FAILED
+          - CANCELLED
+        currency:
+          type: string
+        totalAmountMinor:
+          type: integer
+          format: int64
+        paymentRetryAllowed:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+      - createdAt
+      - currency
+      - merchantId
+      - orderId
+      - paymentRetryAllowed
+      - status
+      - totalAmountMinor
     NearbyBranchResponse:
       type: object
       properties:

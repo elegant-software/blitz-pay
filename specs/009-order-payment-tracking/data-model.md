@@ -14,7 +14,9 @@
 | `order_id` | `VARCHAR(64)` | NO | External business reference used across payment flows |
 | `merchant_application_id` | `UUID` | NO | Owning merchant |
 | `merchant_branch_id` | `UUID` | YES | Optional branch scope when all items are branch-bound |
-| `status` | `VARCHAR(32)` | NO | `PENDING_PAYMENT`, `PAYMENT_IN_PROGRESS`, `PAID`, `PAYMENT_FAILED`, `CANCELLED` |
+| `status` | `VARCHAR(32)` | NO | `CREATED`, `PAYMENT_INITIATED`, `PAID`, `FAILED`, `CANCELLED` |
+| `creator_type` | `VARCHAR(16)` | NO | `MERCHANT` or `SHOPPER` — actor who created the order |
+| `created_by_id` | `VARCHAR(255)` | NO | Identity of the creator (shopper user ID or merchant branch user ID) |
 | `currency` | `VARCHAR(3)` | NO | ISO currency code |
 | `total_amount_minor` | `BIGINT` | NO | Final order amount in minor units |
 | `item_count` | `INTEGER` | NO | Sum of submitted quantities |
@@ -26,7 +28,8 @@
 
 **Validation rules**:
 - `order_id` must be unique.
-- `status` transitions are monotonic except for cancellation before payment success.
+- `status` must be one of `CREATED`, `PAYMENT_INITIATED`, `PAID`, `FAILED`, `CANCELLED`; transitions must follow the defined state machine.
+- `creator_type` must be `MERCHANT` or `SHOPPER`.
 - `total_amount_minor` must equal the sum of order item line totals.
 - `currency` must be consistent across all items in a single order.
 
@@ -84,37 +87,43 @@
 ### Order Status
 
 ```text
-PENDING_PAYMENT
-  -> PAYMENT_IN_PROGRESS
+CREATED
+  -> PAYMENT_INITIATED  (shopper: on payment dispatch; merchant: on customer QR scan)
+  -> CANCELLED          (merchant cancels before QR is scanned)
+
+PAYMENT_INITIATED
   -> PAID
-  -> PAYMENT_FAILED
+  -> FAILED
   -> CANCELLED
 
-PAYMENT_IN_PROGRESS
-  -> PAID
-  -> PAYMENT_FAILED
+FAILED
+  -> PAYMENT_INITIATED  (retry: new payment attempt registered)
 
-PAYMENT_FAILED
-  -> PAYMENT_IN_PROGRESS   (new retry / new payment attempt)
-  -> CANCELLED
+CANCELLED
+  -> PAYMENT_INITIATED  (retry if business allows re-opening)
 
 PAID
   -> terminal
-
-CANCELLED
-  -> terminal
 ```
+
+`paymentRetryAllowed` rules:
+- `CREATED` → `true` (shopper: payment dispatch failed; merchant: no scan yet)
+- `PAYMENT_INITIATED` → `false` (in-flight)
+- `PAID` → `false` (terminal)
+- `FAILED` → `true`
+- `CANCELLED` → `true`
 
 ### Payment Event Mapping
 
 | Payment Event | Order Transition |
 |--------------|------------------|
-| payment request initiated | `PENDING_PAYMENT` stays current or advances to `PAYMENT_IN_PROGRESS` |
-| `PaymentStatusCode.PENDING` | `PENDING_PAYMENT` |
-| `PaymentStatusCode.EXECUTED` | `PAYMENT_IN_PROGRESS` |
-| `PaymentStatusCode.SETTLED` | `PAID` |
-| `PaymentStatusCode.FAILED` | `PAYMENT_FAILED` |
-| `PaymentStatusCode.EXPIRED` | `PAYMENT_FAILED` |
+| Payment dispatched by `order` module | `CREATED` → `PAYMENT_INITIATED` |
+| `PaymentStatusCode.PENDING` | stay `PAYMENT_INITIATED` |
+| `PaymentStatusCode.EXECUTED` | stay `PAYMENT_INITIATED` |
+| `PaymentStatusCode.SETTLED` | `PAYMENT_INITIATED` → `PAID` |
+| `PaymentStatusCode.FAILED` | `PAYMENT_INITIATED` → `FAILED` |
+| `PaymentStatusCode.EXPIRED` | `PAYMENT_INITIATED` → `FAILED` |
+| QR code scanned by customer (merchant-created order) | `CREATED` → `PAYMENT_INITIATED` |
 
 ## Cross-Module API Additions
 
@@ -143,12 +152,14 @@ The `order` module exposes an API surface for payment modules to register paymen
 
 Planned changesets:
 
-1. Create `blitzpay.order_orders`
+1. Create `blitzpay.order_orders` (includes `creator_type`, `created_by_id`)
 2. Create `blitzpay.order_items`
 3. Create `blitzpay.order_payment_attempts`
 4. Add supporting indexes:
    - `ux_order_orders_order_id`
    - `ix_order_orders_merchant_application_id`
+   - `ix_order_orders_merchant_branch_id`
    - `ix_order_orders_status`
+   - `ix_order_orders_created_by_id`
    - `ux_order_payment_attempts_payment_request_id`
    - `ix_order_payment_attempts_order_id`

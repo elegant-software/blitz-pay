@@ -18,6 +18,7 @@ data class OpenApiGroupProperties(
         val braintree: Group = Group(),
         val mobileGeofencing: Group = Group(),
         val merchant: Group = Group(),
+        val order: Group = Group(),
         val voice: Group = Group(),
         val actuator: Group = Group(),
     )

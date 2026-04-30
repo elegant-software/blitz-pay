@@ -6,7 +6,6 @@ import com.elegant.software.blitzpay.payments.truelayer.api.PaymentResult
 import com.elegant.software.blitzpay.payments.truelayer.support.TrueLayerProperties
 import com.truelayer.java.TrueLayerClient
 import com.truelayer.java.entities.CurrencyCode
-import com.truelayer.java.entities.ProviderFilter
 import com.truelayer.java.entities.User
 import com.truelayer.java.http.entities.ApiResponse
 import com.truelayer.java.payments.entities.*
@@ -54,15 +53,9 @@ class PaymentService(
             .paymentMethod(
                 PaymentMethod.bankTransfer()
                     .providerSelection(
-                        ProviderSelection.preselected().providerId("mock-payments-gb-redirect").schemeSelection( SchemeSelection.preselected().schemeId("faster_payments_service").build())
-                            /*.filter(
-                                ProviderFilter.builder()
-                                    .countries(Collections.singletonList(CountryCode.GB))
-                                    .releaseChannel(ReleaseChannel.GENERAL_AVAILABILITY)
-                                    .customerSegments(Collections.singletonList(CustomerSegment.RETAIL))
-                                    .providerIds(Collections.singletonList("mock-payments-gb-redirect"))
-                                    .build()
-                            )*/
+                        ProviderSelection.preselected()
+                            .providerId(trueLayerProperties.mockProviderId)
+                            .schemeSelection(SchemeSelection.preselected().schemeId(trueLayerProperties.mockSchemeId).build())
                             .build()
                     )
                     .beneficiary(
@@ -75,8 +68,8 @@ class PaymentService(
             )
             .user(
                 User.builder()
-                    .name("Andrea")
-                    .email("andrea@truelayer.com")
+                    .name(paymentRequest.userDisplayName)
+                    .email(paymentRequest.userEmail)
                     .build()
             ).metadata(
                 buildMap {
@@ -88,12 +81,14 @@ class PaymentService(
             .build()
 
         log.info(
-            "truelayer createPayment request paymentRequestId={} orderId={} amountMinor={} currency={} merchantAccount={}",
+            "truelayer createPayment request paymentRequestId={} orderId={} amountMinor={} currency={} merchantAccount={} providerId={} schemeId={}",
             paymentRequest.paymentRequestId,
             paymentRequest.orderId,
             amountInMinor,
             currency,
             trueLayerProperties.merchantAccountId,
+            trueLayerProperties.mockProviderId,
+            trueLayerProperties.mockSchemeId,
         )
 
         val started = System.nanoTime()
@@ -136,7 +131,7 @@ class PaymentService(
         if (apiResponse.error != null) {
             val err = apiResponse.error
             log.error(
-                "truelayer createPayment API_ERROR paymentRequestId={} orderId={} httpStatus={} type={} title={} detail={} traceId={} elapsedMs={}",
+                "truelayer createPayment API_ERROR paymentRequestId={} orderId={} httpStatus={} type={} title={} detail={} traceId={} fieldErrors={} elapsedMs={}",
                 paymentRequest.paymentRequestId,
                 paymentRequest.orderId,
                 runCatching { err.status }.getOrNull(),
@@ -144,9 +139,9 @@ class PaymentService(
                 runCatching { err.title }.getOrNull(),
                 runCatching { err.detail }.getOrNull(),
                 runCatching { err.traceId }.getOrNull(),
+                runCatching { err.errors?.toString() }.getOrNull(),
                 elapsedMs,
             )
-            log.debug("truelayer createPayment API_ERROR full response paymentRequestId={} error={}", paymentRequest.paymentRequestId, err)
             return errorResult(paymentRequest, "truelayer_api_error:${runCatching { err.type }.getOrNull() ?: "unknown"}")
         }
         val paymentData = apiResponse.data
@@ -172,7 +167,7 @@ class PaymentService(
         )
 
         val redirectURI = trueLayerClient.hppLinkBuilder()
-            .returnUri(URI.create("https://console.truelayer.com/redirect-page"))
+            .returnUri(URI.create(paymentRequest.redirectReturnUri))
             .resourceToken(paymentData.resourceToken)
             .resourceId(paymentId)
             .build()

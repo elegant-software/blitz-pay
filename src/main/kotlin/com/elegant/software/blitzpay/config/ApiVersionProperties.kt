@@ -14,6 +14,7 @@ data class ApiVersionProperties(
         val payments: String = "1",
         val mobileObservability: String = "1",
         val merchant: String = "1",
+        val order: String = "1",
         val voice: String = "1",
     )
 }
