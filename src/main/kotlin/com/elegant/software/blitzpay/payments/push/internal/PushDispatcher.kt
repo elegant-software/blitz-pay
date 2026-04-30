@@ -20,9 +20,28 @@ class PushDispatcher(
     private val log = LoggerFactory.getLogger(PushDispatcher::class.java)
 
     fun dispatch(event: PaymentStatusChanged) {
-        val devices = deviceRepository.findByPaymentRequestIdAndInvalidFalse(event.paymentRequestId)
+        val orderId = event.orderId
+        val orderDevices = if (orderId != null) {
+            deviceRepository.findByOrderIdAndInvalidFalse(orderId).also { devices ->
+                if (devices.isNotEmpty()) log.info(
+                    "push dispatch resolved devices by orderId={} paymentRequestId={} activeDeviceCount={}",
+                    orderId, event.paymentRequestId, devices.size,
+                )
+            }
+        } else emptyList()
+
+        val devices = if (orderDevices.isNotEmpty()) {
+            orderDevices
+        } else {
+            deviceRepository.findByPaymentRequestIdAndInvalidFalse(event.paymentRequestId).also { devices ->
+                if (devices.isNotEmpty()) log.info(
+                    "push dispatch resolved devices by paymentRequestId={} orderId={} activeDeviceCount={}",
+                    event.paymentRequestId, orderId, devices.size,
+                )
+            }
+        }
         if (devices.isEmpty()) {
-            log.info("no devices registered for payment request={}", event.paymentRequestId)
+            log.info("no devices registered for orderId={} paymentRequestId={}", orderId, event.paymentRequestId)
             return
         }
 
@@ -33,6 +52,7 @@ class PushDispatcher(
                 title = title,
                 body = body,
                 data = mapOf(
+                    "orderId" to orderId,
                     "paymentRequestId" to event.paymentRequestId.toString(),
                     "status" to event.newStatus.name,
                 ),
@@ -45,6 +65,7 @@ class PushDispatcher(
             log.error("expo push dispatch failed request={}", event.paymentRequestId, ex)
             return
         }
+        log.info("expo push dispatch completed request={} ticketCount={}", event.paymentRequestId, tickets.size)
 
         tickets.forEach { ticket ->
             try {

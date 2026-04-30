@@ -1,0 +1,62 @@
+{
+  "contract": "List Merchant Orders",
+  "version": "v1",
+  "endpoints": [
+    {
+      "id": "list-merchant-orders",
+      "method": "GET",
+      "path": "/v1/merchant/orders",
+      "description": "Returns full order details for the authenticated branch scope. Defaults to today's orders in the merchant/branch local timezone. Supports optional single-status filtering.",
+      "request": {
+        "queryParams": {
+          "status": {
+            "type": "string",
+            "required": false,
+            "enum": ["CREATED", "PAYMENT_INITIATED", "PAID", "FAILED", "CANCELLED"],
+            "description": "Filter to a single order status. Omit to return all statuses."
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "contentType": "application/json",
+          "body": {
+            "orders": {
+              "type": "array",
+              "description": "Full order details for each matching order, scoped to the authenticated branch.",
+              "items": {
+                "orderId": { "type": "string" },
+                "merchantId": { "type": "string", "format": "uuid" },
+                "branchId": { "type": "string", "format": "uuid", "required": false },
+                "status": {
+                  "type": "string",
+                  "enum": ["CREATED", "PAYMENT_INITIATED", "PAID", "FAILED", "CANCELLED"]
+                },
+                "creatorType": { "type": "string", "enum": ["MERCHANT", "SHOPPER"] },
+                "currency": { "type": "string" },
+                "totalAmountMinor": { "type": "integer" },
+                "paymentRetryAllowed": {
+                  "type": "boolean",
+                  "description": "True when the client may initiate or retry payment for this order."
+                },
+                "lastPaymentProvider": { "type": "string", "required": false },
+                "paidAt": { "type": "string", "format": "date-time", "required": false },
+                "createdAt": { "type": "string", "format": "date-time" },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "productId": { "type": "string", "format": "uuid" },
+                    "name": { "type": "string" },
+                    "quantity": { "type": "integer" },
+                    "unitPriceMinor": { "type": "integer" },
+                    "lineTotalMinor": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

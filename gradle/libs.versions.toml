@@ -46,8 +46,8 @@ springdoc            = "3.0.2"
 mockito-kotlin       = "6.3.0"
 
 # Modulith: `payments.stripe` + `payments.braintree` — mobile payment gateways
-stripe-java          = "28.4.0"
-braintree-java       = "3.43.0"
+stripe-java          = "32.1.0"
+braintree-java       = "3.48.0"
 aws-sdk              = "2.31.78"
 
 # Optional runtime integrations

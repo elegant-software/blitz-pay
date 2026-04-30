@@ -7,6 +7,8 @@ import com.elegant.software.blitzpay.merchant.domain.MerchantOnboardingStatus
 import com.elegant.software.blitzpay.merchant.domain.MonitoringRecord
 import com.elegant.software.blitzpay.merchant.domain.ReviewOutcome
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
+import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
+import com.elegant.software.blitzpay.merchant.repository.MerchantProductRepository
 import com.elegant.software.blitzpay.merchant.support.MerchantObservabilitySupport
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -17,6 +19,8 @@ import java.util.UUID
 @Transactional
 class MerchantOnboardingService(
     private val merchantApplicationRepository: MerchantApplicationRepository,
+    private val merchantProductRepository: MerchantProductRepository,
+    private val merchantBranchRepository: MerchantBranchRepository,
     private val merchantApplicationValidator: MerchantApplicationValidator,
     private val merchantAuditTrail: MerchantAuditTrail,
     private val merchantObservabilitySupport: MerchantObservabilitySupport
@@ -98,6 +102,30 @@ class MerchantOnboardingService(
             saved
         }.toSummary()
     }
+
+    @Transactional(readOnly = true)
+    override fun findOrderableProducts(productIds: Collection<UUID>) =
+        if (productIds.isEmpty()) {
+            emptyList()
+        } else {
+            val products = merchantProductRepository.findAllById(productIds.toSet())
+            val activeBranchIds = merchantBranchRepository.findAllById(products.mapNotNull { it.merchantBranchId }.toSet())
+                .filter { it.active }
+                .map { it.id }
+                .toSet()
+
+            products.map {
+                com.elegant.software.blitzpay.merchant.api.OrderableMerchantProduct(
+                    productId = it.id,
+                    merchantApplicationId = it.merchantApplicationId,
+                    branchId = it.merchantBranchId,
+                    name = it.name,
+                    description = it.description,
+                    unitPrice = it.unitPrice,
+                    active = it.active && (it.merchantBranchId == null || it.merchantBranchId in activeBranchIds),
+                )
+            }
+        }
 
     private fun getApplication(applicationId: UUID): MerchantApplication =
         merchantApplicationRepository.findById(applicationId)

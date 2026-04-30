@@ -41,6 +41,8 @@ interface MerchantGateway {
         triggerReason: String,
         changedAt: Instant = Instant.now()
     ): MerchantSummary
+
+    fun findOrderableProducts(productIds: Collection<UUID>): List<OrderableMerchantProduct>
 }
 
 data class MerchantSummary(

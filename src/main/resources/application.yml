@@ -62,11 +62,10 @@ api:
     truelayer: 1
     payments: 1
     merchant: 1
+    order: 1
     voice: 1
 
 truelayer:
-  apiBase: ${TRUELAYER_API_BASE:https://api.truelayer-sandbox.com}
-  accessToken: ${TRUELAYER_ACCESS_TOKEN:dummy-access-token}
   webhookJku: ${TRUELAYER_WEBHOOK_JKU:http://localhost:8080/.well-known/jwks.json}
   # SDK configuration
   clientId: ${TRUELAYER_CLIENT_ID}
@@ -83,6 +82,7 @@ truelayer:
 stripe:
   secret-key: ${STRIPE_SECRET_KEY:}
   publishable-key: ${EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY:}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
 
 braintree:
   merchant-id: ${BRAINTREE_MERCHANT_ID:}
@@ -114,6 +114,8 @@ blitzpay:
         label: Mobile-Geofencing
       merchant:
         label: Operations-Merchant
+      order:
+        label: Orders
       voice:
         label: Voice
       actuator:

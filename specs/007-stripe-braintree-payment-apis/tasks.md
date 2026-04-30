@@ -45,7 +45,7 @@
 
 **Goal**: Mobile clients can request a Stripe PaymentIntent; the server returns the `client_secret` and `publishableKey` needed by the mobile Stripe SDK.
 
-**Independent Test**: `POST /v1/payments/stripe/create-intent` with `{"amount": 12.50}` returns a JSON body containing `paymentIntent` (non-blank string) and `publishableKey` (non-blank string). Invalid amount returns HTTP 400.
+**Independent Test**: `POST /v1/payments/stripe/create-intent` with `{"amount": 12.50}` returns a JSON body containing `paymentRequestId` (UUID), `clientSecret` (non-blank string), `paymentIntent` (non-blank string), and `publishableKey` (non-blank string). Invalid amount returns HTTP 400.
 
 ### Implementation for User Story 1
 
@@ -54,9 +54,9 @@
 - [x] T009 [US1] Create `src/main/kotlin/.../payments/stripe/config/StripeConfig.kt` with a `@Bean` that sets `Stripe.apiKey = properties.secretKey` on application startup (Stripe SDK uses a static API key)
 - [x] T010 [P] [US1] Create `src/main/kotlin/.../payments/stripe/config/StripeOpenApiConfig.kt` registering a `GroupedOpenApi` bean named `"Stripe"` for paths `/v1/payments/stripe/**`
 - [x] T011 [US1] Create `src/main/kotlin/.../payments/stripe/internal/StripePaymentService.kt` with a `createIntent(amount: Double, currency: String): StripeIntentResult` method that calls `PaymentIntents.create(...)` wrapped in `Mono.fromCallable { }.subscribeOn(Schedulers.boundedElastic())`, validates `amount > 0`, and returns `client_secret` + publishable key
-- [x] T012 [US1] Create `src/main/kotlin/.../payments/stripe/internal/StripePaymentController.kt` mapping `POST /v1/payments/stripe/create-intent`, accepts `{"amount": Double, "currency": String?}`, delegates to `StripePaymentService`, returns `{"paymentIntent": ..., "publishableKey": ...}` on success or `{"error": ...}` with HTTP 400/500
+- [x] T012 [US1] Create `src/main/kotlin/.../payments/stripe/internal/StripePaymentController.kt` mapping `POST /v1/payments/stripe/create-intent`, accepts `{"amount": Double, "currency": String?}`, delegates to `StripePaymentService`, returns `{"paymentRequestId": ..., "clientSecret": ..., "paymentIntent": ..., "publishableKey": ...}` on success or `{"error": ...}` with HTTP 400/500
 - [x] T013 [P] [US1] Create `src/test/kotlin/.../payments/stripe/StripePaymentServiceTest.kt` with unit tests covering: happy path returns client secret, zero amount throws validation error, negative amount throws validation error, Stripe API exception maps to 500 response
-- [x] T014 [P] [US1] Create `src/contractTest/kotlin/.../payments/stripe/StripePaymentControllerContractTest.kt` with `WebTestClient` contract tests: valid amount → 200 with `paymentIntent` and `publishableKey` fields present; missing amount → 400; invalid amount (zero) → 400
+- [x] T014 [P] [US1] Create `src/contractTest/kotlin/.../payments/stripe/StripePaymentControllerContractTest.kt` with `WebTestClient` contract tests: valid amount → 200 with `paymentRequestId`, `clientSecret`, `paymentIntent`, and `publishableKey` fields present; missing amount → 400; invalid amount (zero) → 400
 - [x] T015 [US1] Update `src/test/kotlin/.../quickpay/payments/ModularityTest.kt.kt` to add `payments.stripe` to the `ApplicationModules.of(...)` verification so module boundary violations are caught
 
 **Checkpoint**: `./gradlew check` passes. Smoke test from quickstart.md Stripe section succeeds against a real sandbox key.
@@ -67,7 +67,7 @@
 
 **Goal**: Mobile clients can fetch a Braintree client token and submit a payment nonce for settlement. When Braintree is unconfigured, both endpoints return HTTP 503.
 
-**Independent Test**: (1) `POST /v1/payments/braintree/client-token` returns `{"clientToken": "<non-blank>"}`. (2) `POST /v1/payments/braintree/checkout` with a sandbox nonce and `amount: 12.50` returns `{"status": "succeeded", "transactionId": "<non-blank>", ...}`. (3) Both endpoints return `{"error": "Braintree not configured on server"}` with HTTP 503 when env vars are absent.
+**Independent Test**: (1) `POST /v1/payments/braintree/client-token` returns `{"clientToken": "<non-blank>"}`. (2) `POST /v1/payments/braintree/checkout` with a sandbox nonce and `amount: 12.50` returns `{"status": "succeeded", "paymentRequestId": "<uuid>", "transactionId": "<non-blank>", ...}`. (3) Both endpoints return `{"error": "Braintree not configured on server"}` with HTTP 503 when env vars are absent.
 
 ### Implementation for User Story 2
 

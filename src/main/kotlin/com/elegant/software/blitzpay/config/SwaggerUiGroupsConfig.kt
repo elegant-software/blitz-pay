@@ -27,6 +27,7 @@ class SwaggerUiGroupsConfig(
             openApiGroupProperties.groups.braintree,
             openApiGroupProperties.groups.mobileGeofencing,
             openApiGroupProperties.groups.merchant,
+            openApiGroupProperties.groups.order,
             openApiGroupProperties.groups.actuator,
         ).map { group ->
             val encodedLabel = UriUtils.encodePathSegment(group.label, StandardCharsets.UTF_8)

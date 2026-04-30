@@ -1,12 +1,12 @@
 {
-  "contract": "Get Order",
+  "contract": "Get Order (Shopper Detail)",
   "version": "v1",
   "endpoints": [
     {
       "id": "get-order",
       "method": "GET",
       "path": "/v1/orders/{orderId}",
-      "description": "Returns the current status and payment-linked state of an existing order.",
+      "description": "Returns the current status and payment-linked state of an existing order. Accessible only by the shopper who created the order.",
       "request": {
         "pathParams": {
           "orderId": {
@@ -19,70 +19,36 @@
         "200": {
           "contentType": "application/json",
           "body": {
-            "orderId": {
-              "type": "string"
-            },
-            "merchantId": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "branchId": {
-              "type": "string",
-              "format": "uuid",
-              "required": false
-            },
+            "orderId": { "type": "string" },
+            "merchantId": { "type": "string", "format": "uuid" },
+            "branchId": { "type": "string", "format": "uuid", "required": false },
             "status": {
               "type": "string",
-              "enum": [
-                "PENDING_PAYMENT",
-                "PAYMENT_IN_PROGRESS",
-                "PAID",
-                "PAYMENT_FAILED",
-                "CANCELLED"
-              ]
+              "enum": ["CREATED", "PAYMENT_INITIATED", "PAID", "FAILED", "CANCELLED"]
             },
-            "currency": {
-              "type": "string"
-            },
-            "totalAmountMinor": {
-              "type": "integer"
-            },
-            "lastPaymentRequestId": {
-              "type": "string",
-              "format": "uuid",
-              "required": false
-            },
-            "lastPaymentProvider": {
-              "type": "string",
-              "required": false
-            },
-            "paidAt": {
-              "type": "string",
-              "format": "date-time",
-              "required": false
-            },
+            "creatorType": { "type": "string", "enum": ["MERCHANT", "SHOPPER"] },
+            "createdById": { "type": "string", "description": "Identity of the order creator." },
+            "currency": { "type": "string" },
+            "totalAmountMinor": { "type": "integer" },
+            "paymentRetryAllowed": { "type": "boolean" },
+            "lastPaymentRequestId": { "type": "string", "format": "uuid", "required": false },
+            "lastPaymentProvider": { "type": "string", "required": false },
+            "paidAt": { "type": "string", "format": "date-time", "required": false },
             "items": {
               "type": "array",
               "items": {
-                "productId": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "name": {
-                  "type": "string"
-                },
-                "quantity": {
-                  "type": "integer"
-                },
-                "unitPriceMinor": {
-                  "type": "integer"
-                },
-                "lineTotalMinor": {
-                  "type": "integer"
-                }
+                "productId": { "type": "string", "format": "uuid" },
+                "name": { "type": "string" },
+                "quantity": { "type": "integer" },
+                "unitPriceMinor": { "type": "integer" },
+                "lineTotalMinor": { "type": "integer" }
               }
-            }
+            },
+            "createdAt": { "type": "string", "format": "date-time" }
           }
+        },
+        "403": {
+          "description": "The authenticated shopper does not own this order."
         },
         "404": {
           "description": "The order ID does not exist."

@@ -1,0 +1,7 @@
+{
+  "paymentRequestId": "44444444-4444-4444-4444-444444444444",
+  "newStatus": "SETTLED",
+  "previousStatus": "EXECUTED",
+  "occurredAt": "2026-04-30T10:15:30Z",
+  "sourceEventId": "evt-123"
+}

@@ -37,3 +37,13 @@ data class ProductResponse(
     val createdAt: Instant,
     val updatedAt: Instant
 )
+
+data class OrderableMerchantProduct(
+    val productId: UUID,
+    val merchantApplicationId: UUID,
+    val branchId: UUID?,
+    val name: String,
+    val description: String?,
+    val unitPrice: BigDecimal,
+    val active: Boolean,
+)

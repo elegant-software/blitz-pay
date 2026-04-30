@@ -93,7 +93,9 @@ Outbound to mobile client.
 
 | Field | Type | Always present | Notes |
 |-------|------|----------------|-------|
-| `paymentIntent` | `String` | Yes | Stripe `client_secret` — used by mobile Stripe SDK |
+| `paymentRequestId` | `UUID` | Yes | Backend-generated correlation id for tracking payment status and webhooks |
+| `clientSecret` | `String` | Yes | Stripe `client_secret` — preferred field for mobile Stripe SDK integration |
+| `paymentIntent` | `String` | Yes | Stripe PaymentIntent id |
 | `publishableKey` | `String` | Yes | Stripe publishable key resolved for the branch/merchant — safe to expose |
 
 ### Validation Rules

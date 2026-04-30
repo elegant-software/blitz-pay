@@ -15,11 +15,12 @@ enum class DevicePlatform { IOS, ANDROID }
 
 @Entity
 @Table(
-    name = "device_registration",
+    name = "push_device_registration",
     indexes = [
-        Index(name = "ux_device_registration_token", columnList = "expo_push_token", unique = true),
-        Index(name = "ix_device_registration_payment_request", columnList = "payment_request_id"),
-        Index(name = "ix_device_registration_payer_ref", columnList = "payer_ref"),
+        Index(name = "ux_push_device_registration_token", columnList = "expo_push_token", unique = true),
+        Index(name = "ix_push_device_registration_order_id", columnList = "order_id"),
+        Index(name = "ix_push_device_registration_payment_request", columnList = "payment_request_id"),
+        Index(name = "ix_push_device_registration_payer_ref", columnList = "payer_ref"),
     ],
 )
 class DeviceRegistrationEntity(
@@ -29,6 +30,9 @@ class DeviceRegistrationEntity(
 
     @Column(name = "payment_request_id")
     var paymentRequestId: UUID? = null,
+
+    @Column(name = "order_id", nullable = false, length = 64)
+    var orderId: String,
 
     @Column(name = "payer_ref", length = 128)
     var payerRef: String? = null,
@@ -51,6 +55,8 @@ class DeviceRegistrationEntity(
 )
 
 interface DeviceRegistrationRepository : JpaRepository<DeviceRegistrationEntity, UUID> {
+    fun countByOrderIdAndInvalidFalse(orderId: String): Long
+    fun findByOrderIdAndInvalidFalse(orderId: String): List<DeviceRegistrationEntity>
     fun findByPaymentRequestIdAndInvalidFalse(paymentRequestId: UUID): List<DeviceRegistrationEntity>
     fun findByExpoPushToken(expoPushToken: String): DeviceRegistrationEntity?
     fun deleteByExpoPushToken(expoPushToken: String): Long

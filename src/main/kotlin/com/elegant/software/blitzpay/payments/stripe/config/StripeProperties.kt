@@ -6,4 +6,5 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 data class StripeProperties(
     val secretKey: String = "",
     val publishableKey: String = "",
+    val webhookSecret: String = "",
 )

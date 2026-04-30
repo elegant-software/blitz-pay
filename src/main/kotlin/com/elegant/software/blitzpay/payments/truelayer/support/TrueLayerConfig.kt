@@ -25,7 +25,7 @@ class TrueLayerConfig {
         }
         builder.environment(env)
 
-        if (trueLayerProperties.httpLogs) {
+        if (trueLayerProperties.httpLogs || trueLayerProperties.environment.lowercase() != "live") {
             builder.withHttpLogs()
         }
 

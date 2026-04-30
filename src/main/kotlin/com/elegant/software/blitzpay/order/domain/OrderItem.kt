@@ -1,0 +1,67 @@
+package com.elegant.software.blitzpay.order.domain
+
+import com.elegant.software.blitzpay.merchant.api.OrderableMerchantProduct
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.Table
+import java.math.RoundingMode
+import java.time.Instant
+import java.util.UUID
+
+@Entity
+@Table(name = "order_items", schema = "blitzpay")
+class OrderItem(
+    @Id
+    val id: UUID = UUID.randomUUID(),
+
+    @Column(name = "order_id_fk", nullable = false, updatable = false)
+    val orderIdFk: UUID,
+
+    @Column(name = "merchant_product_id", nullable = false, updatable = false)
+    val merchantProductId: UUID,
+
+    @Column(name = "merchant_application_id", nullable = false, updatable = false)
+    val merchantApplicationId: UUID,
+
+    @Column(name = "merchant_branch_id")
+    val merchantBranchId: UUID? = null,
+
+    @Column(name = "product_name", nullable = false, length = 255)
+    val productName: String,
+
+    @Column(name = "product_description", length = 2000)
+    val productDescription: String? = null,
+
+    @Column(nullable = false)
+    val quantity: Int,
+
+    @Column(name = "unit_price_minor", nullable = false)
+    val unitPriceMinor: Long,
+
+    @Column(name = "line_total_minor", nullable = false)
+    val lineTotalMinor: Long,
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    val createdAt: Instant = Instant.now(),
+) {
+    companion object {
+        fun fromProduct(orderIdFk: UUID, product: OrderableMerchantProduct, quantity: Int): OrderItem {
+            val unitPriceMinor = product.unitPriceMinor()
+            return OrderItem(
+                orderIdFk = orderIdFk,
+                merchantProductId = product.productId,
+                merchantApplicationId = product.merchantApplicationId,
+                merchantBranchId = product.branchId,
+                productName = product.name,
+                productDescription = product.description,
+                quantity = quantity,
+                unitPriceMinor = unitPriceMinor,
+                lineTotalMinor = unitPriceMinor * quantity,
+            )
+        }
+    }
+}
+
+internal fun OrderableMerchantProduct.unitPriceMinor(): Long =
+    unitPrice.movePointRight(2).setScale(0, RoundingMode.HALF_UP).longValueExact()

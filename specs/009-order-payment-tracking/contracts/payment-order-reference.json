@@ -1,13 +1,13 @@
 {
-  "contract": "Payment Order Reference Updates",
+  "contract": "Payment Order Reference",
   "version": "v1",
-  "note": "This feature does not replace existing payment endpoints. It tightens them so every payment references an existing order.",
+  "note": "Payment initiation is now bundled with order creation. Shopper orders (POST /v1/orders) trigger payment immediately. Merchant orders (POST /v1/merchant/orders) produce a QR code; payment fires when the customer scans. The existing qrpay endpoint is invoked internally when a customer scans a merchant-created order QR code — it no longer requires a separate client call to initiate payment.",
   "endpoints": [
     {
-      "id": "qrpay-request-uses-order-reference",
+      "id": "qrpay-scan-triggers-payment",
       "method": "POST",
       "path": "/v1/payments/request",
-      "description": "The existing QR/TrueLayer payment request continues to accept orderId, but the field now represents a required pre-created order business reference.",
+      "description": "Called internally by the qrpay module when a customer scans a merchant-created order QR code. The orderId embedded in the QR links the payment attempt back to the order. This endpoint is NOT called directly by merchant clients for order payment — it is invoked by the customer app scan flow.",
       "request": {
         "contentType": "application/json",
         "body": {
@@ -19,7 +19,7 @@
           "orderId": {
             "type": "string",
             "required": true,
-            "description": "Order reference returned by POST /v1/orders."
+            "description": "Order reference embedded in the QR code by POST /v1/merchant/orders."
           }
         }
       }
@@ -28,32 +28,18 @@
       "id": "braintree-checkout-uses-order-reference",
       "method": "POST",
       "path": "/v1/payments/braintree/checkout",
-      "description": "Braintree checkout adds a required orderId so the transaction can be linked back to the order lifecycle.",
+      "description": "Braintree checkout carries a required orderId so the transaction links back to a pre-created order. Used when paymentMethod=BRAINTREE on POST /v1/orders.",
       "request": {
         "contentType": "application/json",
         "body": {
-          "orderId": {
-            "type": "string",
-            "required": true
-          },
-          "nonce": {
-            "type": "string",
-            "required": true
-          },
-          "merchantId": {
-            "type": "string",
-            "format": "uuid",
-            "required": true
-          },
-          "branchId": {
-            "type": "string",
-            "format": "uuid",
-            "required": false
-          },
+          "orderId": { "type": "string", "required": true },
+          "nonce": { "type": "string", "required": true },
+          "merchantId": { "type": "string", "format": "uuid", "required": true },
+          "branchId": { "type": "string", "format": "uuid", "required": false },
           "amount": {
             "type": "number",
             "required": false,
-            "description": "Optional override when allowed by the checkout flow. The order remains the primary reference."
+            "description": "Optional override when allowed by the checkout flow. The order total is the authoritative amount."
           }
         }
       },
@@ -61,16 +47,9 @@
         "200": {
           "contentType": "application/json",
           "body": {
-            "status": {
-              "type": "string"
-            },
-            "transactionId": {
-              "type": "string",
-              "required": false
-            },
-            "orderId": {
-              "type": "string"
-            }
+            "status": { "type": "string" },
+            "transactionId": { "type": "string", "required": false },
+            "orderId": { "type": "string" }
           }
         }
       }

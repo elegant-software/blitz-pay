@@ -1,12 +1,13 @@
 {
-  "contract": "Create Order",
+  "contract": "Create Order — Shopper",
   "version": "v1",
+  "note": "Shopper-created orders trigger immediate payment initiation via the chosen provider. The order starts in CREATED and transitions to PAYMENT_INITIATED within the same request.",
   "endpoints": [
     {
-      "id": "create-order",
+      "id": "shopper-create-order",
       "method": "POST",
       "path": "/v1/orders",
-      "description": "Creates an order from merchant products and returns the canonical order reference to be used across payment flows.",
+      "description": "Creates an order from merchant products and immediately initiates payment via the selected provider. Returns the canonical order reference and a provider-specific payment reference.",
       "request": {
         "contentType": "application/json",
         "body": {
@@ -25,6 +26,12 @@
                 "minimum": 1
               }
             }
+          },
+          "paymentMethod": {
+            "type": "string",
+            "required": true,
+            "enum": ["TRUELAYER", "QRPAY", "BRAINTREE", "STRIPE"],
+            "description": "Determines which payment provider is invoked immediately after order creation."
           }
         }
       },
@@ -47,13 +54,12 @@
             },
             "status": {
               "type": "string",
-              "enum": [
-                "PENDING_PAYMENT",
-                "PAYMENT_IN_PROGRESS",
-                "PAID",
-                "PAYMENT_FAILED",
-                "CANCELLED"
-              ]
+              "enum": ["CREATED", "PAYMENT_INITIATED", "PAID", "FAILED", "CANCELLED"],
+              "description": "Expected to be PAYMENT_INITIATED on successful creation + payment dispatch."
+            },
+            "creatorType": {
+              "type": "string",
+              "enum": ["SHOPPER"]
             },
             "currency": {
               "type": "string"
@@ -61,25 +67,27 @@
             "totalAmountMinor": {
               "type": "integer"
             },
+            "paymentRetryAllowed": {
+              "type": "boolean"
+            },
+            "paymentReference": {
+              "type": "object",
+              "required": false,
+              "description": "Provider-specific payment reference (e.g., TrueLayer payment link, Braintree client token). Shape varies by paymentMethod.",
+              "properties": {
+                "provider": { "type": "string" },
+                "paymentRequestId": { "type": "string", "format": "uuid" },
+                "providerPaymentId": { "type": "string", "required": false }
+              }
+            },
             "items": {
               "type": "array",
               "items": {
-                "productId": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "name": {
-                  "type": "string"
-                },
-                "quantity": {
-                  "type": "integer"
-                },
-                "unitPriceMinor": {
-                  "type": "integer"
-                },
-                "lineTotalMinor": {
-                  "type": "integer"
-                }
+                "productId": { "type": "string", "format": "uuid" },
+                "name": { "type": "string" },
+                "quantity": { "type": "integer" },
+                "unitPriceMinor": { "type": "integer" },
+                "lineTotalMinor": { "type": "integer" }
               }
             },
             "createdAt": {
@@ -89,13 +97,13 @@
           }
         },
         "400": {
-          "description": "The order request is malformed, empty, or contains invalid quantities."
+          "description": "The order request is malformed, empty, contains invalid quantities, or is missing paymentMethod."
         },
         "404": {
           "description": "One or more referenced products are unknown."
         },
         "422": {
-          "description": "The referenced products cannot be ordered together because they are inactive or cross merchant boundaries."
+          "description": "Validation failed. Response body lists every invalid product reference and the specific rejection reason (inactive, wrong merchant, etc.)."
         }
       }
     }

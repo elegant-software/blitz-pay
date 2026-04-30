@@ -1,5 +1,10 @@
 package com.elegant.software.blitzpay.contract
 
+import com.elegant.software.blitzpay.order.api.OrderGateway
+import com.elegant.software.blitzpay.order.api.OrderPaymentSummary
+import com.elegant.software.blitzpay.order.repository.OrderItemRepository
+import com.elegant.software.blitzpay.order.repository.OrderRepository
+import com.elegant.software.blitzpay.order.repository.PaymentAttemptRepository
 import com.elegant.software.blitzpay.payments.QuickpayApplication
 import com.elegant.software.blitzpay.merchant.application.MerchantProductCategoryService
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
@@ -13,6 +18,7 @@ import com.elegant.software.blitzpay.payments.push.persistence.PaymentStatusRepo
 import com.elegant.software.blitzpay.payments.push.persistence.ProcessedWebhookEventRepository
 import com.elegant.software.blitzpay.payments.push.persistence.PushDeliveryAttemptRepository
 import com.elegant.software.blitzpay.payments.push.api.PaymentStatusInitializationGateway
+import com.elegant.software.blitzpay.payments.push.api.PaymentStatusUpdateGateway
 import com.elegant.software.blitzpay.storage.StorageService
 import com.elegant.software.blitzpay.support.ContractTestConfig
 import com.elegant.software.blitzpay.voice.api.VoiceGateway
@@ -25,6 +31,7 @@ import com.elegant.software.blitzpay.payments.truelayer.support.JwksService
 import com.truelayer.java.TrueLayerClient
 import org.junit.jupiter.api.BeforeEach
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.doNothing
 import org.mockito.kotlin.whenever
 import org.springframework.boot.test.context.SpringBootTest
@@ -99,11 +106,46 @@ abstract class ContractVerifierBase {
     protected lateinit var paymentStatusInitializationGateway: PaymentStatusInitializationGateway
 
     @MockitoBean
+    protected lateinit var paymentStatusUpdateGateway: PaymentStatusUpdateGateway
+
+    @MockitoBean
+    protected lateinit var orderGateway: OrderGateway
+
+    @MockitoBean
+    protected lateinit var orderRepository: OrderRepository
+
+    @MockitoBean
+    protected lateinit var orderItemRepository: OrderItemRepository
+
+    @MockitoBean
+    protected lateinit var paymentAttemptRepository: PaymentAttemptRepository
+
+    @MockitoBean
     protected lateinit var entityManager: EntityManager
 
     @BeforeEach
     fun setupRestAssured() {
         doNothing().whenever(paymentStatusInitializationGateway).initialize(any(), any(), any(), any(), any())
+        doNothing().whenever(paymentStatusUpdateGateway).settle(any(), any(), any())
+        doNothing().whenever(paymentStatusUpdateGateway).fail(any(), any(), any())
+        whenever(orderGateway.assertPayable(any())).thenReturn(
+            OrderPaymentSummary(
+                orderId = "ORDER-123",
+                merchantId = java.util.UUID.fromString("00000000-0000-0000-0000-000000000001"),
+                branchId = java.util.UUID.fromString("00000000-0000-0000-0000-000000000002"),
+                totalAmountMinor = 1099,
+                currency = "EUR"
+            )
+        )
+        whenever(orderGateway.linkPaymentAttempt(any(), any(), any(), anyOrNull())).thenReturn(
+            OrderPaymentSummary(
+                orderId = "ORDER-123",
+                merchantId = java.util.UUID.fromString("00000000-0000-0000-0000-000000000001"),
+                branchId = java.util.UUID.fromString("00000000-0000-0000-0000-000000000002"),
+                totalAmountMinor = 1099,
+                currency = "EUR"
+            )
+        )
         whenever(paymentService.startPayment(any())).thenAnswer { invocation ->
             val request = invocation.getArgument<PaymentRequested>(0)
             PaymentResult(

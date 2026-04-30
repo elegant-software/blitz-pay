@@ -14,6 +14,7 @@ import java.util.UUID
 
 data class StatusTransition(
     val paymentRequestId: UUID,
+    val orderId: String?,
     val newStatus: PaymentStatusCode,
     val previousStatus: PaymentStatusCode?,
     val occurredAt: Instant,
@@ -58,6 +59,10 @@ class PaymentStatusService(
                     currency = currency,
                 )
             )
+            log.info(
+                "payment status record created paymentRequestId={} orderId={} status=PENDING amountMinorUnits={} currency={} payerRefPresent={}",
+                paymentRequestId, orderId, amountMinorUnits, currency, !payerRef.isNullOrBlank(),
+            )
             return
         }
 
@@ -67,6 +72,10 @@ class PaymentStatusService(
         existing.currency = currency ?: existing.currency
         existing.updatedAt = Instant.now()
         repository.save(existing)
+        log.info(
+            "payment status record updated paymentRequestId={} orderId={} currentStatus={} payerRefPresent={}",
+            paymentRequestId, orderId, existing.currentStatus, !payerRef.isNullOrBlank(),
+        )
     }
 
     fun findRecentBySubject(subject: String, limit: Int = 5): List<RecentPaymentSummary> =
@@ -102,13 +111,13 @@ class PaymentStatusService(
                 )
             )
             log.info("payment status created request={} status={}", paymentRequestId, saved.currentStatus)
-            return StatusTransition(paymentRequestId, newStatus, null, occurredAt, sourceEventId, changed = true)
+            return StatusTransition(paymentRequestId, saved.orderId, newStatus, null, occurredAt, sourceEventId, changed = true)
         }
 
         val previous = existing.currentStatus
         if (newStatus.rank() < previous.rank() || (newStatus == previous)) {
             log.info("payment status unchanged request={} current={} incoming={}", paymentRequestId, previous, newStatus)
-            return StatusTransition(paymentRequestId, previous, previous, occurredAt, sourceEventId, changed = false)
+            return StatusTransition(paymentRequestId, existing.orderId, previous, previous, occurredAt, sourceEventId, changed = false)
         }
 
         existing.currentStatus = newStatus
@@ -117,6 +126,6 @@ class PaymentStatusService(
         existing.updatedAt = Instant.now()
         repository.save(existing)
         log.info("payment status transition request={} {}->{}", paymentRequestId, previous, newStatus)
-        return StatusTransition(paymentRequestId, newStatus, previous, occurredAt, sourceEventId, changed = true)
+        return StatusTransition(paymentRequestId, existing.orderId, newStatus, previous, occurredAt, sourceEventId, changed = true)
     }
 }

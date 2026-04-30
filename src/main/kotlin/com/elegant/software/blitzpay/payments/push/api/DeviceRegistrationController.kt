@@ -1,7 +1,7 @@
 package com.elegant.software.blitzpay.payments.push.api
 
 import com.elegant.software.blitzpay.payments.push.internal.DeviceRegistrationService
-import com.elegant.software.blitzpay.payments.push.internal.PaymentRequestNotFoundException
+import com.elegant.software.blitzpay.payments.push.internal.OrderNotFoundException
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController
 class DeviceRegistrationController(
     private val deviceRegistrationService: DeviceRegistrationService,
 ) {
-    @Operation(summary = "Register or refresh a push token against a payment request.")
+    @Operation(summary = "Register or refresh a push token against an order.")
     @PostMapping
     fun register(@Valid @RequestBody request: DeviceRegistrationRequest): ResponseEntity<DeviceRegistrationResponse> {
         val outcome = deviceRegistrationService.register(request)
@@ -38,8 +38,8 @@ class DeviceRegistrationController(
         deviceRegistrationService.unregister(expoPushToken)
     }
 
-    @ExceptionHandler(PaymentRequestNotFoundException::class)
-    fun handleNotFound(ex: PaymentRequestNotFoundException): ResponseEntity<ProblemDetail> {
+    @ExceptionHandler(OrderNotFoundException::class)
+    fun handleNotFound(ex: OrderNotFoundException): ResponseEntity<ProblemDetail> {
         val problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, "Not found")
         problem.title = "Not Found"
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem)

@@ -39,7 +39,10 @@ class TlWebhookController(
         @RequestBody rawBody: String
     ): ResponseEntity<Any> {
         val webhookId = headers["x-tl-webhook-id"]
-        return LogContext.with(LogContext.WEBHOOK_ID to webhookId) {
+        return LogContext.with(
+            LogContext.WEBHOOK_ID to webhookId,
+            LogContext.PROVIDER to "TRUELAYER",
+        ) {
             handle(headers, rawBody, webhookId)
         }
     }
@@ -49,6 +52,10 @@ class TlWebhookController(
         rawBody: String,
         webhookId: String?,
     ): ResponseEntity<Any> {
+        LOG.info(
+            "truelayer webhook received payloadLength={} timestamp={} signaturePresent={}",
+            rawBody.length, headers["x-tl-webhook-timestamp"], headers["tl-signature"] != null,
+        )
         LOG.debug("truelayer webhook raw body={}", rawBody)
         val signature = headers["tl-signature"]
             ?: run {
@@ -112,14 +119,18 @@ class TlWebhookController(
             return ResponseEntity.badRequest().build()
         }
 
-        LOG.info(
-            "truelayer webhook accepted webhookId={} eventId={} type={} " +
-                "paymentRequestId={} timestamp={}",
-            webhookId, event.event_id, event.type,
-            event.metadata?.get("paymentRequestId"), event.timestamp
-        )
-        applicationEventPublisher.publishEvent(event)
-        return ResponseEntity.ok().build()
+        return LogContext.with(
+            LogContext.EVENT_ID to event.event_id,
+            LogContext.PAYMENT_REQUEST_ID to event.metadata?.get("paymentRequestId"),
+        ) {
+            LOG.info(
+                "truelayer webhook accepted type={} paymentRequestId={} timestamp={} metadataKeys={}",
+                event.type, event.metadata?.get("paymentRequestId"), event.timestamp, event.metadata?.keys
+            )
+            applicationEventPublisher.publishEvent(event)
+            LOG.info("truelayer webhook published envelope event")
+            ResponseEntity.ok().build()
+        }
     }
 
     private fun timestampFresh(ts: String?): Boolean {

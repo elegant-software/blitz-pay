@@ -7,7 +7,7 @@ import java.util.UUID
 
 data class DeviceRegistrationRequest(
     @field:NotNull
-    val paymentRequestId: UUID?,
+    val orderId: String?,
 
     @field:NotNull
     @field:Pattern(regexp = "^ExponentPushToken\\[[^\\]]+\\]$")
@@ -18,7 +18,7 @@ data class DeviceRegistrationRequest(
 
 data class DeviceRegistrationResponse(
     val id: UUID,
-    val paymentRequestId: UUID?,
+    val orderId: String,
     val expoPushToken: String,
     val platform: DevicePlatform?,
 )

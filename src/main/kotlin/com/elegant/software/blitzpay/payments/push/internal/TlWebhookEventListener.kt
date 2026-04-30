@@ -1,6 +1,7 @@
 package com.elegant.software.blitzpay.payments.push.internal
 
 import TlWebhookEnvelope
+import com.elegant.software.blitzpay.config.LogContext
 import com.elegant.software.blitzpay.payments.push.api.PaymentStatusChanged
 import com.elegant.software.blitzpay.payments.push.api.PaymentStatusCode
 import com.elegant.software.blitzpay.payments.push.persistence.ProcessedWebhookEventEntity
@@ -39,24 +40,39 @@ class TlWebhookEventListener(
             return
         }
 
-        if (processedRepository.existsById(eventId)) {
-            log.info("webhook duplicate event={}; skipping", eventId)
-            return
-        }
-        processedRepository.save(ProcessedWebhookEventEntity(eventId = eventId))
+        LogContext.with(
+            LogContext.EVENT_ID to eventId,
+            LogContext.PAYMENT_REQUEST_ID to paymentRequestId,
+            LogContext.PROVIDER to "TRUELAYER",
+        ) {
+            log.info("truelayer webhook mapped status={} type={}", newStatus, envelope.type)
+            if (processedRepository.existsById(eventId)) {
+                log.info("webhook duplicate event={}; skipping", eventId)
+                return
+            }
+            processedRepository.save(ProcessedWebhookEventEntity(eventId = eventId))
+            log.info("truelayer webhook marked event as processed")
 
-        val occurredAt = runCatching { envelope.timestamp?.let(Instant::parse) }.getOrNull() ?: Instant.now()
-        val transition = paymentStatusService.apply(paymentRequestId, newStatus, occurredAt, eventId)
-        if (transition.changed) {
-            publisher.publishEvent(
-                PaymentStatusChanged(
-                    paymentRequestId = transition.paymentRequestId,
-                    newStatus = transition.newStatus,
-                    previousStatus = transition.previousStatus,
-                    occurredAt = transition.occurredAt,
-                    sourceEventId = transition.sourceEventId,
+            val occurredAt = runCatching { envelope.timestamp?.let(Instant::parse) }.getOrNull() ?: Instant.now()
+            val transition = paymentStatusService.apply(paymentRequestId, newStatus, occurredAt, eventId)
+            if (transition.changed) {
+                log.info(
+                    "truelayer webhook publishing payment status change previousStatus={} newStatus={}",
+                    transition.previousStatus, transition.newStatus,
                 )
-            )
+                publisher.publishEvent(
+                    PaymentStatusChanged(
+                        paymentRequestId = transition.paymentRequestId,
+                        orderId = transition.orderId,
+                        newStatus = transition.newStatus,
+                        previousStatus = transition.previousStatus,
+                        occurredAt = transition.occurredAt,
+                        sourceEventId = transition.sourceEventId,
+                    )
+                )
+            } else {
+                log.info("truelayer webhook status unchanged currentStatus={}", transition.newStatus)
+            }
         }
     }
 

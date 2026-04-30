@@ -49,9 +49,14 @@
       "description": "Payment intent created successfully",
       "contentType": "application/json",
       "body": {
+        "clientSecret": {
+          "type": "string",
+          "description": "Stripe PaymentIntent client_secret. Preferred response field for mobile Stripe SDK consumers.",
+          "example": "pi_3Qxyz_secret_abc123"
+        },
         "paymentIntent": {
           "type": "string",
-          "description": "Stripe PaymentIntent client_secret. Used by the mobile Stripe SDK to confirm the payment.",
+          "description": "Legacy alias for clientSecret maintained for backward compatibility.",
           "example": "pi_3Qxyz_secret_abc123"
         },
         "publishableKey": {
