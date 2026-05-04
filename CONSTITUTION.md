@@ -80,6 +80,7 @@ For technology-specific patterns and detailed best practices, refer to:
 | Topic | Document |
 |---|---|
 | Architecture guidelines (module layout, dependency rules) | [`reference/architecture-guidelines.md`](reference/architecture-guidelines.md) |
+| Module packaging convention (sub-package vocabulary, per-type layouts, current gaps) | [`reference/module-packaging-convention.md`](reference/module-packaging-convention.md) |
 | API versioning (URL-path strategy, version resolver, Swagger compat) | [`reference/api-versioning-guide.md`](reference/api-versioning-guide.md) |
 | MCP servers (tools, resources, prompts, contract documentation) | [`reference/mcp-server-best-practices.md`](reference/mcp-server-best-practices.md) |
 | Spring Boot (`@ConfigurationProperties`, injection, reactive stack) | [`reference/spring-boot-best-practices.md`](reference/spring-boot-best-practices.md) |
