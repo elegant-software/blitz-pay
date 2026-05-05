@@ -6,11 +6,11 @@ import com.elegant.software.blitzpay.order.repository.OrderItemRepository
 import com.elegant.software.blitzpay.order.repository.OrderRepository
 import com.elegant.software.blitzpay.order.repository.PaymentAttemptRepository
 import com.elegant.software.blitzpay.payments.QuickpayApplication
-import com.elegant.software.blitzpay.merchant.application.MerchantProductCategoryService
+import com.elegant.software.blitzpay.merchant.service.MerchantProductCategoryService
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
-import com.elegant.software.blitzpay.merchant.repository.MerchantProductCategoryRepository
-import com.elegant.software.blitzpay.merchant.repository.MerchantProductRepository
+import com.elegant.software.blitzpay.merchant.persistence.repository.MerchantProductCategoryRepository
+import com.elegant.software.blitzpay.merchant.persistence.repository.MerchantProductRepository
 import com.elegant.software.blitzpay.merchant.repository.MonitoringRecordRepository
 import com.elegant.software.blitzpay.merchant.repository.ProximityEventRepository
 import com.elegant.software.blitzpay.payments.push.persistence.DeviceRegistrationRepository

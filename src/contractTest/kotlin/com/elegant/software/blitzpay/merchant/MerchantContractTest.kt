@@ -4,7 +4,7 @@ import com.elegant.software.blitzpay.contract.ContractVerifierBase
 import com.elegant.software.blitzpay.merchant.domain.BusinessProfile
 import com.elegant.software.blitzpay.merchant.domain.MerchantApplication
 import com.elegant.software.blitzpay.merchant.domain.MerchantOnboardingStatus
-import com.elegant.software.blitzpay.merchant.domain.MerchantProduct
+import com.elegant.software.blitzpay.merchant.persistence.model.MerchantProduct
 import com.elegant.software.blitzpay.merchant.domain.PrimaryContact
 import com.elegant.software.blitzpay.storage.PresignedUpload
 import jakarta.persistence.Query
@@ -326,7 +326,7 @@ class MerchantContractTest : ContractVerifierBase() {
         whenever(merchantBranchRepository.existsByMerchantApplicationIdAndIdAndActiveTrue(merchantId, branchId)).thenReturn(true)
         whenever(merchantProductCategoryRepository.existsByIdAndMerchantApplicationId(categoryId, merchantId)).thenReturn(true)
         whenever(merchantProductCategoryRepository.findByMerchantApplicationIdAndId(merchantId, categoryId)).thenReturn(
-            com.elegant.software.blitzpay.merchant.domain.MerchantProductCategory(
+            com.elegant.software.blitzpay.merchant.persistence.model.MerchantProductCategory(
                 id = categoryId,
                 merchantApplicationId = merchantId,
                 name = "Drinks"
@@ -373,7 +373,7 @@ class MerchantContractTest : ContractVerifierBase() {
         whenever(nativeQuery.setParameter(any<String>(), any())).thenReturn(nativeQuery)
         whenever(nativeQuery.singleResult).thenReturn(merchantId.toString())
         whenever(merchantProductCategoryRepository.findByMerchantApplicationIdAndId(merchantId, categoryId)).thenReturn(
-            com.elegant.software.blitzpay.merchant.domain.MerchantProductCategory(
+            com.elegant.software.blitzpay.merchant.persistence.model.MerchantProductCategory(
                 id = categoryId,
                 merchantApplicationId = merchantId,
                 name = "Drinks"

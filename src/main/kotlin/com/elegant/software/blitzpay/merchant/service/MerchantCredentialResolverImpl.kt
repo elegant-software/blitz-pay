@@ -6,7 +6,7 @@ import com.elegant.software.blitzpay.merchant.api.StripeCredentials
 import com.elegant.software.blitzpay.merchant.domain.MerchantPaymentChannel
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
-import com.elegant.software.blitzpay.merchant.repository.MerchantProductRepository
+import com.elegant.software.blitzpay.merchant.persistence.repository.MerchantProductRepository
 import com.elegant.software.blitzpay.payments.braintree.config.BraintreeProperties
 import com.elegant.software.blitzpay.payments.stripe.config.StripeProperties
 import org.springframework.stereotype.Service

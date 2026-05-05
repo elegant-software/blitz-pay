@@ -3,7 +3,7 @@ info:
   title: OpenAPI definition
   version: v0
 servers:
-- url: http://localhost:62721
+- url: http://localhost:59219
   description: Generated server url
 tags:
 - name: Merchant Orders
@@ -465,14 +465,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/CreateIntentResponse"
-              examples:
-                success:
-                  value:
-                    paymentRequestId: 123e4567-e89b-12d3-a456-426614174000
-                    clientSecret: pi_3Pxx_secret_abc
-                    paymentIntent: pi_3Pxx
-                    publishableKey: pk_test_123
+                type: object
   /{version}/webhooks/stripe:
     post:
       tags:
@@ -496,31 +489,12 @@ paths:
           content:
             '*/*':
               schema:
-                oneOf:
-                - $ref: "#/components/schemas/CheckoutSuccessResponse"
-                - $ref: "#/components/schemas/CheckoutFailureResponse"
-              examples:
-                success:
-                  value:
-                    status: succeeded
-                    paymentRequestId: 123e4567-e89b-12d3-a456-426614174000
-                    transactionId: tx_abc123
-                    amount: "12.50"
-                    currency: EUR
-                    orderId: ORDER-123
-                    invoiceId: INV-2026-00042
-                    merchantId: 00000000-0000-0000-0000-000000000001
-                    branchId: 00000000-0000-0000-0000-000000000002
-                failure:
-                  value:
-                    status: failed
-                    message: Processor declined
-                    code: declined
+                type: object
   /{version}/voice/query:
     post:
       tags:
       - Voice
-      summary: Submit a voice recording and receive a transcription
+      summary: Submit a voice recording and receive a transcript or product result
       operationId: query
       parameters:
       - name: Authorization
@@ -537,13 +511,20 @@ paths:
                 audio:
                   type: string
                   format: binary
+                merchantId:
+                  type: string
+                branchId:
+                  type: string
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/VoiceTranscriptionResponse"
+                oneOf:
+                - $ref: "#/components/schemas/NoMatch"
+                - $ref: "#/components/schemas/ProductResult"
+                - $ref: "#/components/schemas/Transcript"
   /{version}/proximity:
     post:
       tags:
@@ -1048,7 +1029,7 @@ paths:
     post:
       tags:
       - Device Registration
-      summary: Register or refresh a push token against a payment request.
+      summary: Register or refresh a push token against an order.
       operationId: register
       requestBody:
         content:
@@ -1769,13 +1750,68 @@ components:
       - primaryBusinessAddress
       - registrationNumber
       - status
-    VoiceTranscriptionResponse:
+    AssistantResponse:
+      discriminator:
+        propertyName: type
+      properties:
+        type:
+          type: string
+      required:
+      - type
+    NoMatch:
+      allOf:
+      - $ref: "#/components/schemas/AssistantResponse"
+      - type: object
+        properties:
+          message:
+            type: string
+      required:
+      - message
+    ProductMatch:
       type: object
       properties:
-        transcript:
+        productId:
           type: string
-        language:
+          format: uuid
+        branchId:
           type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        unitPrice:
+          type: number
+        imageUrl:
+          type: string
+      required:
+      - branchId
+      - name
+      - productId
+      - unitPrice
+    ProductResult:
+      allOf:
+      - $ref: "#/components/schemas/AssistantResponse"
+      - type: object
+        properties:
+          products:
+            type: array
+            items:
+              $ref: "#/components/schemas/ProductMatch"
+          requestedQuantity:
+            type: integer
+            format: int32
+      required:
+      - products
+    Transcript:
+      allOf:
+      - $ref: "#/components/schemas/AssistantResponse"
+      - type: object
+        properties:
+          transcript:
+            type: string
+          language:
+            type: string
       required:
       - transcript
     ProximityEventRequest:
@@ -1908,23 +1944,6 @@ components:
           format: uuid
       required:
       - orderId
-    CreateIntentResponse:
-      type: object
-      properties:
-        paymentRequestId:
-          type: string
-          format: uuid
-        clientSecret:
-          type: string
-        paymentIntent:
-          type: string
-        publishableKey:
-          type: string
-      required:
-      - clientSecret
-      - paymentIntent
-      - paymentRequestId
-      - publishableKey
     PaymentRequested:
       type: object
       properties:
@@ -1939,6 +1958,8 @@ components:
         currency:
           type: string
         userDisplayName:
+          type: string
+        userEmail:
           type: string
         redirectReturnUri:
           type: string
@@ -1984,50 +2005,6 @@ components:
           format: uuid
       required:
       - orderId
-    CheckoutSuccessResponse:
-      type: object
-      properties:
-        status:
-          type: string
-        paymentRequestId:
-          type: string
-          format: uuid
-        transactionId:
-          type: string
-        amount:
-          type: string
-        currency:
-          type: string
-        orderId:
-          type: string
-        invoiceId:
-          type: string
-        merchantId:
-          type: string
-          format: uuid
-        branchId:
-          type: string
-          format: uuid
-      required:
-      - amount
-      - currency
-      - merchantId
-      - orderId
-      - paymentRequestId
-      - status
-      - transactionId
-    CheckoutFailureResponse:
-      type: object
-      properties:
-        status:
-          type: string
-        message:
-          type: string
-        code:
-          type: string
-      required:
-      - message
-      - status
     CreateOrderItemRequest:
       type: object
       properties:
@@ -2414,9 +2391,8 @@ components:
     DeviceRegistrationRequest:
       type: object
       properties:
-        paymentRequestId:
+        orderId:
           type: string
-          format: uuid
         expoPushToken:
           type: string
           pattern: "^ExponentPushToken\\[[^\\]]+\\]$"
@@ -2427,16 +2403,15 @@ components:
           - ANDROID
       required:
       - expoPushToken
-      - paymentRequestId
+      - orderId
     DeviceRegistrationResponse:
       type: object
       properties:
         id:
           type: string
           format: uuid
-        paymentRequestId:
+        orderId:
           type: string
-          format: uuid
         expoPushToken:
           type: string
         platform:
@@ -2447,6 +2422,7 @@ components:
       required:
       - expoPushToken
       - id
+      - orderId
     ServerSentEventPaymentResult: {}
     PaymentStatusResponse:
       type: object

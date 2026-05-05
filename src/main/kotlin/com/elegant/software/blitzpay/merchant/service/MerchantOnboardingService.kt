@@ -8,7 +8,7 @@ import com.elegant.software.blitzpay.merchant.domain.MonitoringRecord
 import com.elegant.software.blitzpay.merchant.domain.ReviewOutcome
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
-import com.elegant.software.blitzpay.merchant.repository.MerchantProductRepository
+import com.elegant.software.blitzpay.merchant.persistence.repository.MerchantProductRepository
 import com.elegant.software.blitzpay.merchant.support.MerchantObservabilitySupport
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
