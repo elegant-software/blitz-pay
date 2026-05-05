@@ -86,7 +86,8 @@ For technology-specific patterns and detailed best practices, refer to:
 | Spring Boot (`@ConfigurationProperties`, injection, reactive stack) | [`reference/spring-boot-best-practices.md`](reference/spring-boot-best-practices.md) |
 | Spring Modulith (module boundaries, events, verification) | [`reference/spring-modulith-best-practices.md`](reference/spring-modulith-best-practices.md) |
 | Spring Data JPA (entities, repositories, transactions) | [`reference/spring-data-jpa-best-practices.md`](reference/spring-data-jpa-best-practices.md) |
-| Liquibase (schema migrations, changeset conventions) | [`reference/liquibase-best-practices.md`](reference/liquibase-best-practices.md) |
+| Liquibase (schema migrations, changeset conventions, FK deletion strategy) | [`reference/liquibase-best-practices.md`](reference/liquibase-best-practices.md) |
+| FK deletion strategy (RESTRICT default, no CASCADE, explicit service deletion) | [`reference/liquibase-best-practices.md#10-foreign-key-deletion-strategy`](reference/liquibase-best-practices.md#10-foreign-key-deletion-strategy) |
 | Docker (multi-stage builds, layer caching, `.dockerignore`) | [`reference/docker-best-practices.md`](reference/docker-best-practices.md) |
 | Kubernetes ingress troubleshooting (kind, nginx, TLS, NodePort) | [`reference/k8s-ingress-troubleshooting/`](reference/k8s-ingress-troubleshooting/) |
 | socat (install, run modes, debug `T` state, systemd, NodePort bridging) | [`reference/utils/socat-guide.md`](reference/utils/socat-guide.md) |

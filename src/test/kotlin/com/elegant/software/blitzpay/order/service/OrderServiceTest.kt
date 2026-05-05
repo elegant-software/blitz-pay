@@ -14,11 +14,13 @@ import com.elegant.software.blitzpay.order.repository.OrderRepository
 import com.elegant.software.blitzpay.order.repository.PaymentAttemptRepository
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.math.BigDecimal
+import java.util.Optional
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -30,7 +32,7 @@ class OrderServiceTest {
     private val orderItemRepository = mock<OrderItemRepository>()
     private val paymentAttemptRepository = mock<PaymentAttemptRepository>()
     private val service = OrderService(
-        merchantGateway, orderRepository, orderItemRepository,
+        merchantGateway, orderRepository, orderItemRepository, paymentAttemptRepository,
     )
 
     private val merchantId = UUID.fromString("11111111-1111-1111-1111-111111111111")
@@ -130,5 +132,21 @@ class OrderServiceTest {
         assertEquals(2_900L, response.totalAmountMinor)
         assertEquals(merchantId, response.merchantId)
         assert(response.qrCode.paymentUrl.contains("blitzpay://payment/qr"))
+    }
+
+    @Test
+    fun `deleteOrder deletes payment attempts and items before the order`() {
+        val orderId = UUID.randomUUID()
+        val order = mock<Order>()
+        whenever(order.id).thenReturn(orderId)
+        whenever(orderRepository.findById(orderId)).thenReturn(Optional.of(order))
+
+        service.deleteOrder(orderId)
+
+        inOrder(paymentAttemptRepository, orderItemRepository, orderRepository) {
+            verify(paymentAttemptRepository).deleteAllByOrderIdFk(orderId)
+            verify(orderItemRepository).deleteAllByOrderIdFk(orderId)
+            verify(orderRepository).delete(order)
+        }
     }
 }

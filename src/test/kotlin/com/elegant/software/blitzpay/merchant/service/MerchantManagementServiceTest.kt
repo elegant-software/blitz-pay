@@ -6,20 +6,28 @@ import com.elegant.software.blitzpay.merchant.domain.MerchantApplication
 import com.elegant.software.blitzpay.merchant.domain.MerchantOnboardingStatus
 import com.elegant.software.blitzpay.merchant.domain.MerchantPaymentChannel
 import com.elegant.software.blitzpay.merchant.domain.PrimaryContact
+import com.elegant.software.blitzpay.merchant.domain.MonitoringRecord
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
+import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
+import com.elegant.software.blitzpay.merchant.repository.MonitoringRecordRepository
 import com.elegant.software.blitzpay.storage.StorageService
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.Optional
+import java.util.UUID
 import kotlin.test.assertEquals
 
 class MerchantManagementServiceTest {
 
     private val repository = mock<MerchantApplicationRepository>()
+    private val branchRepository = mock<MerchantBranchRepository>()
+    private val monitoringRecordRepository = mock<MonitoringRecordRepository>()
     private val storageService = mock<StorageService>()
-    private val service = MerchantManagementService(repository, storageService)
+    private val service = MerchantManagementService(repository, branchRepository, monitoringRecordRepository, storageService)
 
     @Test
     fun `update merchant changes editable fields and status`() {
@@ -61,5 +69,62 @@ class MerchantManagementServiceTest {
         assertEquals("new@example.com", response.contactEmail)
         assertEquals(setOf(MerchantPaymentChannel.STRIPE, MerchantPaymentChannel.TRUELAYER), response.activePaymentChannels)
         assertEquals(MerchantOnboardingStatus.ACTIVE, response.status)
+    }
+
+    @Test
+    fun `deleteMerchantApplication deletes branches before the application`() {
+        val applicationId = UUID.randomUUID()
+        val application = MerchantApplication(
+            applicationReference = "BLTZ-DEL",
+            businessProfile = BusinessProfile(
+                legalBusinessName = "To Delete GmbH",
+                businessType = "LLC",
+                registrationNumber = "DE-999",
+                operatingCountry = "DE",
+                primaryBusinessAddress = "Delete Street 1"
+            ),
+            primaryContact = PrimaryContact(
+                fullName = "Delete Me",
+                email = "delete@example.com",
+                phoneNumber = "+49000000000"
+            )
+        )
+        whenever(repository.findById(applicationId)).thenReturn(Optional.of(application))
+
+        service.deleteMerchantApplication(applicationId)
+
+        inOrder(branchRepository, repository) {
+            verify(branchRepository).deleteAllByMerchantApplicationId(applicationId)
+            verify(repository).delete(application)
+        }
+    }
+
+    @Test
+    fun `deleteMerchantApplication deletes monitoring record before the application`() {
+        val applicationId = UUID.randomUUID()
+        val monitoringRecord = MonitoringRecord(lastTriggerReason = "test")
+        val application = MerchantApplication(
+            applicationReference = "BLTZ-MON",
+            businessProfile = BusinessProfile(
+                legalBusinessName = "Monitored GmbH",
+                businessType = "LLC",
+                registrationNumber = "DE-888",
+                operatingCountry = "DE",
+                primaryBusinessAddress = "Monitor Street 1"
+            ),
+            primaryContact = PrimaryContact(
+                fullName = "Monitored",
+                email = "mon@example.com",
+                phoneNumber = "+49111111111"
+            )
+        ).also { it.monitoringRecord = monitoringRecord }
+        whenever(repository.findById(applicationId)).thenReturn(Optional.of(application))
+
+        service.deleteMerchantApplication(applicationId)
+
+        inOrder(monitoringRecordRepository, repository) {
+            verify(monitoringRecordRepository).deleteById(monitoringRecord.id)
+            verify(repository).delete(application)
+        }
     }
 }
