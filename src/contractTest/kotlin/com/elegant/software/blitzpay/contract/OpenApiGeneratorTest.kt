@@ -17,13 +17,17 @@ class OpenApiGeneratorTest : ContractVerifierBase() {
 
         val yamlContent = response.responseBody
         requireNotNull(yamlContent) { "OpenAPI content was null" }
+        val normalizedYamlContent = yamlContent.replace(
+            Regex("""(?m)^- url: http://localhost:\d+$"""),
+            "- url: http://localhost:8080"
+        )
 
         // Save to api-docs folder
         val outputDir = File("api-docs")
         if (!outputDir.exists()) outputDir.mkdirs()
         
         val outputFile = File(outputDir, "api-doc.yml")
-        outputFile.writeText(yamlContent)
+        outputFile.writeText(normalizedYamlContent)
         
         println("OpenAPI documentation updated at: ${outputFile.absolutePath}")
     }

@@ -6,6 +6,9 @@ import com.elegant.software.blitzpay.order.api.OrderGateway
 import com.elegant.software.blitzpay.payments.push.api.PaymentStatusInitializationGateway
 import com.elegant.software.blitzpay.payments.push.api.PaymentStatusUpdateGateway
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.responses.ApiResponse
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -97,6 +100,7 @@ class BraintreePaymentController(
     }
 
     @Operation(summary = "Submit a Braintree payment nonce for settlement.")
+    @ApiResponse(responseCode = "200", content = [Content(schema = Schema(oneOf = [CheckoutSuccessResponse::class, CheckoutFailureResponse::class]))])
     @PostMapping("/checkout")
     fun checkout(@RequestBody request: CheckoutRequest): Mono<ResponseEntity<Any>> {
         val merchantId = request.merchantId
