@@ -3,9 +3,9 @@ package com.elegant.software.blitzpay.voice
 import com.elegant.software.blitzpay.contract.ContractVerifierBase
 import com.elegant.software.blitzpay.voice.api.AssistantResponse
 import com.elegant.software.blitzpay.voice.api.ProductMatch
-import com.elegant.software.blitzpay.voice.internal.MissingAudioException
-import com.elegant.software.blitzpay.voice.internal.NoSpeechDetectedException
-import com.elegant.software.blitzpay.voice.internal.UpstreamAiException
+import com.elegant.software.blitzpay.voice.service.MissingAudioException
+import com.elegant.software.blitzpay.voice.service.NoSpeechDetectedException
+import com.elegant.software.blitzpay.voice.service.UpstreamAiException
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever

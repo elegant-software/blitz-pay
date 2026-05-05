@@ -1,4 +1,4 @@
-package com.elegant.software.blitzpay.voice.internal
+package com.elegant.software.blitzpay.voice.service
 
 import com.elegant.software.blitzpay.merchant.api.CatalogProduct
 import com.elegant.software.blitzpay.voice.api.AssistantResponse
