@@ -229,6 +229,122 @@ behaviour since it validates migrations against a real PostgreSQL instance.
 
 ---
 
+## 10. Foreign Key Deletion Strategy
+
+### Rule: Never use ON DELETE CASCADE on application FK constraints
+
+All foreign key constraints in the `blitzpay` schema **MUST** use `ON DELETE RESTRICT`
+(or omit the clause entirely — PostgreSQL defaults to `NO ACTION`, which is equivalent).
+`ON DELETE CASCADE` is **prohibited** because it:
+
+1. **Silently deletes child rows at the database layer**, bypassing JPA `@PreRemove` /
+   `@PostRemove` lifecycle hooks — any JPA-level bookkeeping is skipped.
+2. **Prevents Spring `ApplicationEventPublisher` events from firing** for the deleted rows —
+   other modules never learn that data was removed.
+3. **Violates Spring Modulith module boundaries** — another module's table can be wiped
+   without that module's service layer ever being invoked.
+
+### Required FK declaration
+
+Always declare the constraint explicitly with a name:
+
+```sql
+CONSTRAINT fk_{child_table}_{parent_table}
+    FOREIGN KEY (column)
+    REFERENCES blitzpay.parent_table (id)
+    ON DELETE RESTRICT
+```
+
+Omitting `ON DELETE …` is also acceptable — PostgreSQL defaults to `NO ACTION`, which
+behaves identically to `RESTRICT` for non-deferred constraints.
+
+### Approved deletion patterns
+
+**Pattern A — Explicit service-layer child deletion (preferred)**
+
+The owning module's service deletes children first, then the parent, all within a single
+`@Transactional` method. Every deletion is visible to JPA and Spring events fire normally.
+
+```kotlin
+@Transactional
+fun deleteOrder(orderId: UUID) {
+    paymentAttemptRepository.deleteAllByOrderIdFk(orderId)
+    orderItemRepository.deleteAllByOrderIdFk(orderId)
+    orderRepository.deleteById(orderId)
+}
+```
+
+**Pattern B — Soft delete / logical delete (for audit-sensitive data)**
+
+Add a `deleted_at TIMESTAMPTZ NULL` column. All read queries filter on
+`WHERE deleted_at IS NULL`. No physical `DELETE` is issued; the row is retained for audit.
+Suitable for financial or compliance-sensitive entities.
+
+**Pattern C — ON DELETE SET NULL (nullable optional references only)**
+
+Acceptable when the FK column is nullable and an orphaned child row has clear
+business meaning (the reference becomes "unknown / unassigned"):
+
+```sql
+merchant_branch_id UUID NULL,
+CONSTRAINT fk_order_orders_merchant_branch
+    FOREIGN KEY (merchant_branch_id)
+    REFERENCES blitzpay.merchant_branches (id)
+    ON DELETE SET NULL
+```
+
+### Exception: audit / observability tables
+
+`ON DELETE CASCADE` is acceptable **only** for write-only operational log or
+delivery-attempt tables where:
+- The child row has no business identity without the parent
+- No cross-module consumer reads the child table
+
+The changeset **must** include an explicit justification comment:
+
+```sql
+-- cascade-exception: push_delivery_attempt rows are observability-only with no cross-module consumers
+CONSTRAINT fk_push_delivery_attempt_webhook_event
+    FOREIGN KEY (webhook_event_id)
+    REFERENCES blitzpay.push_processed_webhook_event (id)
+    ON DELETE CASCADE
+```
+
+### Prohibition on JPA CascadeType.REMOVE
+
+Do **not** use `CascadeType.REMOVE` or `CascadeType.ALL` on `@OneToOne` / `@OneToMany`
+associations for entities with independent domain significance. JPA cascade-remove fires
+lifecycle hooks but still bypasses Spring application events. Use explicit service-layer
+deletion instead.
+
+`CascadeType.PERSIST` and `CascadeType.MERGE` are safe and encouraged for propagating
+saves from parent to child.
+
+```kotlin
+// Wrong — CascadeType.ALL includes REMOVE
+@OneToOne(cascade = [CascadeType.ALL], orphanRemoval = true)
+
+// Correct — PERSIST + MERGE only; service handles deletion
+@OneToOne(cascade = [CascadeType.PERSIST, CascadeType.MERGE])
+```
+
+### Verification
+
+After any schema migration, verify no unintended CASCADE FKs remain:
+
+```sql
+SELECT conname, conrelid::regclass, confdeltype
+FROM pg_constraint
+WHERE contype = 'f'
+  AND conrelid::regclass::text LIKE 'blitzpay.%'
+  AND confdeltype = 'a';  -- 'a' = CASCADE — must return zero rows
+```
+
+`confdeltype` reference: `a` = CASCADE, `r` = RESTRICT, `n` = SET NULL,
+`d` = SET DEFAULT, `\0` = NO ACTION.
+
+---
+
 ## References
 
 - Liquibase docs: https://docs.liquibase.com

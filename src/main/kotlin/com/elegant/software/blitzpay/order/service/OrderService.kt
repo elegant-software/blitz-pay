@@ -17,6 +17,7 @@ import com.elegant.software.blitzpay.order.domain.OrderStatus
 import com.elegant.software.blitzpay.order.domain.unitPriceMinor
 import com.elegant.software.blitzpay.order.repository.OrderItemRepository
 import com.elegant.software.blitzpay.order.repository.OrderRepository
+import com.elegant.software.blitzpay.order.repository.PaymentAttemptRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -32,6 +33,7 @@ class OrderService(
     private val merchantGateway: MerchantGateway,
     private val orderRepository: OrderRepository,
     private val orderItemRepository: OrderItemRepository,
+    private val paymentAttemptRepository: PaymentAttemptRepository,
 ) {
     private val log = LoggerFactory.getLogger(OrderService::class.java)
 
@@ -124,6 +126,15 @@ class OrderService(
             val items = orderItemRepository.findAllByOrderIdFk(order.id)
             order.toResponse(items)
         }
+    }
+
+    fun deleteOrder(orderId: UUID) {
+        val order = orderRepository.findById(orderId)
+            .orElseThrow { NoSuchElementException("Order not found: $orderId") }
+        paymentAttemptRepository.deleteAllByOrderIdFk(order.id)
+        orderItemRepository.deleteAllByOrderIdFk(order.id)
+        orderRepository.delete(order)
+        log.info("order deleted id={}", orderId)
     }
 
     private fun validateProducts(
