@@ -86,7 +86,7 @@ class MerchantApplication(
     )
     var riskAssessment: RiskAssessment? = null
 
-    @OneToOne(fetch = FetchType.EAGER, optional = true, cascade = [CascadeType.ALL], orphanRemoval = true)
+    @OneToOne(fetch = FetchType.EAGER, optional = true, cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @JoinColumn(name = "monitoring_record_id")
     var monitoringRecord: MonitoringRecord? = null
 
