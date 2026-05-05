@@ -50,10 +50,12 @@ class VoiceQueryServiceTest {
     )
 
     @Test
-    fun `process returns TRANSCRIPT when no merchant context`() {
+    fun `process returns TRANSCRIPT when no merchant context and no contextual or global candidates`() {
         whenever(transcriptionClient.transcribe(submissionNoMerchant)).thenReturn(
             VoiceTranscription(text = "What is my latest payment?", language = "en", durationSeconds = BigDecimal("2.5"))
         )
+        whenever(productCatalogGateway.findActiveProductsBySubject("user-123")).thenReturn(emptyList())
+        whenever(productCatalogGateway.searchActiveProducts("What is my latest payment?", 25)).thenReturn(emptyList())
 
         val result = service.process(submissionNoMerchant)
 
@@ -61,6 +63,64 @@ class VoiceQueryServiceTest {
         assertEquals("What is my latest payment?", transcript.transcript)
         assertEquals("en", transcript.language)
         verify(productCatalogGateway, never()).findActiveProducts(any(), any())
+    }
+
+    @Test
+    fun `process uses proximity-derived catalog when no explicit merchant context`() {
+        val productId = UUID.randomUUID()
+        val catalog = listOf(
+            CatalogProduct(productId, branchId, "Erdbeer Becher", "Fresh strawberry cup", BigDecimal("3.50"), null)
+        )
+        val intent = ProductIntent(matchedProductIds = listOf(productId), requestedQuantity = 1)
+        val expected = AssistantResponse.ProductResult(
+            products = listOf(
+                com.elegant.software.blitzpay.voice.api.ProductMatch(
+                    productId, branchId, "Erdbeer Becher", "Fresh strawberry cup", BigDecimal("3.50"), null
+                )
+            ),
+            requestedQuantity = 1,
+        )
+
+        whenever(transcriptionClient.transcribe(submissionNoMerchant)).thenReturn(
+            VoiceTranscription(text = "I would like one Erdbeer Becher please", durationSeconds = BigDecimal("3.0"))
+        )
+        whenever(productCatalogGateway.findActiveProductsBySubject("user-123")).thenReturn(catalog)
+        whenever(productIntentExtractor.extract(any(), eq(catalog))).thenReturn(intent)
+        whenever(productCatalogSearch.search(intent, catalog)).thenReturn(expected)
+
+        val result = service.process(submissionNoMerchant)
+
+        assertEquals(expected, result)
+        verify(productCatalogGateway, never()).searchActiveProducts(any(), any())
+    }
+
+    @Test
+    fun `process falls back to global product search when subject context is unavailable`() {
+        val productId = UUID.randomUUID()
+        val catalog = listOf(
+            CatalogProduct(productId, branchId, "Erdbeer Shake", "Fresh strawberry shake", BigDecimal("4.20"), null)
+        )
+        val intent = ProductIntent(matchedProductIds = listOf(productId), requestedQuantity = null)
+        val expected = AssistantResponse.ProductResult(
+            products = listOf(
+                com.elegant.software.blitzpay.voice.api.ProductMatch(
+                    productId, branchId, "Erdbeer Shake", "Fresh strawberry shake", BigDecimal("4.20"), null
+                )
+            ),
+            requestedQuantity = null,
+        )
+
+        whenever(transcriptionClient.transcribe(submissionNoMerchant)).thenReturn(
+            VoiceTranscription(text = "strawberry shake", durationSeconds = BigDecimal("2.0"))
+        )
+        whenever(productCatalogGateway.findActiveProductsBySubject("user-123")).thenReturn(emptyList())
+        whenever(productCatalogGateway.searchActiveProducts("strawberry shake", 25)).thenReturn(catalog)
+        whenever(productIntentExtractor.extract(any(), eq(catalog))).thenReturn(intent)
+        whenever(productCatalogSearch.search(intent, catalog)).thenReturn(expected)
+
+        val result = service.process(submissionNoMerchant)
+
+        assertEquals(expected, result)
     }
 
     @Test

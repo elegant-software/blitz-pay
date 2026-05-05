@@ -34,23 +34,73 @@ class VoiceQueryService(
         val merchantId = submission.merchantId
         val branchId = submission.branchId
 
-        if (merchantId == null || branchId == null) {
+        val catalog = when {
+            merchantId != null && branchId != null -> {
+                log.info(
+                    "voice query using explicit merchant context subject={} merchantId={} branchId={}",
+                    submission.callerSubject,
+                    merchantId,
+                    branchId,
+                )
+                productCatalogGateway.findActiveProducts(merchantId, branchId)
+            }
+            else -> {
+                val contextualCatalog = productCatalogGateway.findActiveProductsBySubject(submission.callerSubject)
+                if (contextualCatalog.isNotEmpty()) {
+                    log.info(
+                        "voice query resolved catalog from subject proximity subject={} productCount={}",
+                        submission.callerSubject,
+                        contextualCatalog.size,
+                    )
+                    contextualCatalog
+                } else {
+                    val globalCatalog = productCatalogGateway.searchActiveProducts(transcription.text)
+                    log.info(
+                        "voice query falling back to global product search subject={} productCount={} transcriptLength={}",
+                        submission.callerSubject,
+                        globalCatalog.size,
+                        transcription.text.length,
+                    )
+                    globalCatalog
+                }
+            }
+        }
+
+        if (catalog.isEmpty()) {
+            log.info(
+                "voice query no product catalog candidates subject={} returning=TRANSCRIPT",
+                submission.callerSubject,
+            )
             return AssistantResponse.Transcript(
                 transcript = transcription.text,
                 language = transcription.language,
             )
         }
 
-        val catalog = productCatalogGateway.findActiveProducts(merchantId, branchId)
+        log.info(
+            "voice product catalog loaded subject={} merchantId={} branchId={} productCount={} sampleProductIds={}",
+            submission.callerSubject,
+            merchantId,
+            branchId,
+            catalog.size,
+            catalog.take(5).map { "${it.productId}:${it.name.take(32)}" }
+        )
         val intent = productIntentExtractor.extract(transcription.text, catalog)
 
         log.info(
-            "product intent extracted subject={} matches={} quantity={}",
+            "product intent extracted subject={} matches={} quantity={} matchedProductIds={}",
             submission.callerSubject,
             intent.matchedProductIds.size,
             intent.requestedQuantity,
+            intent.matchedProductIds.take(5),
         )
 
-        return productCatalogSearch.search(intent, catalog)
+        return productCatalogSearch.search(intent, catalog).also { response ->
+            log.info(
+                "voice product response built subject={} responseType={}",
+                submission.callerSubject,
+                response.javaClass.simpleName,
+            )
+        }
     }
 }

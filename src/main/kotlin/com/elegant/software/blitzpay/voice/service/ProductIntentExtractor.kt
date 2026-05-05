@@ -1,6 +1,7 @@
 package com.elegant.software.blitzpay.voice.service
 
 import com.elegant.software.blitzpay.merchant.api.CatalogProduct
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.UUID
 
@@ -10,25 +11,44 @@ interface ProductIntentExtractor {
 
 @Service
 class HeuristicProductIntentExtractor : ProductIntentExtractor {
+    private val log = LoggerFactory.getLogger(HeuristicProductIntentExtractor::class.java)
+
     override fun extract(transcript: String, catalog: List<CatalogProduct>): ProductIntent {
         val normalizedTranscript = transcript.normalizeForSearch()
+        val requestedQuantity = extractQuantity(normalizedTranscript)
         if (normalizedTranscript.isBlank() || catalog.isEmpty()) {
-            return ProductIntent(emptyList(), extractQuantity(normalizedTranscript))
+            log.info(
+                "voice product intent skipped normalizedTranscriptBlank={} catalogEmpty={} requestedQuantity={}",
+                normalizedTranscript.isBlank(),
+                catalog.isEmpty(),
+                requestedQuantity,
+            )
+            return ProductIntent(emptyList(), requestedQuantity)
         }
 
-        val rankedIds = catalog
-            .mapNotNull { product ->
+        val scoredProducts = catalog
+            .map { product ->
                 val score = scoreProduct(normalizedTranscript, product)
-                if (score > 0) product.productId to score else null
+                product to score
             }
+        val rankedProducts = scoredProducts
+            .filter { it.second > 0 }
             .sortedByDescending { it.second }
-            .map { it.first }
-            .distinct()
             .take(5)
+        val rankedIds = rankedProducts
+            .map { it.first.productId }
+            .distinct()
+
+        log.info(
+            "voice product intent ranked transcript=\"{}\" requestedQuantity={} topCandidates={}",
+            normalizedTranscript.take(120),
+            requestedQuantity,
+            rankedProducts.map { (product, score) -> "${product.productId}:${product.name.take(32)}:$score" }
+        )
 
         return ProductIntent(
             matchedProductIds = rankedIds,
-            requestedQuantity = extractQuantity(normalizedTranscript),
+            requestedQuantity = requestedQuantity,
         )
     }
 
