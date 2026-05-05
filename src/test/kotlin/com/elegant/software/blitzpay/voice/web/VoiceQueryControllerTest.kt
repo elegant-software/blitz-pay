@@ -3,9 +3,9 @@ package com.elegant.software.blitzpay.voice.web
 import com.elegant.software.blitzpay.voice.api.AssistantResponse
 import com.elegant.software.blitzpay.voice.api.VoiceGateway
 import com.elegant.software.blitzpay.voice.config.VoiceProperties
-import com.elegant.software.blitzpay.voice.internal.MissingAuthorizationException
-import com.elegant.software.blitzpay.voice.internal.PayloadTooLargeException
-import com.elegant.software.blitzpay.voice.internal.UnsupportedAudioFormatException
+import com.elegant.software.blitzpay.voice.service.MissingAuthorizationException
+import com.elegant.software.blitzpay.voice.service.PayloadTooLargeException
+import com.elegant.software.blitzpay.voice.service.UnsupportedAudioFormatException
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.any
