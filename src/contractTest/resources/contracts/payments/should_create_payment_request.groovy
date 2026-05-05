@@ -15,6 +15,7 @@ Contract.make {
             amountMinorUnits: 1099,
             currency: 'EUR',
             userDisplayName: 'Jane Doe',
+            userEmail: 'jane.doe@example.com',
             redirectReturnUri: 'https://merchant.example.com/return'
         )
     }

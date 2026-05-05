@@ -3,7 +3,7 @@ info:
   title: OpenAPI definition
   version: v0
 servers:
-- url: http://localhost:64988
+- url: http://localhost:8080
   description: Generated server url
 tags:
 - name: Merchant Orders
@@ -563,7 +563,7 @@ paths:
           content:
             '*/*':
               schema:
-                type: object
+                $ref: "#/components/schemas/CreateIntentResponse"
   /{version}/payments/request:
     post:
       tags:
@@ -625,7 +625,9 @@ paths:
           content:
             '*/*':
               schema:
-                type: object
+                oneOf:
+                - $ref: "#/components/schemas/CheckoutSuccessResponse"
+                - $ref: "#/components/schemas/CheckoutFailureResponse"
   /{version}/orders:
     get:
       tags:
@@ -1882,6 +1884,23 @@ components:
           format: uuid
       required:
       - orderId
+    CreateIntentResponse:
+      type: object
+      properties:
+        paymentRequestId:
+          type: string
+          format: uuid
+        clientSecret:
+          type: string
+        paymentIntent:
+          type: string
+        publishableKey:
+          type: string
+      required:
+      - clientSecret
+      - paymentIntent
+      - paymentRequestId
+      - publishableKey
     PaymentRequested:
       type: object
       properties:
@@ -1943,6 +1962,50 @@ components:
           format: uuid
       required:
       - orderId
+    CheckoutSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        paymentRequestId:
+          type: string
+          format: uuid
+        transactionId:
+          type: string
+        amount:
+          type: string
+        currency:
+          type: string
+        orderId:
+          type: string
+        invoiceId:
+          type: string
+        merchantId:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+      required:
+      - amount
+      - currency
+      - merchantId
+      - orderId
+      - paymentRequestId
+      - status
+      - transactionId
+    CheckoutFailureResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+        code:
+          type: string
+      required:
+      - message
+      - status
     CreateOrderItemRequest:
       type: object
       properties:

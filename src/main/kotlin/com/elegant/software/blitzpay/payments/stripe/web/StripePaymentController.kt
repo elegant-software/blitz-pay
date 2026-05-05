@@ -6,6 +6,9 @@ import com.elegant.software.blitzpay.order.api.OrderGateway
 import com.elegant.software.blitzpay.payments.push.api.PaymentStatusInitializationGateway
 import com.stripe.exception.StripeException
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.responses.ApiResponse
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -44,6 +47,7 @@ class StripePaymentController(
     private val log = LoggerFactory.getLogger(StripePaymentController::class.java)
 
     @Operation(summary = "Create a Stripe PaymentIntent and return credentials to the mobile SDK.")
+    @ApiResponse(responseCode = "200", content = [Content(schema = Schema(implementation = CreateIntentResponse::class))])
     @PostMapping("/create-intent")
     fun createIntent(@RequestBody request: CreateIntentRequest): Mono<ResponseEntity<Any>> {
         val merchantId = request.merchantId
