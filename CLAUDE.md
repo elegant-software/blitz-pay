@@ -34,9 +34,13 @@ TRUELAYER_KEY_ID
 TRUELAYER_MERCHANT_ACCOUNT_ID
 TRUELAYER_PRIVATE_KEY_PATH   # path to PEM private key
 EXPO_ACCESS_TOKEN            # Expo Push access token (payments.push module)
+KEYCLOAK_IAM_SERVER_URL      # Keycloak server base URL (merchant.iam module)
+KEYCLOAK_IAM_REALM           # Keycloak realm for merchant/branch groups
+KEYCLOAK_IAM_ADMIN_CLIENT_ID # service account client ID with realm-management roles
+KEYCLOAK_IAM_ADMIN_CLIENT_SECRET # service account client secret
 ```
 
-Contract tests do **not** require these — TrueLayer beans are mocked under the `contract-test` Spring profile.
+Contract tests do **not** require these — TrueLayer and Keycloak beans are mocked under the `contract-test` Spring profile.
 
 ## Architecture
 
@@ -86,6 +90,10 @@ Semantic commits: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`. Summaries: sh
 - Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux (reactive), Spring Modulith, Hibernate/JPA, Spring AI (MCP `@McpTool`) (feat/merchant-mcp)
 - PostgreSQL 16 (`blitzpay` schema), `ddl-auto: none`, Liquibase for all schema changes (feat/merchant-mcp)
 - Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith, Hibernate/JPA, Liquibase (main)
+- Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux (WebClient), Spring Modulith 2.1.0-M3 (014-keycloak-merchant-groups)
+- No new tables; existing `event_publication` Modulith table for durability (014-keycloak-merchant-groups)
+- Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith 2.1.0-M3, Spring Framework 7 HTTP Interfaces (`@HttpExchange`, `@ImportHttpServices`) (014-keycloak-merchant-groups)
+- No new tables; existing `event_publication` Modulith table for at-least-once delivery (014-keycloak-merchant-groups)
 
 ## Recent Changes
 - 006-push-notifications: Added Kotlin 2.3.20 on Java 25 (unchanged) + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith, Hibernate/JPA on PostgreSQL 16, TrueLayer Java SDK (unchanged). New: Reactor `WebClient` against the Expo Push HTTPS API (`https://exp.host/--/api/v2/push/send`) — no additional SDK; a thin in-repo client keeps the dependency surface minimal.

@@ -1,22 +1,29 @@
 package com.elegant.software.blitzpay.merchant.application
 
+import com.elegant.software.blitzpay.merchant.api.BranchCreated
+import com.elegant.software.blitzpay.merchant.api.BranchNameUpdated
 import com.elegant.software.blitzpay.merchant.api.BranchResponse
 import com.elegant.software.blitzpay.merchant.api.CreateBranchRequest
 import com.elegant.software.blitzpay.merchant.api.UpdateBranchRequest
 import com.elegant.software.blitzpay.merchant.domain.MerchantBranch
+import com.elegant.software.blitzpay.merchant.domain.MerchantEntityStatus
 import com.elegant.software.blitzpay.merchant.domain.MerchantLocation
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
 import com.elegant.software.blitzpay.storage.StorageService
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
 
 @Service
+@Transactional
 class MerchantBranchService(
     private val merchantBranchRepository: MerchantBranchRepository,
     private val merchantApplicationRepository: MerchantApplicationRepository,
     private val storageService: StorageService,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
 
     fun create(merchantId: UUID, request: CreateBranchRequest, active: Boolean = true): BranchResponse {
@@ -25,11 +32,12 @@ class MerchantBranchService(
             "latitude and longitude must both be provided or both be omitted"
         }
         request.geofenceRadiusMeters?.let { require(it > 0) { "geofenceRadiusMeters must be positive" } }
-        requireMerchantExists(merchantId)
+        val merchant = requireMerchant(merchantId)
         val branch = MerchantBranch(
             merchantApplicationId = merchantId,
             name = request.name,
             active = active,
+            status = if (active) MerchantEntityStatus.ACTIVE else MerchantEntityStatus.INACTIVE,
             addressLine1 = request.addressLine1,
             addressLine2 = request.addressLine2,
             city = request.city,
@@ -41,7 +49,11 @@ class MerchantBranchService(
             activePaymentChannels = request.activePaymentChannels.toMutableSet(),
             location = request.toLocation(),
         )
-        return merchantBranchRepository.save(branch).toResponse()
+        val saved = merchantBranchRepository.save(branch)
+        if (active) {
+            eventPublisher.publishEvent(BranchCreated(saved.id, merchantId, saved.name, merchant.businessProfile.legalBusinessName))
+        }
+        return saved.toResponse()
     }
 
     fun list(merchantId: UUID): List<BranchResponse> {
@@ -143,7 +155,7 @@ class MerchantBranchService(
             googlePlaceId = googlePlaceId
         )
         existing.active = false
-        existing.status = "INACTIVE"
+        existing.status = MerchantEntityStatus.INACTIVE
         return merchantBranchRepository.save(existing).toResponse()
     }
 
@@ -153,7 +165,7 @@ class MerchantBranchService(
             "latitude and longitude must both be provided or both be omitted"
         }
         request.geofenceRadiusMeters?.let { require(it > 0) { "geofenceRadiusMeters must be positive" } }
-        requireMerchantExists(merchantId)
+        val merchant = requireMerchant(merchantId)
 
         val branch = merchantBranchRepository.findById(branchId)
             .orElseThrow { NoSuchElementException("Branch not found: $branchId") }
@@ -161,6 +173,8 @@ class MerchantBranchService(
             throw NoSuchElementException("Branch not found: $branchId")
         }
 
+        val previousName = branch.name
+        val wasInactive = !branch.active
         branch.updateDetails(
             name = request.name,
             active = request.active,
@@ -176,7 +190,13 @@ class MerchantBranchService(
             location = request.toLocation(),
         )
 
-        return merchantBranchRepository.save(branch).toResponse()
+        val saved = merchantBranchRepository.saveAndFlush(branch)
+        if (wasInactive && saved.active) {
+            eventPublisher.publishEvent(BranchCreated(saved.id, merchantId, saved.name, merchant.businessProfile.legalBusinessName))
+        } else if (saved.name != previousName) {
+            eventPublisher.publishEvent(BranchNameUpdated(saved.id, merchantId, saved.name))
+        }
+        return saved.toResponse()
     }
 
     fun updateImage(merchantId: UUID, branchId: UUID, storageKey: String): BranchResponse {
@@ -191,16 +211,9 @@ class MerchantBranchService(
         return merchantBranchRepository.save(branch).toResponse()
     }
 
-    fun delete(merchantId: UUID, branchId: UUID) {
-        requireMerchantExists(merchantId)
-        val branch = merchantBranchRepository.findById(branchId)
-            .orElseThrow { NoSuchElementException("Branch not found: $branchId") }
-        if (branch.merchantApplicationId != merchantId) {
-            throw NoSuchElementException("Branch not found: $branchId")
-        }
-        branch.deactivate()
-        merchantBranchRepository.save(branch)
-    }
+    private fun requireMerchant(merchantId: UUID) =
+        merchantApplicationRepository.findById(merchantId)
+            .orElseThrow { NoSuchElementException("Merchant not found: $merchantId") }
 
     private fun requireMerchantExists(merchantId: UUID) {
         if (!merchantApplicationRepository.existsById(merchantId)) {

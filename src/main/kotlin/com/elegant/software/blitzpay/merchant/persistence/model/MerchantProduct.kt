@@ -42,7 +42,7 @@ class MerchantProduct(
     var active: Boolean = true,
 
     @Column(nullable = false, length = 32)
-    var status: String = "INACTIVE",
+    var status: String = MerchantEntityStatus.INACTIVE,
 
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant = Instant.now(),
@@ -84,7 +84,7 @@ class MerchantProduct(
         this.productCategoryId = productCategoryId
         this.productCode = productCode
         this.active = true
-        this.status = "ACTIVE"
+        this.status = MerchantEntityStatus.ACTIVE
         this.updatedAt = at
     }
 }

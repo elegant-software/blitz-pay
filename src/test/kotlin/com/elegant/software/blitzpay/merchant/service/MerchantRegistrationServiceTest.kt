@@ -1,5 +1,6 @@
 package com.elegant.software.blitzpay.merchant.application
 
+import com.elegant.software.blitzpay.merchant.api.MerchantActivated
 import com.elegant.software.blitzpay.merchant.api.MerchantBusinessProfileRequest
 import com.elegant.software.blitzpay.merchant.api.MerchantPrimaryContactRequest
 import com.elegant.software.blitzpay.merchant.api.RegisterMerchantRequest
@@ -11,8 +12,10 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.springframework.context.ApplicationEventPublisher
 import java.util.Optional
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -24,7 +27,8 @@ class MerchantRegistrationServiceTest {
     private val repository = mock<MerchantApplicationRepository>()
     private val auditTrail = mock<MerchantAuditTrail>()
     private val observabilitySupport = mock<MerchantObservabilitySupport>()
-    private val service = MerchantRegistrationService(repository, auditTrail, observabilitySupport)
+    private val eventPublisher = mock<ApplicationEventPublisher>()
+    private val service = MerchantRegistrationService(repository, auditTrail, observabilitySupport, eventPublisher)
 
     private val validRequest = RegisterMerchantRequest(
         businessProfile = MerchantBusinessProfileRequest(
@@ -90,6 +94,30 @@ class MerchantRegistrationServiceTest {
         verify(auditTrail).record(captor.capture())
         assertEquals("register_direct", captor.firstValue.action)
         assertEquals(MerchantOnboardingStatus.ACTIVE, captor.firstValue.status)
+    }
+
+    @Test
+    fun `register publishes MerchantActivated event`() {
+        whenever(repository.existsByBusinessProfileRegistrationNumberAndStatusIn(any(), any()))
+            .thenReturn(false)
+        whenever(repository.save(any<com.elegant.software.blitzpay.merchant.domain.MerchantApplication>())).thenAnswer { it.arguments[0] }
+
+        service.register(validRequest)
+
+        val captor = argumentCaptor<MerchantActivated>()
+        verify(eventPublisher).publishEvent(captor.capture())
+        assertEquals("Acme GmbH", captor.firstValue.merchantName)
+    }
+
+    @Test
+    fun `registerDraft does not publish MerchantActivated event`() {
+        whenever(repository.existsByBusinessProfileRegistrationNumberAndStatusIn(any(), any()))
+            .thenReturn(false)
+        whenever(repository.save(any<com.elegant.software.blitzpay.merchant.domain.MerchantApplication>())).thenAnswer { it.arguments[0] }
+
+        service.registerDraft(validRequest)
+
+        verify(eventPublisher, never()).publishEvent(any<MerchantActivated>())
     }
 
     @Test

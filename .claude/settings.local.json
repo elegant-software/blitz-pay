@@ -55,7 +55,24 @@
       "Bash(./gradlew clean *)",
       "Bash(bash *)",
       "Bash(SPECIFY_FEATURE_DIRECTORY=specs/012-product-categories bash *)",
-      "Bash(SPECIFY_FEATURE=012-product-categories bash *)"
+      "Bash(SPECIFY_FEATURE=012-product-categories bash *)",
+      "WebSearch",
+      "WebFetch(domain:spring.io)",
+      "WebFetch(domain:www.danvega.dev)",
+      "WebFetch(domain:howtodoinjava.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(SPECIFY_FEATURE=014-keycloak-merchant-groups bash *)",
+      "Bash(mkdir -p /Users/mehdi/MyProject/blitz-pay/src/main/kotlin/com/elegant/software/blitzpay/merchant/iam/internal)",
+      "Bash(mkdir -p /Users/mehdi/MyProject/blitz-pay/src/test/kotlin/com/elegant/software/blitzpay/merchant/iam/internal)",
+      "Read(//private/tmp/**)",
+      "Bash(jar xf *)",
+      "Bash(./gradlew contractTest --tests \"*.MerchantIamContractTest\")",
+      "Bash(./gradlew contractTest --info)",
+      "Bash(./gradlew contractTest --tests \"*.MerchantIamContractTest\" --info)",
+      "Bash(./gradlew :compileKotlin --quiet)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git *)"
     ]
   },
   "hooks": {

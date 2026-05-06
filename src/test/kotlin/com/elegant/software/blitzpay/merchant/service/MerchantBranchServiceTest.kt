@@ -1,9 +1,14 @@
 package com.elegant.software.blitzpay.merchant.application
 
+import com.elegant.software.blitzpay.merchant.api.BranchCreated
+import com.elegant.software.blitzpay.merchant.api.BranchNameUpdated
 import com.elegant.software.blitzpay.merchant.api.CreateBranchRequest
 import com.elegant.software.blitzpay.merchant.api.UpdateBranchRequest
+import com.elegant.software.blitzpay.merchant.domain.BusinessProfile
+import com.elegant.software.blitzpay.merchant.domain.MerchantApplication
 import com.elegant.software.blitzpay.merchant.domain.MerchantBranch
 import com.elegant.software.blitzpay.merchant.domain.MerchantPaymentChannel
+import com.elegant.software.blitzpay.merchant.domain.PrimaryContact
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
 import com.elegant.software.blitzpay.storage.StorageService
@@ -11,8 +16,10 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.springframework.context.ApplicationEventPublisher
 import java.util.Optional
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -22,16 +29,33 @@ class MerchantBranchServiceTest {
     private val branchRepository = mock<MerchantBranchRepository>()
     private val merchantRepository = mock<MerchantApplicationRepository>()
     private val storageService = mock<StorageService>()
-    private val service = MerchantBranchService(branchRepository, merchantRepository, storageService)
+    private val eventPublisher = mock<ApplicationEventPublisher>()
+    private val service = MerchantBranchService(branchRepository, merchantRepository, storageService, eventPublisher)
+
+    private fun merchantApplication(name: String = "Test Merchant GmbH") = MerchantApplication(
+        applicationReference = "BLTZ-TEST",
+        businessProfile = BusinessProfile(
+            legalBusinessName = name,
+            businessType = "LLC",
+            registrationNumber = "DE-TEST",
+            operatingCountry = "DE",
+            primaryBusinessAddress = "Test Street 1"
+        ),
+        primaryContact = PrimaryContact(
+            fullName = "Test Contact",
+            email = "test@example.com",
+            phoneNumber = "+49000000000"
+        )
+    )
 
     @Test
     fun `create branch stores operational address and geolocation`() {
-        val merchantId = UUID.randomUUID()
-        whenever(merchantRepository.existsById(merchantId)).thenReturn(true)
+        val merchant = merchantApplication()
+        whenever(merchantRepository.findById(merchant.id)).thenReturn(Optional.of(merchant))
         whenever(branchRepository.save(any<MerchantBranch>())).thenAnswer { it.arguments[0] }
 
         val response = service.create(
-            merchantId,
+            merchant.id,
             CreateBranchRequest(
                 name = "Bremen Mitte",
                 addressLine1 = "Marktplatz 1",
@@ -64,19 +88,35 @@ class MerchantBranchServiceTest {
     }
 
     @Test
+    fun `create branch publishes BranchCreated event for active branch`() {
+        val merchant = merchantApplication("Acme GmbH")
+        whenever(merchantRepository.findById(merchant.id)).thenReturn(Optional.of(merchant))
+        whenever(branchRepository.save(any<MerchantBranch>())).thenAnswer { it.arguments[0] }
+
+        service.create(merchant.id, CreateBranchRequest(name = "Main Branch"))
+
+        val captor = argumentCaptor<BranchCreated>()
+        verify(eventPublisher).publishEvent(captor.capture())
+        assertEquals(merchant.id, captor.firstValue.merchantId)
+        assertEquals("Main Branch", captor.firstValue.branchName)
+        assertEquals("Acme GmbH", captor.firstValue.merchantName)
+    }
+
+    @Test
     fun `create can persist inactive branch`() {
-        val merchantId = UUID.randomUUID()
-        whenever(merchantRepository.existsById(merchantId)).thenReturn(true)
+        val merchant = merchantApplication()
+        whenever(merchantRepository.findById(merchant.id)).thenReturn(Optional.of(merchant))
         whenever(branchRepository.save(any<MerchantBranch>())).thenAnswer { it.arguments[0] }
 
         val response = service.create(
-            merchantId,
+            merchant.id,
             CreateBranchRequest(name = "MCP Branch"),
             active = false
         )
 
         assertEquals(false, response.active)
         assertEquals("INACTIVE", response.status)
+        verify(eventPublisher, never()).publishEvent(any<BranchCreated>())
     }
 
     @Test
@@ -113,9 +153,9 @@ class MerchantBranchServiceTest {
             merchantApplicationId = merchantId,
             name = "Bremen Mitte"
         )
-        whenever(merchantRepository.existsById(merchantId)).thenReturn(true)
+        whenever(merchantRepository.findById(merchantId)).thenReturn(Optional.of(merchantApplication()))
         whenever(branchRepository.findById(branch.id)).thenReturn(Optional.of(branch))
-        whenever(branchRepository.save(any<MerchantBranch>())).thenAnswer { it.arguments[0] }
+        whenever(branchRepository.saveAndFlush(any<MerchantBranch>())).thenAnswer { it.arguments[0] }
 
         val response = service.update(
             merchantId,
@@ -142,10 +182,34 @@ class MerchantBranchServiceTest {
         assertEquals(setOf(MerchantPaymentChannel.PAYPAL, MerchantPaymentChannel.TRUELAYER), response.activePaymentChannels)
 
         val branchCaptor = argumentCaptor<MerchantBranch>()
-        verify(branchRepository).save(branchCaptor.capture())
+        verify(branchRepository).saveAndFlush(branchCaptor.capture())
         assertEquals(
             setOf(MerchantPaymentChannel.PAYPAL, MerchantPaymentChannel.TRUELAYER),
             branchCaptor.firstValue.activePaymentChannels.toSet()
         )
+
+        val eventCaptor = argumentCaptor<BranchNameUpdated>()
+        verify(eventPublisher).publishEvent(eventCaptor.capture())
+        assertEquals(branch.id, eventCaptor.firstValue.branchId)
+        assertEquals(merchantId, eventCaptor.firstValue.merchantId)
+        assertEquals("Bremen Nord", eventCaptor.firstValue.newName)
+    }
+
+    @Test
+    fun `update branch does not publish BranchNameUpdated when name unchanged`() {
+        val merchantId = UUID.randomUUID()
+        val branch = MerchantBranch(merchantApplicationId = merchantId, name = "Same Name")
+        whenever(merchantRepository.findById(merchantId)).thenReturn(Optional.of(merchantApplication()))
+        whenever(branchRepository.findById(branch.id)).thenReturn(Optional.of(branch))
+        whenever(branchRepository.saveAndFlush(any<MerchantBranch>())).thenAnswer { it.arguments[0] }
+
+        service.update(
+            merchantId, branch.id,
+            UpdateBranchRequest(name = "Same Name", active = true, contactFullName = "New Contact",
+                contactEmail = "new@example.com", contactPhoneNumber = "+49999",
+                activePaymentChannels = setOf(MerchantPaymentChannel.STRIPE))
+        )
+
+        verify(eventPublisher, never()).publishEvent(any<BranchNameUpdated>())
     }
 }

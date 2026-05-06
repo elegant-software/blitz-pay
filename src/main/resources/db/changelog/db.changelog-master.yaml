@@ -61,3 +61,5 @@ databaseChangeLog:
       file: db/changelog/20260505-001-restrict-merchant-branches-fk.sql
   - include:
       file: db/changelog/20260505-002-restrict-order-fks.sql
+  - include:
+      file: db/changelog/20260507-001-branch-product-status-column.sql

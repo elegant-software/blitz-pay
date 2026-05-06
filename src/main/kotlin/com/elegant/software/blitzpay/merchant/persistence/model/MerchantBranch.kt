@@ -40,7 +40,7 @@ class MerchantBranch(
     var active: Boolean = true,
 
     @Column(nullable = false, length = 32)
-    var status: String = "INACTIVE",
+    var status: String = MerchantEntityStatus.INACTIVE,
 
     @Column(name = "address_line1")
     var addressLine1: String? = null,
@@ -89,6 +89,7 @@ class MerchantBranch(
 ) {
     fun deactivate(at: Instant = Instant.now()) {
         active = false
+        status = MerchantEntityStatus.INACTIVE
         updatedAt = at
     }
 
@@ -109,6 +110,7 @@ class MerchantBranch(
     ) {
         this.name = name
         this.active = active
+        this.status = if (active) MerchantEntityStatus.ACTIVE else MerchantEntityStatus.INACTIVE
         this.addressLine1 = addressLine1
         this.addressLine2 = addressLine2
         this.city = city

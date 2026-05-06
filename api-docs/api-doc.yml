@@ -354,27 +354,6 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/BranchResponse"
-    delete:
-      tags:
-      - Merchant Branches
-      summary: Soft-delete a branch (sets active = false)
-      operationId: delete_1
-      parameters:
-      - name: merchantId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: branchId
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      responses:
-        "204":
-          description: No Content
   /{version}/merchants/{id}/logo:
     put:
       tags:

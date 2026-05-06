@@ -249,7 +249,21 @@ class MerchantContractTest : ContractVerifierBase() {
     fun `PUT branch updates branch details and contact`() {
         val merchantId = UUID.randomUUID()
         val branchId = UUID.randomUUID()
-        whenever(merchantApplicationRepository.existsById(merchantId)).thenReturn(true)
+        whenever(merchantApplicationRepository.findById(merchantId)).thenReturn(
+            Optional.of(
+                MerchantApplication(
+                    applicationReference = "BLTZ-BRANCH-TEST",
+                    businessProfile = BusinessProfile(
+                        legalBusinessName = "Test Merchant",
+                        businessType = "LLC",
+                        registrationNumber = "DE-BRANCH-TEST",
+                        operatingCountry = "DE",
+                        primaryBusinessAddress = "Teststrasse 1"
+                    ),
+                    primaryContact = PrimaryContact(fullName = "Branch User", email = "branch@test.de", phoneNumber = "+49301234567")
+                )
+            )
+        )
         whenever(merchantBranchRepository.findById(branchId)).thenReturn(
             Optional.of(
                 com.elegant.software.blitzpay.merchant.domain.MerchantBranch(
@@ -259,7 +273,7 @@ class MerchantContractTest : ContractVerifierBase() {
                 )
             )
         )
-        whenever(merchantBranchRepository.save(any<com.elegant.software.blitzpay.merchant.domain.MerchantBranch>()))
+        whenever(merchantBranchRepository.saveAndFlush(any<com.elegant.software.blitzpay.merchant.domain.MerchantBranch>()))
             .thenAnswer { it.arguments[0] }
 
         webTestClient.put()

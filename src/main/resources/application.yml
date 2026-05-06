@@ -170,3 +170,10 @@ blitzpay:
       api-key: ${OPENAI_API_KEY:}
       base-url: ${WHISPER_BASE_URL:http://localhost:8000/v1}
       model: ${WHISPER_MODEL:whisper-1}
+
+keycloak:
+  iam:
+    server-url: ${KEYCLOAK_IAM_SERVER_URL:https://keycloak.elegantsoftware.de}
+    realm: ${KEYCLOAK_IAM_REALM:blitzpay}
+    admin-client-id: ${KEYCLOAK_IAM_ADMIN_CLIENT_ID:}
+    admin-client-secret: ${KEYCLOAK_IAM_ADMIN_CLIENT_SECRET:}

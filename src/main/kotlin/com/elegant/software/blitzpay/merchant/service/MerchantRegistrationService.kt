@@ -1,5 +1,6 @@
 package com.elegant.software.blitzpay.merchant.application
 
+import com.elegant.software.blitzpay.merchant.api.MerchantActivated
 import com.elegant.software.blitzpay.merchant.api.RegisterMerchantRequest
 import com.elegant.software.blitzpay.merchant.domain.BusinessProfile
 import com.elegant.software.blitzpay.merchant.domain.MerchantApplication
@@ -8,6 +9,7 @@ import com.elegant.software.blitzpay.merchant.domain.PrimaryContact
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
 import com.elegant.software.blitzpay.merchant.support.MerchantObservabilitySupport
 import org.slf4j.LoggerFactory
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -18,7 +20,8 @@ import java.util.UUID
 class MerchantRegistrationService(
     private val merchantApplicationRepository: MerchantApplicationRepository,
     private val merchantAuditTrail: MerchantAuditTrail,
-    private val merchantObservabilitySupport: MerchantObservabilitySupport
+    private val merchantObservabilitySupport: MerchantObservabilitySupport,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
 
     private val log = LoggerFactory.getLogger(MerchantRegistrationService::class.java)
@@ -90,6 +93,9 @@ class MerchantRegistrationService(
         )
         merchantObservabilitySupport.recordSuccess(action, saved.status)
         log.info("Merchant registration saved: action={} ref={} status={}", action, saved.applicationReference, saved.status)
+        if (activateDirectly) {
+            eventPublisher.publishEvent(MerchantActivated(saved.id, saved.businessProfile.legalBusinessName))
+        }
         return saved
     }
 
