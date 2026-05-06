@@ -34,6 +34,7 @@ Both human contributors and AI agents. When in doubt about a convention, this fi
 - Contract tests (`src/contractTest/kotlin`): `WebTestClient`-based, run under the `contract-test` profile. External services (TrueLayer, database) are mocked — these tests validate HTTP contract shape, not business logic.
 - Module verification: maintain `ApplicationModules.of(...).verify()` tests. Use `@ApplicationModuleTest` for single-module integration tests.
 - **Tests must pass before committing.** Run `./gradlew check` (unit + contract tests) locally before pushing. Do not commit, merge, or push code with failing tests.
+- **Every functional change must be verified with a passing test suite before it is considered done.** This applies equally to AI-assisted changes: do not report a change as complete, hand off work, or move to the next task until `./gradlew check` exits green. A change that breaks an existing test is not done — it is broken.
 - Fixture files are checked into version control. Do not generate fixtures at test time; keep them static and reviewable.
 
 ## Persistence and Schema
@@ -88,6 +89,7 @@ For technology-specific patterns and detailed best practices, refer to:
 | Spring Data JPA (entities, repositories, transactions) | [`reference/spring-data-jpa-best-practices.md`](reference/spring-data-jpa-best-practices.md) |
 | Liquibase (schema migrations, changeset conventions, FK deletion strategy) | [`reference/liquibase-best-practices.md`](reference/liquibase-best-practices.md) |
 | FK deletion strategy (RESTRICT default, no CASCADE, explicit service deletion) | [`reference/liquibase-best-practices.md#10-foreign-key-deletion-strategy`](reference/liquibase-best-practices.md#10-foreign-key-deletion-strategy) |
+| HTTP Interface clients (`@HttpExchange` + `@ImportHttpServices`, token filters, contract-test guard) | [`reference/api-calls-best-practice.md`](reference/api-calls-best-practice.md) |
 | Docker (multi-stage builds, layer caching, `.dockerignore`) | [`reference/docker-best-practices.md`](reference/docker-best-practices.md) |
 | Kubernetes ingress troubleshooting (kind, nginx, TLS, NodePort) | [`reference/k8s-ingress-troubleshooting/`](reference/k8s-ingress-troubleshooting/) |
 | socat (install, run modes, debug `T` state, systemd, NodePort bridging) | [`reference/utils/socat-guide.md`](reference/utils/socat-guide.md) |

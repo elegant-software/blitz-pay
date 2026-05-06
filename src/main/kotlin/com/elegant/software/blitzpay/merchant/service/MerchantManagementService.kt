@@ -1,6 +1,7 @@
 package com.elegant.software.blitzpay.merchant.application
 
 import com.elegant.software.blitzpay.merchant.api.MerchantDetailsResponse
+import com.elegant.software.blitzpay.merchant.api.MerchantNameUpdated
 import com.elegant.software.blitzpay.merchant.api.UpdateMerchantRequest
 import com.elegant.software.blitzpay.merchant.domain.MerchantApplication
 import com.elegant.software.blitzpay.merchant.domain.PrimaryContact
@@ -9,6 +10,7 @@ import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepositor
 import com.elegant.software.blitzpay.merchant.repository.MonitoringRecordRepository
 import com.elegant.software.blitzpay.storage.StorageService
 import org.slf4j.LoggerFactory
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -18,7 +20,8 @@ class MerchantManagementService(
     private val repository: MerchantApplicationRepository,
     private val branchRepository: MerchantBranchRepository,
     private val monitoringRecordRepository: MonitoringRecordRepository,
-    private val storageService: StorageService
+    private val storageService: StorageService,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
     private val log = LoggerFactory.getLogger(MerchantManagementService::class.java)
 
@@ -37,6 +40,7 @@ class MerchantManagementService(
         val application = repository.findById(applicationId)
             .orElseThrow { NoSuchElementException("Merchant application not found: $applicationId") }
 
+        val previousName = application.businessProfile.legalBusinessName
         application.updateProfile(
             legalBusinessName = request.legalBusinessName,
             primaryBusinessAddress = request.primaryBusinessAddress,
@@ -49,7 +53,11 @@ class MerchantManagementService(
             nextStatus = request.status
         )
 
-        return repository.save(application).toDetailsResponse()
+        val saved = repository.save(application)
+        if (saved.businessProfile.legalBusinessName != previousName) {
+            eventPublisher.publishEvent(MerchantNameUpdated(applicationId, saved.businessProfile.legalBusinessName))
+        }
+        return saved.toDetailsResponse()
     }
 
     @Transactional

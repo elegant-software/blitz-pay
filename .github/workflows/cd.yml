@@ -22,6 +22,7 @@ jobs:
       packages: write
       id-token: write
       attestations: write
+      checks: write
     #needs: ci
     if: github.event_name == 'release'
     uses: elegant-software/elegant-ci-cd-pipeline/.github/workflows/backend-docker-build.yml@main

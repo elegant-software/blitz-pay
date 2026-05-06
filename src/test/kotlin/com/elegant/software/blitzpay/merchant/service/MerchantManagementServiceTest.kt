@@ -1,5 +1,6 @@
 package com.elegant.software.blitzpay.merchant.application
 
+import com.elegant.software.blitzpay.merchant.api.MerchantNameUpdated
 import com.elegant.software.blitzpay.merchant.api.UpdateMerchantRequest
 import com.elegant.software.blitzpay.merchant.domain.BusinessProfile
 import com.elegant.software.blitzpay.merchant.domain.MerchantApplication
@@ -13,10 +14,13 @@ import com.elegant.software.blitzpay.merchant.repository.MonitoringRecordReposit
 import com.elegant.software.blitzpay.storage.StorageService
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.springframework.context.ApplicationEventPublisher
 import java.util.Optional
 import java.util.UUID
 import kotlin.test.assertEquals
@@ -27,7 +31,8 @@ class MerchantManagementServiceTest {
     private val branchRepository = mock<MerchantBranchRepository>()
     private val monitoringRecordRepository = mock<MonitoringRecordRepository>()
     private val storageService = mock<StorageService>()
-    private val service = MerchantManagementService(repository, branchRepository, monitoringRecordRepository, storageService)
+    private val eventPublisher = mock<ApplicationEventPublisher>()
+    private val service = MerchantManagementService(repository, branchRepository, monitoringRecordRepository, storageService, eventPublisher)
 
     @Test
     fun `update merchant changes editable fields and status`() {
@@ -69,6 +74,79 @@ class MerchantManagementServiceTest {
         assertEquals("new@example.com", response.contactEmail)
         assertEquals(setOf(MerchantPaymentChannel.STRIPE, MerchantPaymentChannel.TRUELAYER), response.activePaymentChannels)
         assertEquals(MerchantOnboardingStatus.ACTIVE, response.status)
+    }
+
+    @Test
+    fun `update publishes MerchantNameUpdated when name changes`() {
+        val application = MerchantApplication(
+            applicationReference = "BLTZ-EVT",
+            businessProfile = BusinessProfile(
+                legalBusinessName = "Old Name GmbH",
+                businessType = "LLC",
+                registrationNumber = "DE-EVT",
+                operatingCountry = "DE",
+                primaryBusinessAddress = "Event Street 1"
+            ),
+            primaryContact = PrimaryContact(
+                fullName = "Contact",
+                email = "evt@example.com",
+                phoneNumber = "+490000"
+            )
+        )
+        whenever(repository.findById(application.id)).thenReturn(Optional.of(application))
+        whenever(repository.save(any<MerchantApplication>())).thenAnswer { it.getArgument<MerchantApplication>(0) }
+
+        service.update(
+            application.id,
+            UpdateMerchantRequest(
+                legalBusinessName = "New Name GmbH",
+                primaryBusinessAddress = "Event Street 1",
+                contactFullName = "Contact",
+                contactEmail = "evt@example.com",
+                contactPhoneNumber = "+490000",
+                activePaymentChannels = emptySet()
+            )
+        )
+
+        val captor = argumentCaptor<MerchantNameUpdated>()
+        verify(eventPublisher).publishEvent(captor.capture())
+        assertEquals(application.id, captor.firstValue.merchantId)
+        assertEquals("New Name GmbH", captor.firstValue.newName)
+    }
+
+    @Test
+    fun `update does not publish MerchantNameUpdated when name unchanged`() {
+        val application = MerchantApplication(
+            applicationReference = "BLTZ-SAME",
+            businessProfile = BusinessProfile(
+                legalBusinessName = "Same Name GmbH",
+                businessType = "LLC",
+                registrationNumber = "DE-SAME",
+                operatingCountry = "DE",
+                primaryBusinessAddress = "Same Street 1"
+            ),
+            primaryContact = PrimaryContact(
+                fullName = "Contact",
+                email = "same@example.com",
+                phoneNumber = "+490000"
+            )
+        )
+        whenever(repository.findById(application.id)).thenReturn(Optional.of(application))
+        whenever(repository.save(any<MerchantApplication>())).thenAnswer { it.getArgument<MerchantApplication>(0) }
+
+        service.update(
+            application.id,
+            UpdateMerchantRequest(
+                legalBusinessName = "Same Name GmbH",
+                primaryBusinessAddress = "Same Street 1",
+                contactFullName = "Contact",
+                contactEmail = "same@example.com",
+                contactPhoneNumber = "+490000",
+                activePaymentChannels = emptySet()
+            )
+        )
+
+        verify(eventPublisher, never()).publishEvent(any<MerchantNameUpdated>())
     }
 
     @Test

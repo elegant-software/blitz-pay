@@ -3,6 +3,7 @@ package com.elegant.software.blitzpay.merchant.application
 import com.elegant.software.blitzpay.merchant.api.CreateProductRequest
 import com.elegant.software.blitzpay.merchant.api.ProductResponse
 import com.elegant.software.blitzpay.merchant.api.UpdateProductRequest
+import com.elegant.software.blitzpay.merchant.domain.MerchantEntityStatus
 import com.elegant.software.blitzpay.merchant.domain.MerchantProduct
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
@@ -209,7 +210,7 @@ class MerchantProductService(
         val product = productRepository.findById(productId)
             .orElseThrow { NoSuchElementException("Product not found: $productId") }
         product.active = false
-        product.status = "INACTIVE"
+        product.status = MerchantEntityStatus.INACTIVE
         product.updatedAt = java.time.Instant.now()
         return productRepository.save(product).toResponse()
     }

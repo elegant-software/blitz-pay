@@ -8,14 +8,12 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
@@ -56,14 +54,6 @@ class MerchantBranchController(private val merchantBranchService: MerchantBranch
         @RequestBody request: UpdateBranchRequest,
     ): ResponseEntity<BranchResponse> =
         ResponseEntity.ok(merchantBranchService.update(merchantId, branchId, request))
-
-    @Operation(summary = "Soft-delete a branch (sets active = false)")
-    @DeleteMapping("/{branchId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    fun delete(
-        @PathVariable merchantId: UUID,
-        @PathVariable branchId: UUID,
-    ) = merchantBranchService.delete(merchantId, branchId)
 
     @Operation(summary = "Set branch image")
     @PutMapping("/{branchId}/image")
