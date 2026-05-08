@@ -134,6 +134,14 @@ class MerchantProductService(
         )?.toResponse()
     }
 
+    @Transactional(readOnly = true)
+    fun findByProductCode(merchantId: UUID, branchId: UUID, productCode: Long): ProductResponse? {
+        requireMerchantExists(merchantId)
+        return productRepository.findByMerchantBranchIdAndProductCode(branchId, productCode)
+            ?.takeIf { it.merchantApplicationId == merchantId }
+            ?.toResponse()
+    }
+
     fun update(merchantId: UUID, productId: UUID, request: UpdateProductRequest, image: ProductImageUpload? = null): ProductResponse {
         requireMerchantExists(merchantId)
         validateProductFields(request.name, request.description, request.unitPrice)
