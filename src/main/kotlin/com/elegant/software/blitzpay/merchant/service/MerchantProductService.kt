@@ -236,7 +236,7 @@ class MerchantProductService(
     }
 
     private fun validateBranch(merchantId: UUID, branchId: UUID) {
-        require(merchantBranchRepository.existsByMerchantApplicationIdAndIdAndActiveTrue(merchantId, branchId)) {
+        require(merchantBranchRepository.existsByMerchantApplicationIdAndId(merchantId, branchId)) {
             "Merchant branch not found or does not belong to merchant: $branchId"
         }
     }
