@@ -60,6 +60,7 @@ class MerchantProductServiceTest {
         whenever(nativeQuery.setParameter(any<String>(), any())).thenReturn(nativeQuery)
         whenever(nativeQuery.singleResult).thenReturn(merchantId.toString())
         whenever(merchantApplicationRepository.existsById(merchantId)).thenReturn(true)
+        whenever(merchantBranchRepository.existsByMerchantApplicationIdAndId(merchantId, branchId)).thenReturn(true)
         whenever(merchantBranchRepository.existsByMerchantApplicationIdAndIdAndActiveTrue(merchantId, branchId)).thenReturn(true)
         whenever(categoryRepository.existsByIdAndMerchantApplicationId(categoryId, merchantId)).thenReturn(true)
         whenever(storageService.presignDownload(any(), any())).thenAnswer { "https://signed.example/${it.arguments[0]}" }

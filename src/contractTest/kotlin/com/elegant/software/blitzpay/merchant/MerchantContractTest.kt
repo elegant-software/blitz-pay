@@ -337,6 +337,7 @@ class MerchantContractTest : ContractVerifierBase() {
         val branchId = UUID.randomUUID()
         val categoryId = UUID.randomUUID()
         whenever(merchantApplicationRepository.existsById(merchantId)).thenReturn(true)
+        whenever(merchantBranchRepository.existsByMerchantApplicationIdAndId(merchantId, branchId)).thenReturn(true)
         whenever(merchantBranchRepository.existsByMerchantApplicationIdAndIdAndActiveTrue(merchantId, branchId)).thenReturn(true)
         whenever(merchantProductCategoryRepository.existsByIdAndMerchantApplicationId(categoryId, merchantId)).thenReturn(true)
         whenever(merchantProductCategoryRepository.findByMerchantApplicationIdAndId(merchantId, categoryId)).thenReturn(

@@ -155,3 +155,13 @@ The practical standard for MCP documentation is:
 - repository-local human documentation for behavior, examples, and operational constraints
 
 In other words: use MCP schema for discovery and validation, and use repository docs the way REST projects use OpenAPI plus handbook-style guidance.
+
+## Merchant Module Tool Index
+
+The merchant MCP module currently includes documented bulk-import tools:
+
+- `products_bulk_create`
+- `categories_bulk_create`
+
+Their contract, validation rules, and example payloads live in
+`specs/015-mcp-bulk-operations/contracts/mcp-tools.md`.

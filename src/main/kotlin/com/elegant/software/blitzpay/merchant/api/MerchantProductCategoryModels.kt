@@ -13,3 +13,13 @@ data class ProductCategoryResponse(
     val createdAt: Instant,
     val updatedAt: Instant,
 )
+
+data class BulkCategoryInput(
+    val categoryName: String,
+)
+
+data class BulkCategoryCreateResult(
+    val created: List<ProductCategoryResponse>,
+    val skipped: List<BulkSkippedItem>,
+    val failed: List<BulkFailedItem>,
+)

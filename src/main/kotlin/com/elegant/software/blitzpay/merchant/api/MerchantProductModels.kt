@@ -47,3 +47,30 @@ data class OrderableMerchantProduct(
     val unitPrice: BigDecimal,
     val active: Boolean,
 )
+
+data class BulkProductInput(
+    val productName: String,
+    val unitPrice: String,
+    val description: String? = null,
+    val productCode: String? = null,
+    val categoryId: String? = null,
+    val categoryName: String? = null,
+)
+
+data class BulkSkippedItem(
+    val name: String,
+    val reason: String,
+    val existingId: String? = null,
+)
+
+data class BulkFailedItem(
+    val name: String,
+    val reason: String,
+)
+
+data class BulkProductUpsertResult(
+    val created: List<ProductResponse>,
+    val updated: List<ProductResponse>,
+    val skipped: List<BulkSkippedItem>,
+    val failed: List<BulkFailedItem>,
+)

@@ -1,6 +1,8 @@
 package com.elegant.software.blitzpay.merchant.mcp
 
 import com.elegant.software.blitzpay.merchant.api.BranchResponse
+import com.elegant.software.blitzpay.merchant.api.BulkCategoryInput
+import com.elegant.software.blitzpay.merchant.api.BulkProductInput
 import com.elegant.software.blitzpay.merchant.api.CreateBranchRequest
 import com.elegant.software.blitzpay.merchant.api.CreateProductCategoryRequest
 import com.elegant.software.blitzpay.merchant.api.CreateProductRequest
@@ -22,6 +24,7 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.isNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.math.BigDecimal
@@ -242,6 +245,41 @@ class MerchantProductToolsTest {
     }
 
     @Test
+    fun `getOrCreateProductId passes categoryId into create request`() {
+        val merchantId = UUID.randomUUID()
+        val branchId = UUID.randomUUID()
+        val categoryId = UUID.randomUUID()
+        whenever(merchantProductService.findByNameIncludingInactive(merchantId, branchId, "Latte")).thenReturn(null)
+        whenever(merchantProductService.create(eq(merchantId), any<CreateProductRequest>(), isNull(), eq(false))).thenReturn(
+            ProductResponse(
+                productId = UUID.randomUUID(),
+                branchId = branchId,
+                name = "Latte",
+                description = null,
+                unitPrice = BigDecimal("3.50"),
+                imageUrl = null,
+                active = false,
+                status = "INACTIVE",
+                categoryId = categoryId,
+                createdAt = Instant.now(),
+                updatedAt = Instant.now()
+            )
+        )
+
+        tools.getOrCreateProductId(
+            merchantId = merchantId.toString(),
+            branchId = branchId.toString(),
+            productName = "Latte",
+            unitPrice = "3.50",
+            categoryId = categoryId.toString()
+        )
+
+        val captor = argumentCaptor<CreateProductRequest>()
+        verify(merchantProductService).create(eq(merchantId), captor.capture(), isNull(), eq(false))
+        assertEquals(categoryId, captor.firstValue.categoryId)
+    }
+
+    @Test
     fun `getOrCreateProductId passes product code into create request`() {
         val merchantId = UUID.randomUUID()
         val branchId = UUID.randomUUID()
@@ -273,6 +311,261 @@ class MerchantProductToolsTest {
         val captor = argumentCaptor<CreateProductRequest>()
         verify(merchantProductService).create(eq(merchantId), captor.capture(), isNull(), eq(false))
         assertEquals(12L, captor.firstValue.productCode)
+    }
+
+    @Test
+    fun `bulkUpsertProducts creates all items when none exist`() {
+        val merchantId = UUID.randomUUID()
+        val branchId = UUID.randomUUID()
+        val products = listOf(
+            BulkProductInput(productName = "Latte", unitPrice = "3.50"),
+            BulkProductInput(productName = "Mocha", unitPrice = "4.20"),
+            BulkProductInput(productName = "Espresso", unitPrice = "2.80"),
+        )
+        products.forEach { input ->
+            whenever(merchantProductService.findByNameIncludingInactive(merchantId, branchId, input.productName)).thenReturn(null)
+        }
+        whenever(merchantProductService.create(eq(merchantId), any<CreateProductRequest>(), isNull(), eq(false)))
+            .thenAnswer { invocation ->
+                val request = invocation.getArgument<CreateProductRequest>(1)
+                productResponse(branchId = branchId, name = request.name, unitPrice = request.unitPrice)
+            }
+
+        val result = tools.bulkUpsertProducts(merchantId.toString(), branchId.toString(), products)
+
+        assertEquals(3, result.created.size)
+        assertEquals(emptyList<Any>(), result.skipped)
+        assertEquals(emptyList<Any>(), result.failed)
+    }
+
+    @Test
+    fun `bulkUpsertProducts updates products that already exist by name`() {
+        val merchantId = UUID.randomUUID()
+        val branchId = UUID.randomUUID()
+        val existingId = UUID.randomUUID()
+        val updatedResponse = productResponse(productId = existingId, branchId = branchId, name = "Latte", unitPrice = BigDecimal("3.99"))
+        whenever(merchantProductService.findByNameIncludingInactive(merchantId, branchId, "Latte"))
+            .thenReturn(productResponse(productId = existingId, branchId = branchId, name = "Latte", unitPrice = BigDecimal("3.50")))
+        whenever(merchantProductService.findByNameIncludingInactive(merchantId, branchId, "Mocha")).thenReturn(null)
+        whenever(merchantProductService.updateIncludingInactive(eq(merchantId), eq(existingId), any(), isNull()))
+            .thenReturn(updatedResponse)
+        whenever(merchantProductService.create(eq(merchantId), any<CreateProductRequest>(), isNull(), eq(false)))
+            .thenReturn(productResponse(branchId = branchId, name = "Mocha", unitPrice = BigDecimal("4.20")))
+
+        val result = tools.bulkUpsertProducts(
+            merchantId = merchantId.toString(),
+            branchId = branchId.toString(),
+            products = listOf(
+                BulkProductInput(productName = "Latte", unitPrice = "3.99"),
+                BulkProductInput(productName = "Mocha", unitPrice = "4.20"),
+            )
+        )
+
+        assertEquals(1, result.created.size)
+        assertEquals(1, result.updated.size)
+        assertEquals(existingId, result.updated.single().productId)
+        assertEquals(emptyList<Any>(), result.skipped)
+    }
+
+    @Test
+    fun `bulkUpsertProducts skips within-batch name duplicates`() {
+        val merchantId = UUID.randomUUID()
+        val branchId = UUID.randomUUID()
+        whenever(merchantProductService.findByNameIncludingInactive(merchantId, branchId, "Latte")).thenReturn(null)
+        whenever(merchantProductService.create(eq(merchantId), any<CreateProductRequest>(), isNull(), eq(false)))
+            .thenReturn(productResponse(branchId = branchId, name = "Latte", unitPrice = BigDecimal("3.50")))
+
+        val result = tools.bulkUpsertProducts(
+            merchantId = merchantId.toString(),
+            branchId = branchId.toString(),
+            products = listOf(
+                BulkProductInput(productName = "Latte", unitPrice = "3.50"),
+                BulkProductInput(productName = "latte", unitPrice = "3.75"),
+            )
+        )
+
+        assertEquals(1, result.created.size)
+        assertEquals(1, result.skipped.size)
+        assertEquals("duplicate within batch", result.skipped.single().reason)
+        verify(merchantProductService, times(1)).findByNameIncludingInactive(merchantId, branchId, "Latte")
+        verify(merchantProductService, times(1)).create(eq(merchantId), any<CreateProductRequest>(), isNull(), eq(false))
+    }
+
+    @Test
+    fun `bulkUpsertProducts rejects entire batch when size exceeds 200`() {
+        val merchantId = UUID.randomUUID()
+        val branchId = UUID.randomUUID()
+
+        kotlin.test.assertFailsWith<IllegalArgumentException> {
+            tools.bulkUpsertProducts(
+                merchantId = merchantId.toString(),
+                branchId = branchId.toString(),
+                products = (1..201).map { BulkProductInput(productName = "Product $it", unitPrice = "1.00") }
+            )
+        }
+
+        verify(merchantProductService, never()).findByNameIncludingInactive(any(), any(), any())
+        verify(merchantProductService, never()).create(any(), any<CreateProductRequest>(), any(), any())
+    }
+
+    @Test
+    fun `bulkUpsertProducts puts item in failed list when service throws`() {
+        val merchantId = UUID.randomUUID()
+        val branchId = UUID.randomUUID()
+        whenever(merchantProductService.findByNameIncludingInactive(merchantId, branchId, "Broken")).thenReturn(null)
+        whenever(merchantProductService.findByNameIncludingInactive(merchantId, branchId, "Latte")).thenReturn(null)
+        whenever(merchantProductService.create(eq(merchantId), any<CreateProductRequest>(), isNull(), eq(false)))
+            .thenAnswer { invocation ->
+                val request = invocation.getArgument<CreateProductRequest>(1)
+                if (request.name == "Broken") {
+                    throw IllegalArgumentException("unitPrice must be >= 0")
+                }
+                productResponse(branchId = branchId, name = request.name, unitPrice = request.unitPrice)
+            }
+
+        val result = tools.bulkUpsertProducts(
+            merchantId = merchantId.toString(),
+            branchId = branchId.toString(),
+            products = listOf(
+                BulkProductInput(productName = "Broken", unitPrice = "-1.00"),
+                BulkProductInput(productName = "Latte", unitPrice = "3.50"),
+            )
+        )
+
+        assertEquals(1, result.created.size)
+        assertEquals(1, result.failed.size)
+        assertEquals("Broken", result.failed.single().name)
+        assertEquals("unitPrice must be >= 0", result.failed.single().reason)
+    }
+
+    @Test
+    fun `bulkUpsertProducts passes categoryId through to create request`() {
+        val merchantId = UUID.randomUUID()
+        val branchId = UUID.randomUUID()
+        val categoryId = UUID.randomUUID()
+        whenever(merchantProductService.findByNameIncludingInactive(merchantId, branchId, "Latte")).thenReturn(null)
+        whenever(merchantProductService.create(eq(merchantId), any<CreateProductRequest>(), isNull(), eq(false)))
+            .thenReturn(
+                productResponse(
+                    branchId = branchId,
+                    name = "Latte",
+                    unitPrice = BigDecimal("3.50"),
+                    categoryId = categoryId
+                )
+            )
+
+        tools.bulkUpsertProducts(
+            merchantId = merchantId.toString(),
+            branchId = branchId.toString(),
+            products = listOf(BulkProductInput(productName = "Latte", unitPrice = "3.50", categoryId = categoryId.toString()))
+        )
+
+        val captor = argumentCaptor<CreateProductRequest>()
+        verify(merchantProductService).create(eq(merchantId), captor.capture(), isNull(), eq(false))
+        assertEquals(categoryId, captor.firstValue.categoryId)
+    }
+
+    @Test
+    fun `bulkCreateCategories creates all when none exist`() {
+        val merchantId = UUID.randomUUID()
+        val categories = listOf(
+            BulkCategoryInput("Starters"),
+            BulkCategoryInput("Mains"),
+            BulkCategoryInput("Desserts"),
+        )
+        categories.forEach { input ->
+            whenever(merchantProductCategoryService.findByName(merchantId, input.categoryName)).thenReturn(null)
+        }
+        whenever(merchantProductCategoryService.create(eq(merchantId), any<CreateProductCategoryRequest>()))
+            .thenAnswer { invocation ->
+                val request = invocation.getArgument<CreateProductCategoryRequest>(1)
+                categoryResponse(name = request.name)
+            }
+
+        val result = tools.bulkCreateCategories(merchantId.toString(), categories)
+
+        assertEquals(3, result.created.size)
+        assertEquals(emptyList<Any>(), result.skipped)
+        assertEquals(emptyList<Any>(), result.failed)
+    }
+
+    @Test
+    fun `bulkCreateCategories skips categories that already exist for merchant`() {
+        val merchantId = UUID.randomUUID()
+        val existingId = UUID.randomUUID()
+        whenever(merchantProductCategoryService.findByName(merchantId, "Starters"))
+            .thenReturn(categoryResponse(id = existingId, name = "Starters"))
+        whenever(merchantProductCategoryService.findByName(merchantId, "Mains")).thenReturn(null)
+        whenever(merchantProductCategoryService.create(eq(merchantId), any<CreateProductCategoryRequest>()))
+            .thenReturn(categoryResponse(name = "Mains"))
+
+        val result = tools.bulkCreateCategories(
+            merchantId = merchantId.toString(),
+            categories = listOf(BulkCategoryInput("Starters"), BulkCategoryInput("Mains"))
+        )
+
+        assertEquals(1, result.created.size)
+        assertEquals(1, result.skipped.size)
+        assertEquals("already exists", result.skipped.single().reason)
+        assertEquals(existingId.toString(), result.skipped.single().existingId)
+    }
+
+    @Test
+    fun `bulkCreateCategories skips within-batch duplicates case-insensitively`() {
+        val merchantId = UUID.randomUUID()
+        whenever(merchantProductCategoryService.findByName(merchantId, "Starters")).thenReturn(null)
+        whenever(merchantProductCategoryService.create(eq(merchantId), any<CreateProductCategoryRequest>()))
+            .thenReturn(categoryResponse(name = "Starters"))
+
+        val result = tools.bulkCreateCategories(
+            merchantId = merchantId.toString(),
+            categories = listOf(BulkCategoryInput("Starters"), BulkCategoryInput("starters"))
+        )
+
+        assertEquals(1, result.created.size)
+        assertEquals(1, result.skipped.size)
+        assertEquals("duplicate within batch", result.skipped.single().reason)
+        verify(merchantProductCategoryService, times(1)).findByName(merchantId, "Starters")
+    }
+
+    @Test
+    fun `bulkCreateCategories rejects entire batch when size exceeds 200`() {
+        val merchantId = UUID.randomUUID()
+
+        kotlin.test.assertFailsWith<IllegalArgumentException> {
+            tools.bulkCreateCategories(
+                merchantId = merchantId.toString(),
+                categories = (1..201).map { BulkCategoryInput("Category $it") }
+            )
+        }
+
+        verify(merchantProductCategoryService, never()).findByName(any(), any())
+        verify(merchantProductCategoryService, never()).create(any(), any<CreateProductCategoryRequest>())
+    }
+
+    @Test
+    fun `bulkCreateCategories puts item in failed list when service throws`() {
+        val merchantId = UUID.randomUUID()
+        whenever(merchantProductCategoryService.findByName(merchantId, "Broken")).thenReturn(null)
+        whenever(merchantProductCategoryService.findByName(merchantId, "Mains")).thenReturn(null)
+        whenever(merchantProductCategoryService.create(eq(merchantId), any<CreateProductCategoryRequest>()))
+            .thenAnswer { invocation ->
+                val request = invocation.getArgument<CreateProductCategoryRequest>(1)
+                if (request.name == "Broken") {
+                    throw IllegalArgumentException("Category name must not be blank")
+                }
+                categoryResponse(name = request.name)
+            }
+
+        val result = tools.bulkCreateCategories(
+            merchantId = merchantId.toString(),
+            categories = listOf(BulkCategoryInput("Broken"), BulkCategoryInput("Mains"))
+        )
+
+        assertEquals(1, result.created.size)
+        assertEquals(1, result.failed.size)
+        assertEquals("Broken", result.failed.single().name)
+        assertEquals("Category name must not be blank", result.failed.single().reason)
     }
 
     private fun captureBranchName(): String {
@@ -326,6 +619,40 @@ class MerchantProductToolsTest {
             placeEnrichedAt = null,
             imageUrl = null,
             status = "INACTIVE",
+            createdAt = Instant.now(),
+            updatedAt = Instant.now()
+        )
+
+    private fun productResponse(
+        productId: UUID = UUID.randomUUID(),
+        branchId: UUID,
+        name: String,
+        unitPrice: BigDecimal,
+        categoryId: UUID? = null,
+    ): ProductResponse =
+        ProductResponse(
+            productId = productId,
+            branchId = branchId,
+            name = name,
+            description = null,
+            unitPrice = unitPrice,
+            imageUrl = null,
+            active = false,
+            status = "INACTIVE",
+            categoryId = categoryId,
+            categoryName = null,
+            productCode = null,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now()
+        )
+
+    private fun categoryResponse(
+        id: UUID = UUID.randomUUID(),
+        name: String,
+    ): ProductCategoryResponse =
+        ProductCategoryResponse(
+            id = id,
+            name = name,
             createdAt = Instant.now(),
             updatedAt = Instant.now()
         )
