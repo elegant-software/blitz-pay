@@ -8,6 +8,7 @@ import com.elegant.software.blitzpay.merchant.api.UpdateBranchRequest
 import com.elegant.software.blitzpay.merchant.domain.MerchantBranch
 import com.elegant.software.blitzpay.merchant.domain.MerchantEntityStatus
 import com.elegant.software.blitzpay.merchant.domain.MerchantLocation
+import com.elegant.software.blitzpay.merchant.domain.MerchantPaymentChannel
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
 import com.elegant.software.blitzpay.storage.StorageService
@@ -91,6 +92,10 @@ class MerchantBranchService(
         city: String? = null,
         postalCode: String? = null,
         country: String? = null,
+        contactFullName: String? = null,
+        contactEmail: String? = null,
+        contactPhoneNumber: String? = null,
+        activePaymentChannels: Set<MerchantPaymentChannel>? = null,
         latitude: Double? = null,
         longitude: Double? = null,
         geofenceRadiusMeters: Int? = null,
@@ -119,6 +124,10 @@ class MerchantBranchService(
                     city = city,
                     postalCode = postalCode,
                     country = country,
+                    contactFullName = contactFullName,
+                    contactEmail = contactEmail,
+                    contactPhoneNumber = contactPhoneNumber,
+                    activePaymentChannels = activePaymentChannels ?: emptySet(),
                     latitude = latitude,
                     longitude = longitude,
                     geofenceRadiusMeters = geofenceRadiusMeters,
@@ -134,6 +143,10 @@ class MerchantBranchService(
                 city = city,
                 postalCode = postalCode,
                 country = country,
+                contactFullName = contactFullName,
+                contactEmail = contactEmail,
+                contactPhoneNumber = contactPhoneNumber,
+                activePaymentChannels = activePaymentChannels,
                 latitude = latitude,
                 longitude = longitude,
                 geofenceRadiusMeters = geofenceRadiusMeters,
@@ -149,6 +162,10 @@ class MerchantBranchService(
             city = city,
             postalCode = postalCode,
             country = country,
+            contactFullName = contactFullName,
+            contactEmail = contactEmail,
+            contactPhoneNumber = contactPhoneNumber,
+            activePaymentChannels = activePaymentChannels,
             latitude = latitude,
             longitude = longitude,
             geofenceRadiusMeters = geofenceRadiusMeters,
@@ -230,21 +247,19 @@ class MerchantBranchService(
         city: String?,
         postalCode: String?,
         country: String?,
+        contactFullName: String?,
+        contactEmail: String?,
+        contactPhoneNumber: String?,
+        activePaymentChannels: Set<MerchantPaymentChannel>?,
         latitude: Double?,
         longitude: Double?,
         geofenceRadiusMeters: Int?,
         googlePlaceId: String?
     ): Boolean {
         return listOf(
-            addressLine1,
-            addressLine2,
-            city,
-            postalCode,
-            country,
-            latitude,
-            longitude,
-            geofenceRadiusMeters,
-            googlePlaceId
+            addressLine1, addressLine2, city, postalCode, country,
+            contactFullName, contactEmail, contactPhoneNumber, activePaymentChannels,
+            latitude, longitude, geofenceRadiusMeters, googlePlaceId
         ).any { it != null }
     }
 
@@ -338,6 +353,10 @@ class MerchantBranchService(
         city: String?,
         postalCode: String?,
         country: String?,
+        contactFullName: String?,
+        contactEmail: String?,
+        contactPhoneNumber: String?,
+        activePaymentChannels: Set<MerchantPaymentChannel>?,
         latitude: Double?,
         longitude: Double?,
         geofenceRadiusMeters: Int?,
@@ -348,6 +367,10 @@ class MerchantBranchService(
         city?.let { this.city = it }
         postalCode?.let { this.postalCode = it }
         country?.let { this.country = it }
+        contactFullName?.let { this.contactFullName = it }
+        contactEmail?.let { this.contactEmail = it }
+        contactPhoneNumber?.let { this.contactPhoneNumber = it }
+        activePaymentChannels?.let { this.activePaymentChannels = it.toMutableSet() }
 
         val hasCoordinateUpdate = latitude != null && longitude != null
         if (!hasCoordinateUpdate && location == null && (geofenceRadiusMeters != null || googlePlaceId != null)) {
