@@ -67,3 +67,27 @@ data class BranchResponse(
     val createdAt: Instant,
     val updatedAt: Instant,
 )
+
+data class BulkBranchInput(
+    val branchName: String,
+    val addressLine1: String? = null,
+    val addressLine2: String? = null,
+    val city: String? = null,
+    val postalCode: String? = null,
+    val country: String? = null,
+    val contactFullName: String? = null,
+    val contactEmail: String? = null,
+    val contactPhoneNumber: String? = null,
+    val activePaymentChannels: List<String> = emptyList(),
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val geofenceRadiusMeters: Int? = null,
+    val googlePlaceId: String? = null,
+)
+
+data class BulkBranchUpsertResult(
+    val created: List<BranchResponse>,
+    val updated: List<BranchResponse>,
+    val skipped: List<BulkSkippedItem>,
+    val failed: List<BulkFailedItem>,
+)

@@ -9,6 +9,8 @@ import com.elegant.software.blitzpay.merchant.api.CreateProductRequest
 import com.elegant.software.blitzpay.merchant.api.ProductCategoryResponse
 import com.elegant.software.blitzpay.merchant.api.ProductResponse
 import com.elegant.software.blitzpay.merchant.application.MerchantBranchService
+import com.elegant.software.blitzpay.merchant.application.MerchantLogoService
+import com.elegant.software.blitzpay.merchant.application.MerchantManagementService
 import com.elegant.software.blitzpay.merchant.application.MerchantProductCategoryService
 import com.elegant.software.blitzpay.merchant.application.MerchantProductService
 import com.elegant.software.blitzpay.merchant.application.MerchantRegistrationService
@@ -16,6 +18,7 @@ import com.elegant.software.blitzpay.merchant.domain.BusinessProfile
 import com.elegant.software.blitzpay.merchant.domain.MerchantApplication
 import com.elegant.software.blitzpay.merchant.domain.MerchantOnboardingStatus
 import com.elegant.software.blitzpay.merchant.domain.PrimaryContact
+import com.elegant.software.blitzpay.storage.StorageService
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -36,42 +39,52 @@ class MerchantProductToolsTest {
     private val merchantProductService = mock<MerchantProductService>()
     private val merchantBranchService = mock<MerchantBranchService>()
     private val merchantRegistrationService = mock<MerchantRegistrationService>()
+    private val merchantManagementService = mock<MerchantManagementService>()
+    private val merchantLogoService = mock<MerchantLogoService>()
     private val merchantProductCategoryService = mock<MerchantProductCategoryService>()
+    private val storageService = mock<StorageService>()
 
     private val tools = MerchantProductTools(
         merchantProductService = merchantProductService,
         merchantBranchService = merchantBranchService,
         merchantRegistrationService = merchantRegistrationService,
-        merchantProductCategoryService = merchantProductCategoryService
+        merchantManagementService = merchantManagementService,
+        merchantLogoService = merchantLogoService,
+        merchantProductCategoryService = merchantProductCategoryService,
+        storageService = storageService,
     )
 
     @Test
-    fun `getOrCreateMerchantId returns existing merchant and does not register when found`() {
+    fun `upsertMerchant updates existing merchant and does not register when found`() {
         val merchantId = UUID.randomUUID()
+        val details = merchantDetailsResponse(merchantId, "Cafe Blue")
         whenever(merchantRegistrationService.findByName("Cafe Blue"))
             .thenReturn(merchant(merchantId, "Cafe Blue", "REG-001"))
+        whenever(merchantManagementService.get(merchantId)).thenReturn(details)
+        whenever(merchantManagementService.update(eq(merchantId), any())).thenReturn(details)
         whenever(merchantBranchService.findByNameIncludingInactive(merchantId, "Main Branch")).thenReturn(null)
         whenever(merchantBranchService.create(eq(merchantId), any<CreateBranchRequest>(), eq(false))).thenReturn(branchResponse(merchantId))
 
-        val result = tools.getOrCreateMerchantId(merchantName = "Cafe Blue")
+        val result = tools.upsertMerchant(merchantName = "Cafe Blue")
 
-        assertEquals(merchantId.toString(), result)
+        assertEquals(merchantId, result.applicationId)
         verify(merchantRegistrationService, never()).registerDraft(any())
+        verify(merchantManagementService).update(eq(merchantId), any())
         verify(merchantBranchService).create(eq(merchantId), any<CreateBranchRequest>(), eq(false))
     }
 
     @Test
-    fun `getOrCreateMerchantId creates merchant and default branch when merchant is missing`() {
-        whenever(merchantRegistrationService.findByName("Fresh Mart")).thenReturn(null)
-
+    fun `upsertMerchant creates merchant and default branch when merchant is missing`() {
         val merchantId = UUID.randomUUID()
+        whenever(merchantRegistrationService.findByName("Fresh Mart")).thenReturn(null)
         whenever(merchantRegistrationService.registerDraft(any())).thenReturn(merchant(merchantId, "Fresh Mart", "REG-NEW"))
         whenever(merchantBranchService.findByNameIncludingInactive(merchantId, "Main Branch")).thenReturn(null)
         whenever(merchantBranchService.create(eq(merchantId), any<CreateBranchRequest>(), eq(false))).thenReturn(branchResponse(merchantId))
+        whenever(merchantManagementService.get(merchantId)).thenReturn(merchantDetailsResponse(merchantId, "Fresh Mart"))
 
-        val result = tools.getOrCreateMerchantId(merchantName = "Fresh Mart")
+        val result = tools.upsertMerchant(merchantName = "Fresh Mart")
 
-        assertEquals(merchantId.toString(), result)
+        assertEquals(merchantId, result.applicationId)
         val registerCaptor = argumentCaptor<com.elegant.software.blitzpay.merchant.api.RegisterMerchantRequest>()
         verify(merchantRegistrationService).registerDraft(registerCaptor.capture())
         assertEquals("Fresh Mart", registerCaptor.firstValue.businessProfile.legalBusinessName)
@@ -573,6 +586,24 @@ class MerchantProductToolsTest {
         verify(merchantBranchService).create(any(), requestCaptor.capture(), eq(false))
         return requestCaptor.firstValue.name
     }
+
+    private fun merchantDetailsResponse(id: UUID, name: String): com.elegant.software.blitzpay.merchant.api.MerchantDetailsResponse =
+        com.elegant.software.blitzpay.merchant.api.MerchantDetailsResponse(
+            applicationId = id,
+            applicationReference = "BLTZ-TEST1234",
+            registrationNumber = "REG-001",
+            businessType = "RETAIL",
+            operatingCountry = "US",
+            legalBusinessName = name,
+            primaryBusinessAddress = "Street 1",
+            contactFullName = "Owner",
+            contactEmail = "owner@example.com",
+            contactPhoneNumber = "000",
+            activePaymentChannels = emptySet(),
+            status = MerchantOnboardingStatus.DRAFT,
+            submittedAt = null,
+            lastUpdatedAt = Instant.now(),
+        )
 
     private fun merchant(id: UUID, name: String, registrationNumber: String): MerchantApplication =
         MerchantApplication(
