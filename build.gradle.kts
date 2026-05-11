@@ -31,7 +31,7 @@ tasks.named<BootJar>("bootJar") {
 val mavenProxyUrl = providers.gradleProperty("mavenProxyUrl").orNull
 val skillsJarsRepositoryUrl = providers.gradleProperty("skillsJarsRepositoryUrl").orNull
 val sourceSets = the<org.gradle.api.tasks.SourceSetContainer>()
-val contractTestSourceSet = sourceSets.create("contractTest") {
+val contractTestSourceSet = sourceSets.maybeCreate("contractTest").apply {
     java.setSrcDirs(listOf("src/contractTest/kotlin"))
     resources.setSrcDirs(listOf("src/contractTest/resources"))
     compileClasspath += sourceSets["main"].output + configurations["testCompileClasspath"]
@@ -164,7 +164,7 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
-tasks.register<Test>("contractTest") {
+tasks.named<Test>("contractTest") {
     description = "Runs Boot 4-compatible contract tests."
     group = "verification"
     testClassesDirs = contractTestSourceSet.output.classesDirs
