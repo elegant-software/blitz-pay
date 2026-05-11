@@ -17,6 +17,7 @@ spring-dependency-management = { id = "io.spring.dependency-management", version
 # Security & quality plugins
 cyclonedx            = { id = "org.cyclonedx.bom", version.ref = "cyclonedx" }
 dependency-track     = { id = "com.liftric.dependency-track-companion-plugin", version.ref = "dependency-track" }
+spring-cloud-contract = { id = "org.springframework.cloud.contract", version.ref = "spring-cloud-contract" }
 
 # -----------------------------------------------------------------------------
 # [Versions] - Dependency Version Definitions
@@ -52,6 +53,9 @@ aws-sdk              = "2.31.78"
 
 # Optional runtime integrations
 dr-jskill            = "2026_02_19-a951a5e"
+
+# Contract stubs publishing
+spring-cloud-contract = "4.2.1"
 
 # Security scanning / SBOM + Dependency-Track upload
 cyclonedx            = "3.2.0"

@@ -10,6 +10,8 @@ plugins {
     alias(libs.plugins.kotlin.jpa)
     alias(libs.plugins.cyclonedx)
     alias(libs.plugins.dependency.track)
+    alias(libs.plugins.spring.cloud.contract)
+    `maven-publish`
 }
 
 group = "com.elegant.software.blitzpay"
@@ -187,4 +189,36 @@ dependencyTrackCompanion {
     projectName.set(project.name)
     projectVersion.set(project.version.toString())
     autoCreate.set(true)
+}
+
+contracts {
+    contractsDslDir.set(file("src/contractTest/resources/contracts"))
+}
+
+// We use handwritten WebTestClient contract tests; suppress SCC's generated test classes.
+afterEvaluate {
+    tasks.findByName("generateContractTests")?.enabled = false
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("stubs") {
+            artifact(tasks.named("verifierStubsJar"))
+            groupId = "com.elegant.software.blitzpay"
+            artifactId = "blitz-pay"
+            version = project.version.toString()
+        }
+    }
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/elegant-software/blitz-pay")
+            credentials {
+                username = providers.gradleProperty("githubActor").orNull
+                    ?: System.getenv("GITHUB_ACTOR")
+                password = providers.gradleProperty("githubToken").orNull
+                    ?: System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
 }

@@ -1,0 +1,42 @@
+name: Publish Contract Stubs
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'src/contractTest/resources/contracts/**'
+
+jobs:
+  publish-stubs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Generate and publish stubs JAR
+        run: ./gradlew verifierStubsJar publishStubsPublicationToGitHubPackagesRepository
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Dispatch monorepo contract tests
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.MONO_REPO_DISPATCH_TOKEN }}
+          repository: elegant-software/blitzpay-mono-repo
+          event-type: stubs-published
+          client-payload: '{"sha": "${{ github.sha }}", "version": "${{ github.ref_name }}"}'
