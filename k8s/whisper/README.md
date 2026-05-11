@@ -27,7 +27,8 @@ kubectl rollout status deployment/whisper -n blitzpay-staging
 
 ## Test
 
-**Step 1 — port-forward the service to localhost:**
+**Step 1 — po
+rt-forward the service to localhost:**
 ```bash
 kubectl port-forward svc/whisper 8000:8000 -n blitzpay-staging
 ```

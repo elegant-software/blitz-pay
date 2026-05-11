@@ -1,6 +1,7 @@
-package com.elegant.software.blitzpay.merchant.repository
+package com.elegant.software.blitzpay.merchant.persistence.repository
 
-import com.elegant.software.blitzpay.merchant.domain.MerchantProduct
+import com.elegant.software.blitzpay.merchant.persistence.model.MerchantProduct
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
@@ -28,6 +29,7 @@ interface MerchantProductRepository : JpaRepository<MerchantProduct, UUID> {
     fun updateStatus(@Param("id") id: UUID, @Param("status") status: String): Int
 
     fun findAllByActiveTrue(): List<MerchantProduct>
+    fun findAllByActiveTrueAndMerchantApplicationId(merchantApplicationId: UUID): List<MerchantProduct>
     fun findAllByMerchantBranchId(merchantBranchId: UUID): List<MerchantProduct>
     fun findAllByActiveTrueAndMerchantBranchId(merchantBranchId: UUID): List<MerchantProduct>
     fun findAllByMerchantBranchIdAndProductCategoryId(
@@ -43,6 +45,21 @@ interface MerchantProductRepository : JpaRepository<MerchantProduct, UUID> {
 
     @Query("select max(p.productCode) from MerchantProduct p where p.merchantBranchId = :merchantBranchId")
     fun findMaxProductCodeByMerchantBranchId(@Param("merchantBranchId") merchantBranchId: UUID): Long?
+
+    @Query(
+        """
+        select p
+        from MerchantProduct p
+        where p.active = true
+          and p.merchantBranchId is not null
+          and (
+            lower(p.name) like lower(concat('%', :term, '%'))
+            or lower(coalesce(p.description, '')) like lower(concat('%', :term, '%'))
+          )
+        order by p.updatedAt desc
+        """
+    )
+    fun searchActiveProductsByTerm(@Param("term") term: String, pageable: Pageable): List<MerchantProduct>
 
     fun countByProductCategoryIdAndActiveTrue(productCategoryId: UUID): Long
     fun findByIdAndActiveTrue(id: UUID): Optional<MerchantProduct>

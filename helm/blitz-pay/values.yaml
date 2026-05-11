@@ -90,6 +90,8 @@ config:
   truelayerWebhookJku: http://localhost:8080/.well-known/jwks.json
   whisperBaseUrl: http://whisper:8000/v1
   frontendOrigin: http://localhost:4200
+  ollamaBaseUrl: http://ollama:11434
+  ollamaModel: llama3.2
 
 # ---------------------------------------------------------------------------
 # Resource requests and limits

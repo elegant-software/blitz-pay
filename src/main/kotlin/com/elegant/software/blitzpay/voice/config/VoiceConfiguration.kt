@@ -3,6 +3,8 @@ package com.elegant.software.blitzpay.voice.config
 import io.netty.channel.ChannelOption
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.handler.timeout.WriteTimeoutHandler
+import org.springframework.ai.chat.client.ChatClient
+import org.springframework.ai.ollama.OllamaChatModel
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -15,6 +17,10 @@ import java.util.concurrent.TimeUnit
 @Configuration
 @EnableConfigurationProperties(VoiceProperties::class)
 class VoiceConfiguration {
+
+    @Bean
+    fun ollamaChatClient(ollamaChatModel: OllamaChatModel): ChatClient =
+        ChatClient.builder(ollamaChatModel).build()
 
     @Bean
     fun whisperWebClient(properties: VoiceProperties): WebClient {

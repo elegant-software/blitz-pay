@@ -7,8 +7,8 @@ import com.elegant.software.blitzpay.merchant.api.CreateProductRequest
 import com.elegant.software.blitzpay.merchant.api.ProductCategoryResponse
 import com.elegant.software.blitzpay.merchant.api.ProductResponse
 import com.elegant.software.blitzpay.merchant.application.MerchantBranchService
-import com.elegant.software.blitzpay.merchant.application.MerchantProductCategoryService
-import com.elegant.software.blitzpay.merchant.application.MerchantProductService
+import com.elegant.software.blitzpay.merchant.service.MerchantProductCategoryService
+import com.elegant.software.blitzpay.merchant.service.MerchantProductService
 import com.elegant.software.blitzpay.merchant.application.MerchantRegistrationService
 import com.elegant.software.blitzpay.merchant.domain.BusinessProfile
 import com.elegant.software.blitzpay.merchant.domain.MerchantApplication

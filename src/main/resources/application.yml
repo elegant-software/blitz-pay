@@ -38,6 +38,13 @@ spring:
         name: blitzpay-mcp
         version: 1.0.0
         protocol: STREAMABLE
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      chat:
+        model: ${OLLAMA_MODEL:llama3.2}
+        options:
+          temperature: 0.1
+          num-predict: 256
 
 server:
   tomcat:

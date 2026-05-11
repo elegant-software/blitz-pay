@@ -104,8 +104,14 @@ dependencies {
     // Purpose: Expose merchant product update as MCP
     // ----------------------------
     implementation("org.springframework.ai:spring-ai-starter-mcp-server")
-    implementation ("org.springframework.ai:spring-ai-starter-mcp-server-webflux")
+    implementation("org.springframework.ai:spring-ai-starter-mcp-server-webflux")
     implementation("org.springframework.ai:spring-ai-openai")
+
+    // ----------------------------
+    // Modulith: `voice`
+    // Purpose: Local AI reasoning via Ollama for product intent extraction
+    // ----------------------------
+    implementation("org.springframework.ai:spring-ai-starter-model-ollama")
     // ----------------------------
     // Runtime support (used across modules)
     // ----------------------------

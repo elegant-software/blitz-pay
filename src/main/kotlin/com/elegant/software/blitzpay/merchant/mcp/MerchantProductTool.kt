@@ -2,11 +2,11 @@ package com.elegant.software.blitzpay.merchant.mcp
 
 import com.elegant.software.blitzpay.merchant.api.*
 import com.elegant.software.blitzpay.merchant.application.MerchantBranchService
-import com.elegant.software.blitzpay.merchant.application.MerchantProductCategoryService
-import com.elegant.software.blitzpay.merchant.application.MerchantProductService
+import com.elegant.software.blitzpay.merchant.service.MerchantProductCategoryService
+import com.elegant.software.blitzpay.merchant.service.MerchantProductService
 import com.elegant.software.blitzpay.merchant.application.MerchantRegistrationService
-import com.elegant.software.blitzpay.merchant.application.ProductImagePolicy
-import com.elegant.software.blitzpay.merchant.application.ProductImageUpload
+import com.elegant.software.blitzpay.merchant.service.ProductImagePolicy
+import com.elegant.software.blitzpay.merchant.service.ProductImageUpload
 import com.elegant.software.blitzpay.merchant.api.RegisterMerchantRequest
 import com.elegant.software.blitzpay.merchant.api.MerchantBusinessProfileRequest
 import com.elegant.software.blitzpay.merchant.api.MerchantPrimaryContactRequest

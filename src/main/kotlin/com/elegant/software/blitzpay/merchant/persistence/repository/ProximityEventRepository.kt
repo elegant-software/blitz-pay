@@ -20,4 +20,6 @@ interface ProximityEventRepository : JpaRepository<ProximityEvent, UUID> {
         deviceId: String,
         since: Instant,
     ): Boolean
+
+    fun findTopByUserSubjectOrderByReceivedAtDesc(userSubject: String): ProximityEvent?
 }
