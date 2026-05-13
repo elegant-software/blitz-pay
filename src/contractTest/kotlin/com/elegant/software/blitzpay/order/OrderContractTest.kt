@@ -10,6 +10,7 @@ import com.elegant.software.blitzpay.order.api.QrCodeResponse
 import com.elegant.software.blitzpay.order.application.OrderService
 import com.elegant.software.blitzpay.order.domain.CreatorType
 import com.elegant.software.blitzpay.order.domain.OrderStatus
+import com.elegant.software.blitzpay.order.domain.OrderType
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
@@ -32,6 +33,7 @@ class OrderContractTest : ContractVerifierBase() {
                 orderId = "ORD-ABC123456789",
                 merchantId = merchantId,
                 branchId = branchId,
+                orderType = OrderType.PRE_ORDER,
                 status = OrderStatus.CREATED,
                 creatorType = CreatorType.SHOPPER,
                 createdById = "shopper-abc",
@@ -57,6 +59,10 @@ class OrderContractTest : ContractVerifierBase() {
             .bodyValue(
                 """
                 {
+                  "branchId": "33333333-3333-3333-3333-333333333333",
+                  "orderType": "PRE_ORDER",
+                  "usesDeferredPayment": false,
+                  "customerLocation": null,
                   "items": [
                     { "productId": "22222222-2222-2222-2222-222222222221", "quantity": 2 },
                     { "productId": "22222222-2222-2222-2222-222222222222", "quantity": 1 }
@@ -69,6 +75,8 @@ class OrderContractTest : ContractVerifierBase() {
             .expectStatus().isCreated
             .expectBody()
             .jsonPath("$.orderId").isEqualTo("ORD-ABC123456789")
+            .jsonPath("$.branchId").isEqualTo(branchId.toString())
+            .jsonPath("$.orderType").isEqualTo("PRE_ORDER")
             .jsonPath("$.status").isEqualTo("CREATED")
             .jsonPath("$.paymentRetryAllowed").isEqualTo(true)
             .jsonPath("$.paymentReference").doesNotExist()
@@ -82,6 +90,7 @@ class OrderContractTest : ContractVerifierBase() {
                 orderId = "ORD-MERCHANT00001",
                 merchantId = merchantId,
                 branchId = branchId,
+                orderType = OrderType.WALK_IN_ORDERING,
                 status = OrderStatus.CREATED,
                 creatorType = CreatorType.MERCHANT,
                 currency = "EUR",
@@ -109,6 +118,9 @@ class OrderContractTest : ContractVerifierBase() {
                 {
                   "merchantId": "11111111-1111-1111-1111-111111111111",
                   "branchId": "33333333-3333-3333-3333-333333333333",
+                  "orderType": "WALK_IN_ORDERING",
+                  "usesDeferredPayment": false,
+                  "customerLocation": null,
                   "items": [
                     { "productId": "22222222-2222-2222-2222-222222222221", "quantity": 1 }
                   ]
@@ -119,6 +131,7 @@ class OrderContractTest : ContractVerifierBase() {
             .expectStatus().isCreated
             .expectBody()
             .jsonPath("$.orderId").isEqualTo("ORD-MERCHANT00001")
+            .jsonPath("$.orderType").isEqualTo("WALK_IN_ORDERING")
             .jsonPath("$.status").isEqualTo("CREATED")
             .jsonPath("$.paymentRetryAllowed").isEqualTo(true)
             .jsonPath("$.qrCode.paymentUrl").isEqualTo("blitzpay://payment/qr?orderId=ORD-MERCHANT00001&amount=1250&currency=EUR")
@@ -131,6 +144,7 @@ class OrderContractTest : ContractVerifierBase() {
                 orderId = "ORD-ABC123456789",
                 merchantId = merchantId,
                 branchId = null,
+                orderType = OrderType.PRE_ORDER,
                 status = OrderStatus.PAID,
                 creatorType = CreatorType.SHOPPER,
                 createdById = "shopper-abc",
@@ -161,6 +175,7 @@ class OrderContractTest : ContractVerifierBase() {
                     orderId = "ORD-ABC123456789",
                     merchantId = merchantId,
                     branchId = branchId,
+                    orderType = OrderType.PRE_ORDER,
                     status = OrderStatus.PAID,
                     currency = "EUR",
                     totalAmountMinor = 2900,

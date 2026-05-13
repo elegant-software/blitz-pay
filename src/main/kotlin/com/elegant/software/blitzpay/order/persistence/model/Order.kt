@@ -25,6 +25,13 @@ class Order(
     val merchantBranchId: UUID? = null,
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "order_type", nullable = false, length = 32)
+    val orderType: OrderType = OrderType.PRE_ORDER,
+
+    @Column(name = "uses_deferred_payment", nullable = false)
+    val usesDeferredPayment: Boolean = false,
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     var status: OrderStatus = OrderStatus.CREATED,
 

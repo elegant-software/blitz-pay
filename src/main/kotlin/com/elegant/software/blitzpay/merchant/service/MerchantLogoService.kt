@@ -39,6 +39,8 @@ class MerchantLogoService(
         return MerchantSummary(
             applicationId = application.id,
             applicationReference = application.applicationReference,
+            merchantCode = application.merchantCode,
+            merchantName = application.merchantName.ifBlank { application.businessProfile.legalBusinessName },
             registrationNumber = application.businessProfile.registrationNumber,
             status = application.status,
             submittedAt = application.submittedAt,

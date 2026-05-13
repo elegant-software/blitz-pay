@@ -58,14 +58,10 @@ class MerchantContractTest : ContractVerifierBase() {
             .bodyValue(
                 """
                 {
-                  "legalBusinessName": "Acme GmbH",
+                  "merchantName": "Acme GmbH",
                   "businessType": "RETAIL",
                   "registrationNumber": "DE123456789",
-                  "operatingCountry": "DE",
-                  "primaryBusinessAddress": "Hauptstrasse 1, 10115 Berlin",
-                  "contactFullName": "Jane Doe",
-                  "contactEmail": "jane@acme.de",
-                  "contactPhoneNumber": "+4930123456"
+                  "operatingCountry": "DE"
                 }
                 """.trimIndent()
             )
@@ -73,10 +69,10 @@ class MerchantContractTest : ContractVerifierBase() {
             .expectStatus().isCreated
             .expectBody()
             .jsonPath("$.status").isEqualTo(MerchantOnboardingStatus.ACTIVE.name)
+            .jsonPath("$.merchantName").isEqualTo("Acme GmbH")
+            .jsonPath("$.merchantStatus").isEqualTo("ACTIVE")
             .jsonPath("$.applicationId").exists()
-            .jsonPath("$.applicationReference").value<String> { ref ->
-                require(ref.startsWith("BLTZ-")) { "Expected BLTZ- prefix, got $ref" }
-            }
+            .jsonPath("$.merchantCode").exists()
     }
 
     @Test
@@ -128,8 +124,8 @@ class MerchantContractTest : ContractVerifierBase() {
             .expectStatus().isOk
             .expectBody()
             .jsonPath("$.applicationId").isEqualTo(application.id.toString())
-            .jsonPath("$.legalBusinessName").isEqualTo("Test GmbH")
-            .jsonPath("$.contactEmail").isEqualTo("test@test.de")
+            .jsonPath("$.merchantName").isEqualTo("Test GmbH")
+            .jsonPath("$.contactInfo.email").isEqualTo("test@test.de")
             .jsonPath("$.logoUrl").isEqualTo("https://signed.example/merchants/logo/test.webp")
     }
 
@@ -169,11 +165,25 @@ class MerchantContractTest : ContractVerifierBase() {
             .bodyValue(
                 """
                 {
-                  "legalBusinessName": "After GmbH",
-                  "primaryBusinessAddress": "New Strasse 9",
-                  "contactFullName": "After User",
-                  "contactEmail": "after@test.de",
-                  "contactPhoneNumber": "+49309999999",
+                  "merchantName": "After GmbH",
+                  "merchantStatus": "INACTIVE",
+                  "contactInfo": {
+                    "website": "https://after.example.com",
+                    "email": "after@test.de",
+                    "phoneNumber": "+49309999999"
+                  },
+                  "address": {
+                    "addressLine1": "New Strasse 9",
+                    "city": "Berlin",
+                    "postalCode": "10115",
+                    "country": "DE"
+                  },
+                  "location": {
+                    "latitude": 52.52,
+                    "longitude": 13.405,
+                    "geofenceRadiusMeters": 150
+                  },
+                  "offerings": ["PRE_ORDER", "DEFERRED_PAYMENT"],
                   "activePaymentChannels": ["STRIPE", "TRUELAYER"],
                   "status": "ACTIVE"
                 }
@@ -182,9 +192,10 @@ class MerchantContractTest : ContractVerifierBase() {
             .exchange()
             .expectStatus().isOk
             .expectBody()
-            .jsonPath("$.legalBusinessName").isEqualTo("After GmbH")
-            .jsonPath("$.primaryBusinessAddress").isEqualTo("New Strasse 9")
-            .jsonPath("$.contactEmail").isEqualTo("after@test.de")
+            .jsonPath("$.merchantName").isEqualTo("After GmbH")
+            .jsonPath("$.merchantStatus").isEqualTo("INACTIVE")
+            .jsonPath("$.contactInfo.email").isEqualTo("after@test.de")
+            .jsonPath("$.address.addressLine1").isEqualTo("New Strasse 9")
             .jsonPath("$.activePaymentChannels.length()").isEqualTo(2)
             .jsonPath("$.status").isEqualTo(MerchantOnboardingStatus.ACTIVE.name)
     }
@@ -269,8 +280,18 @@ class MerchantContractTest : ContractVerifierBase() {
                 com.elegant.software.blitzpay.merchant.domain.MerchantBranch(
                     id = branchId,
                     merchantApplicationId = merchantId,
-                    name = "Old Branch"
-                )
+                    name = "Old Branch",
+                    addressLine1 = "Old Street 1",
+                    city = "Berlin",
+                    postalCode = "10115",
+                    country = "DE"
+                ).also {
+                    it.location = com.elegant.software.blitzpay.merchant.domain.MerchantLocation(
+                        latitude = 52.52,
+                        longitude = 13.405,
+                        geofenceRadiusMeters = 200
+                    )
+                }
             )
         )
         whenever(merchantBranchRepository.saveAndFlush(any<com.elegant.software.blitzpay.merchant.domain.MerchantBranch>()))
@@ -289,9 +310,13 @@ class MerchantContractTest : ContractVerifierBase() {
                   "postalCode": "10115",
                   "country": "DE",
                   "contactFullName": "Store Manager",
+                  "website": "https://branch.example.com",
                   "contactEmail": "branch@test.de",
                   "contactPhoneNumber": "+49305555555",
-                  "activePaymentChannels": ["PAYPAL", "TRUELAYER"]
+                  "activePaymentChannels": ["PAYPAL", "TRUELAYER"],
+                  "latitude": 52.52,
+                  "longitude": 13.405,
+                  "geofenceRadiusMeters": 200
                 }
                 """.trimIndent()
             )
@@ -300,6 +325,7 @@ class MerchantContractTest : ContractVerifierBase() {
             .expectBody()
             .jsonPath("$.name").isEqualTo("Updated Branch")
             .jsonPath("$.contactFullName").isEqualTo("Store Manager")
+            .jsonPath("$.website").isEqualTo("https://branch.example.com")
             .jsonPath("$.contactEmail").isEqualTo("branch@test.de")
             .jsonPath("$.activePaymentChannels.length()").isEqualTo(2)
     }

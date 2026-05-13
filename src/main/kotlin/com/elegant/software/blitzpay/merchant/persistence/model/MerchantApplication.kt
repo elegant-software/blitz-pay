@@ -27,6 +27,25 @@ class MerchantApplication(
     @Column(nullable = false, unique = true)
     val applicationReference: String,
 
+    @Column(name = "merchant_code", nullable = false, unique = true)
+    val merchantCode: String = "MRC-" + UUID.randomUUID().toString().replace("-", "").take(12).uppercase(),
+
+    @Column(name = "merchant_name", nullable = false)
+    var merchantName: String = "",
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "merchant_status", nullable = false, length = 32)
+    var merchantStatus: MerchantOperationalStatus = MerchantOperationalStatus.ACTIVE,
+
+    @Column(name = "website")
+    var website: String? = null,
+
+    @Column(name = "contact_email_public")
+    var publicEmail: String? = null,
+
+    @Column(name = "contact_phone_public")
+    var publicPhoneNumber: String? = null,
+
     @Embedded
     var businessProfile: BusinessProfile,
 
@@ -174,6 +193,9 @@ class MerchantApplication(
             legalBusinessName = legalBusinessName,
             primaryBusinessAddress = primaryBusinessAddress
         )
+        merchantName = legalBusinessName
+        publicEmail = primaryContact.email
+        publicPhoneNumber = primaryContact.phoneNumber
         this.primaryContact = primaryContact
         this.activePaymentChannels = activePaymentChannels.toMutableSet()
 

@@ -1,6 +1,7 @@
 package com.elegant.software.blitzpay.merchant.api
 
 import com.elegant.software.blitzpay.merchant.domain.MerchantOnboardingStatus
+import com.elegant.software.blitzpay.merchant.domain.MerchantOperationalStatus
 import com.elegant.software.blitzpay.merchant.domain.ReviewOutcome
 import org.springframework.modulith.NamedInterface
 import java.time.Instant
@@ -48,9 +49,13 @@ interface MerchantGateway {
 data class MerchantSummary(
     val applicationId: UUID,
     val applicationReference: String,
+    val merchantCode: String = "",
+    val merchantName: String = "",
+    val merchantStatus: MerchantOperationalStatus = MerchantOperationalStatus.ACTIVE,
     val registrationNumber: String,
     val status: MerchantOnboardingStatus,
     val submittedAt: Instant?,
     val lastUpdatedAt: Instant,
-    val logoStorageKey: String? = null
+    val logoStorageKey: String? = null,
+    val offerings: Set<String> = emptySet(),
 )

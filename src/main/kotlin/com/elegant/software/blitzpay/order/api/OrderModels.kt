@@ -4,22 +4,42 @@ import com.elegant.software.blitzpay.order.domain.CreatorType
 import com.elegant.software.blitzpay.order.domain.Order
 import com.elegant.software.blitzpay.order.domain.OrderItem
 import com.elegant.software.blitzpay.order.domain.OrderStatus
+import com.elegant.software.blitzpay.order.domain.OrderType
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import java.time.Instant
 import java.util.UUID
 
 enum class PaymentMethod { TRUELAYER, QRPAY, BRAINTREE, STRIPE }
 
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class OrderCustomerLocationRequest(
+    val latitude: Double,
+    val longitude: Double,
+    val accuracyMeters: Double,
+    val capturedAt: Instant,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class CreateOrderRequest(
+    val branchId: UUID? = null,
+    val orderType: OrderType = OrderType.PRE_ORDER,
+    val usesDeferredPayment: Boolean = false,
+    val customerLocation: OrderCustomerLocationRequest? = null,
     val items: List<CreateOrderItemRequest> = emptyList(),
     val paymentMethod: PaymentMethod = PaymentMethod.TRUELAYER,
 )
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class CreateMerchantOrderRequest(
     val merchantId: UUID,
     val branchId: UUID? = null,
+    val orderType: OrderType = OrderType.WALK_IN_ORDERING,
+    val usesDeferredPayment: Boolean = false,
+    val customerLocation: OrderCustomerLocationRequest? = null,
     val items: List<CreateOrderItemRequest> = emptyList(),
 )
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class CreateOrderItemRequest(
     val productId: UUID,
     val quantity: Int,
@@ -46,6 +66,8 @@ data class OrderResponse(
     val orderId: String,
     val merchantId: UUID,
     val branchId: UUID?,
+    val orderType: OrderType = OrderType.PRE_ORDER,
+    val usesDeferredPayment: Boolean = false,
     val status: OrderStatus,
     val creatorType: CreatorType,
     val createdById: String,
@@ -64,6 +86,8 @@ data class MerchantOrderResponse(
     val orderId: String,
     val merchantId: UUID,
     val branchId: UUID?,
+    val orderType: OrderType = OrderType.WALK_IN_ORDERING,
+    val usesDeferredPayment: Boolean = false,
     val status: OrderStatus,
     val creatorType: CreatorType,
     val currency: String,
@@ -78,6 +102,8 @@ data class OrderSummaryResponse(
     val orderId: String,
     val merchantId: UUID,
     val branchId: UUID?,
+    val orderType: OrderType = OrderType.PRE_ORDER,
+    val usesDeferredPayment: Boolean = false,
     val status: OrderStatus,
     val currency: String,
     val totalAmountMinor: Long,
@@ -100,6 +126,8 @@ internal fun Order.toResponse(items: List<OrderItem>, paymentReference: PaymentR
     orderId = orderId,
     merchantId = merchantApplicationId,
     branchId = merchantBranchId,
+    orderType = orderType,
+    usesDeferredPayment = usesDeferredPayment,
     status = status,
     creatorType = creatorType,
     createdById = createdById,
@@ -126,6 +154,8 @@ internal fun Order.toSummaryResponse() = OrderSummaryResponse(
     orderId = orderId,
     merchantId = merchantApplicationId,
     branchId = merchantBranchId,
+    orderType = orderType,
+    usesDeferredPayment = usesDeferredPayment,
     status = status,
     currency = currency,
     totalAmountMinor = totalAmountMinor,
@@ -137,6 +167,8 @@ internal fun Order.toMerchantResponse(items: List<OrderItem>, qrPaymentUrl: Stri
     orderId = orderId,
     merchantId = merchantApplicationId,
     branchId = merchantBranchId,
+    orderType = orderType,
+    usesDeferredPayment = usesDeferredPayment,
     status = status,
     creatorType = creatorType,
     currency = currency,

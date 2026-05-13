@@ -93,7 +93,19 @@ class MerchantBranchServiceTest {
         whenever(merchantRepository.findById(merchant.id)).thenReturn(Optional.of(merchant))
         whenever(branchRepository.save(any<MerchantBranch>())).thenAnswer { it.arguments[0] }
 
-        service.create(merchant.id, CreateBranchRequest(name = "Main Branch"))
+        service.create(
+            merchant.id,
+            CreateBranchRequest(
+                name = "Main Branch",
+                addressLine1 = "High Street 1",
+                city = "Berlin",
+                postalCode = "10115",
+                country = "DE",
+                latitude = 52.52,
+                longitude = 13.405,
+                geofenceRadiusMeters = 150
+            )
+        )
 
         val captor = argumentCaptor<BranchCreated>()
         verify(eventPublisher).publishEvent(captor.capture())
@@ -151,8 +163,18 @@ class MerchantBranchServiceTest {
         val merchantId = UUID.randomUUID()
         val branch = MerchantBranch(
             merchantApplicationId = merchantId,
-            name = "Bremen Mitte"
-        )
+            name = "Bremen Mitte",
+            addressLine1 = "Old Strasse 1",
+            city = "Bremen",
+            postalCode = "28195",
+            country = "DE"
+        ).also {
+            it.location = com.elegant.software.blitzpay.merchant.domain.MerchantLocation(
+                latitude = 53.0758,
+                longitude = 8.8072,
+                geofenceRadiusMeters = 250
+            )
+        }
         whenever(merchantRepository.findById(merchantId)).thenReturn(Optional.of(merchantApplication()))
         whenever(branchRepository.findById(branch.id)).thenReturn(Optional.of(branch))
         whenever(branchRepository.saveAndFlush(any<MerchantBranch>())).thenAnswer { it.arguments[0] }
@@ -168,15 +190,20 @@ class MerchantBranchServiceTest {
                 postalCode = "28195",
                 country = "DE",
                 contactFullName = "Branch Lead",
+                website = "https://branch.example.com",
                 contactEmail = "branch@example.com",
                 contactPhoneNumber = "+4930123456",
-                activePaymentChannels = setOf(MerchantPaymentChannel.PAYPAL, MerchantPaymentChannel.TRUELAYER)
+                activePaymentChannels = setOf(MerchantPaymentChannel.PAYPAL, MerchantPaymentChannel.TRUELAYER),
+                latitude = 53.0758,
+                longitude = 8.8072,
+                geofenceRadiusMeters = 250
             )
         )
 
         assertEquals("Bremen Nord", response.name)
         assertEquals(false, response.active)
         assertEquals("Branch Lead", response.contactFullName)
+        assertEquals("https://branch.example.com", response.website)
         assertEquals("branch@example.com", response.contactEmail)
         assertEquals("+4930123456", response.contactPhoneNumber)
         assertEquals(setOf(MerchantPaymentChannel.PAYPAL, MerchantPaymentChannel.TRUELAYER), response.activePaymentChannels)
@@ -198,7 +225,20 @@ class MerchantBranchServiceTest {
     @Test
     fun `update branch does not publish BranchNameUpdated when name unchanged`() {
         val merchantId = UUID.randomUUID()
-        val branch = MerchantBranch(merchantApplicationId = merchantId, name = "Same Name")
+        val branch = MerchantBranch(
+            merchantApplicationId = merchantId,
+            name = "Same Name",
+            addressLine1 = "Same Street 1",
+            city = "Hamburg",
+            postalCode = "20095",
+            country = "DE"
+        ).also {
+            it.location = com.elegant.software.blitzpay.merchant.domain.MerchantLocation(
+                latitude = 53.5511,
+                longitude = 9.9937,
+                geofenceRadiusMeters = 200
+            )
+        }
         whenever(merchantRepository.findById(merchantId)).thenReturn(Optional.of(merchantApplication()))
         whenever(branchRepository.findById(branch.id)).thenReturn(Optional.of(branch))
         whenever(branchRepository.saveAndFlush(any<MerchantBranch>())).thenAnswer { it.arguments[0] }
@@ -207,7 +247,14 @@ class MerchantBranchServiceTest {
             merchantId, branch.id,
             UpdateBranchRequest(name = "Same Name", active = true, contactFullName = "New Contact",
                 contactEmail = "new@example.com", contactPhoneNumber = "+49999",
-                activePaymentChannels = setOf(MerchantPaymentChannel.STRIPE))
+                activePaymentChannels = setOf(MerchantPaymentChannel.STRIPE),
+                addressLine1 = "Same Street 1",
+                city = "Hamburg",
+                postalCode = "20095",
+                country = "DE",
+                latitude = 53.5511,
+                longitude = 9.9937,
+                geofenceRadiusMeters = 200)
         )
 
         verify(eventPublisher, never()).publishEvent(any<BranchNameUpdated>())

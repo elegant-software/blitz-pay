@@ -33,6 +33,14 @@ class MerchantBranchService(
             "latitude and longitude must both be provided or both be omitted"
         }
         request.geofenceRadiusMeters?.let { require(it > 0) { "geofenceRadiusMeters must be positive" } }
+        if (active) {
+            require(request.addressLine1?.isNotBlank() == true) { "addressLine1 must not be blank for active branches" }
+            require(request.city?.isNotBlank() == true) { "city must not be blank for active branches" }
+            require(request.postalCode?.isNotBlank() == true) { "postalCode must not be blank for active branches" }
+            require(request.country?.isNotBlank() == true) { "country must not be blank for active branches" }
+            require(request.latitude != null && request.longitude != null) { "latitude and longitude are required for active branches" }
+            require(request.geofenceRadiusMeters != null) { "geofenceRadiusMeters is required for active branches" }
+        }
         val merchant = requireMerchant(merchantId)
         val branch = MerchantBranch(
             merchantApplicationId = merchantId,
@@ -45,6 +53,7 @@ class MerchantBranchService(
             postalCode = request.postalCode,
             country = request.country,
             contactFullName = request.contactFullName,
+            websiteOverride = request.website,
             contactEmail = request.contactEmail,
             contactPhoneNumber = request.contactPhoneNumber,
             activePaymentChannels = request.activePaymentChannels.toMutableSet(),
@@ -144,6 +153,7 @@ class MerchantBranchService(
                 postalCode = postalCode,
                 country = country,
                 contactFullName = contactFullName,
+                websiteOverride = null,
                 contactEmail = contactEmail,
                 contactPhoneNumber = contactPhoneNumber,
                 activePaymentChannels = activePaymentChannels,
@@ -201,11 +211,13 @@ class MerchantBranchService(
             postalCode = request.postalCode,
             country = request.country,
             contactFullName = request.contactFullName,
+            websiteOverride = request.website,
             contactEmail = request.contactEmail,
             contactPhoneNumber = request.contactPhoneNumber,
             activePaymentChannels = request.activePaymentChannels,
             location = request.toLocation(),
         )
+        validateActiveBranch(branch)
 
         val saved = merchantBranchRepository.saveAndFlush(branch)
         if (wasInactive && saved.active) {
@@ -248,6 +260,7 @@ class MerchantBranchService(
         postalCode: String?,
         country: String?,
         contactFullName: String?,
+        websiteOverride: String?,
         contactEmail: String?,
         contactPhoneNumber: String?,
         activePaymentChannels: Set<MerchantPaymentChannel>?,
@@ -266,6 +279,7 @@ class MerchantBranchService(
     private fun MerchantBranch.toResponse() = BranchResponse(
         id = id,
         merchantId = merchantApplicationId,
+        branchCode = branchCode,
         name = name,
         active = active,
         addressLine1 = addressLine1,
@@ -274,6 +288,7 @@ class MerchantBranchService(
         postalCode = postalCode,
         country = country,
         contactFullName = contactFullName,
+        website = websiteOverride,
         contactEmail = contactEmail,
         contactPhoneNumber = contactPhoneNumber,
         activePaymentChannels = activePaymentChannels.toSet(),
@@ -409,6 +424,16 @@ class MerchantBranchService(
         }
         updatedAt = Instant.now()
         return this
+    }
+
+    private fun validateActiveBranch(branch: MerchantBranch) {
+        if (!branch.active) return
+        require(branch.addressLine1?.isNotBlank() == true) { "addressLine1 must not be blank for active branches" }
+        require(branch.city?.isNotBlank() == true) { "city must not be blank for active branches" }
+        require(branch.postalCode?.isNotBlank() == true) { "postalCode must not be blank for active branches" }
+        require(branch.country?.isNotBlank() == true) { "country must not be blank for active branches" }
+        val location = requireNotNull(branch.location) { "location is required for active branches" }
+        require(location.geofenceRadiusMeters > 0) { "geofenceRadiusMeters must be positive for active branches" }
     }
 
     private fun enrichmentStatusFor(googlePlaceId: String?, currentLocation: MerchantLocation?): String? {

@@ -11,6 +11,9 @@ import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepo
 import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantProductCategoryRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantProductRepository
+import com.elegant.software.blitzpay.merchant.repository.MerchantOfferingAssignmentRepository
+import com.elegant.software.blitzpay.merchant.repository.MerchantOfferingRepository
+import com.elegant.software.blitzpay.merchant.domain.MerchantOffering
 import com.elegant.software.blitzpay.merchant.repository.MerchantVerticalRepository
 import com.elegant.software.blitzpay.merchant.repository.MonitoringRecordRepository
 import com.elegant.software.blitzpay.merchant.repository.ProximityEventRepository
@@ -89,6 +92,12 @@ abstract class ContractVerifierBase {
     protected lateinit var merchantProductRepository: MerchantProductRepository
 
     @MockitoBean
+    protected lateinit var merchantOfferingRepository: MerchantOfferingRepository
+
+    @MockitoBean
+    protected lateinit var merchantOfferingAssignmentRepository: MerchantOfferingAssignmentRepository
+
+    @MockitoBean
     protected lateinit var merchantProductCategoryRepository: MerchantProductCategoryRepository
 
     @MockitoBean
@@ -130,6 +139,15 @@ abstract class ContractVerifierBase {
     @BeforeEach
     fun setupRestAssured() {
         whenever(merchantVerticalRepository.existsByCodeAndActiveTrue(any())).thenReturn(true)
+        whenever(merchantOfferingRepository.findAllByActiveTrueOrderByDisplayNameAsc()).thenReturn(
+            listOf(
+                MerchantOffering("PRE_ORDER", "Pre-Order"),
+                MerchantOffering("WALK_IN_ORDERING", "Walk-In Ordering"),
+                MerchantOffering("DEFERRED_PAYMENT", "Deferred Payment"),
+                MerchantOffering("APPOINTMENT_BOOKING", "Appointment Booking"),
+            )
+        )
+        whenever(merchantOfferingAssignmentRepository.findAllByMerchantApplicationId(any())).thenReturn(emptyList())
         doNothing().whenever(paymentStatusInitializationGateway).initialize(any(), any(), any(), any(), any())
         doNothing().whenever(paymentStatusUpdateGateway).settle(any(), any(), any())
         doNothing().whenever(paymentStatusUpdateGateway).fail(any(), any(), any())
