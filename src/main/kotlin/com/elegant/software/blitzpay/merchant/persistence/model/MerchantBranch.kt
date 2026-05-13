@@ -29,6 +29,9 @@ class MerchantBranch(
     @Column(name = "merchant_application_id", nullable = false, updatable = false)
     val merchantApplicationId: UUID,
 
+    @Column(name = "branch_code", nullable = false)
+    val branchCode: String = "BR-" + UUID.randomUUID().toString().replace("-", "").take(12).uppercase(),
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "merchant_application_id", insertable = false, updatable = false)
     val merchantApplication: MerchantApplication? = null,
@@ -66,6 +69,9 @@ class MerchantBranch(
     @Column(name = "contact_phone_number")
     var contactPhoneNumber: String? = null,
 
+    @Column(name = "website_override")
+    var websiteOverride: String? = null,
+
     @Column(name = "image_storage_key")
     var imageStorageKey: String? = null,
 
@@ -102,6 +108,7 @@ class MerchantBranch(
         postalCode: String?,
         country: String?,
         contactFullName: String?,
+        websiteOverride: String?,
         contactEmail: String?,
         contactPhoneNumber: String?,
         activePaymentChannels: Set<MerchantPaymentChannel>,
@@ -117,6 +124,7 @@ class MerchantBranch(
         this.postalCode = postalCode
         this.country = country
         this.contactFullName = contactFullName
+        this.websiteOverride = websiteOverride
         this.contactEmail = contactEmail
         this.contactPhoneNumber = contactPhoneNumber
         this.activePaymentChannels = activePaymentChannels.toMutableSet()

@@ -94,6 +94,13 @@ For technology-specific patterns and detailed best practices, refer to:
 | Kubernetes ingress troubleshooting (kind, nginx, TLS, NodePort) | [`reference/k8s-ingress-troubleshooting/`](reference/k8s-ingress-troubleshooting/) |
 | socat (install, run modes, debug `T` state, systemd, NodePort bridging) | [`reference/utils/socat-guide.md`](reference/utils/socat-guide.md) |
 
+## Domain Language
+
+- Use the operational merchant vocabulary defined in `CONTEXT.md`. Prefer `Merchant`, `Branch`, `MerchantCode`, `BranchCode`, `MerchantStatus`, and `BranchStatus` over legacy onboarding terms such as `MerchantApplication`, `applicationReference`, or onboarding workflow states.
+- Merchant status uses a simplified two-value model (`ACTIVE` / `INACTIVE`). Onboarding workflow statuses (`DRAFT`, `SUBMITTED`, etc.) coexist for backwards compatibility but must not leak into operational merchant contracts or new feature code.
+- Every `Branch` is the mandatory anchor for `Order` records. `branchId` is required on all new order creation requests. `orderType` (`PRE_ORDER` / `WALK_IN_ORDERING`) and `usesDeferredPayment` are explicit fields on every order.
+- Merchant-wide offerings (`PRE_ORDER`, `WALK_IN_ORDERING`, `DEFERRED_PAYMENT`, `APPOINTMENT_BOOKING`) are a platform-managed catalogue. `DEFERRED_PAYMENT` requires at least one ordering offering to also be enabled.
+
 ## Documentation
 
 - Update `README.md`, `CONTRIBUTING.md`, and relevant `reference/` docs when module boundaries, environment variables, API contracts, or architecture rules change.

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.assertThrows
 import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class MerchantApplicationTest {
 
@@ -67,6 +68,59 @@ class MerchantApplicationTest {
         assertEquals(MerchantOnboardingStatus.MONITORING, application.status)
         assertNotNull(application.monitoringRecord)
         assertEquals(MonitoringStatus.ACTIVE, application.monitoringRecord?.status)
+    }
+
+    @Test
+    fun `updateProfile keeps merchant name and public contact aligned with operational fields`() {
+        val application = merchantApplication()
+
+        application.updateProfile(
+            legalBusinessName = "Operational Merchant",
+            primaryBusinessAddress = "Neue Strasse 3, Berlin",
+            primaryContact = PrimaryContact(
+                fullName = "Owner Name",
+                email = "owner@example.com",
+                phoneNumber = "+491234567"
+            )
+        )
+
+        assertEquals("Operational Merchant", application.merchantName)
+        assertEquals("owner@example.com", application.publicEmail)
+        assertEquals("+491234567", application.publicPhoneNumber)
+        assertTrue(application.merchantCode.startsWith("MRC-"))
+    }
+
+    @Test
+    fun `merchantStatus defaults to ACTIVE and is independent from onboarding status`() {
+        val application = merchantApplication(status = MerchantOnboardingStatus.DRAFT)
+
+        assertEquals(MerchantOperationalStatus.ACTIVE, application.merchantStatus)
+        assertEquals(MerchantOnboardingStatus.DRAFT, application.status)
+    }
+
+    @Test
+    fun `merchantStatus can be changed independently of onboarding status`() {
+        val application = merchantApplication(status = MerchantOnboardingStatus.ACTIVE)
+
+        application.merchantStatus = MerchantOperationalStatus.INACTIVE
+
+        assertEquals(MerchantOperationalStatus.INACTIVE, application.merchantStatus)
+        assertEquals(MerchantOnboardingStatus.ACTIVE, application.status)
+    }
+
+    @Test
+    fun `merchantCode is stable and starts with MRC-`() {
+        val application = merchantApplication()
+        val originalCode = application.merchantCode
+
+        application.updateProfile(
+            legalBusinessName = "Updated Name",
+            primaryBusinessAddress = "New Address",
+            primaryContact = PrimaryContact("Name", "e@example.com", "+49000")
+        )
+
+        assertTrue(application.merchantCode.startsWith("MRC-"))
+        assertEquals(originalCode, application.merchantCode)
     }
 
     private fun merchantApplication(

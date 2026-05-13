@@ -174,6 +174,8 @@ class MerchantOnboardingService(
     private fun MerchantApplication.toSummary() = MerchantSummary(
         applicationId = id,
         applicationReference = applicationReference,
+        merchantCode = merchantCode,
+        merchantName = merchantName.ifBlank { businessProfile.legalBusinessName },
         registrationNumber = businessProfile.registrationNumber,
         status = status,
         submittedAt = submittedAt,

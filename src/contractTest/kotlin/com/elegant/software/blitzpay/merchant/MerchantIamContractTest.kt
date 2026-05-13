@@ -49,14 +49,10 @@ class MerchantIamContractTest : ContractVerifierBase() {
             .bodyValue(
                 """
                 {
-                  "legalBusinessName": "IAM Test GmbH",
+                  "merchantName": "IAM Test GmbH",
                   "businessType": "RETAIL",
                   "registrationNumber": "DE-IAM-001",
-                  "operatingCountry": "DE",
-                  "primaryBusinessAddress": "IAM Strasse 1, Berlin",
-                  "contactFullName": "IAM Contact",
-                  "contactEmail": "iam@test.de",
-                  "contactPhoneNumber": "+49301234567"
+                  "operatingCountry": "DE"
                 }
                 """.trimIndent()
             )
@@ -97,7 +93,21 @@ class MerchantIamContractTest : ContractVerifierBase() {
         webTestClient.post()
             .uri("/v1/merchants/$merchantId/branches")
             .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue("""{"name": "IAM Branch", "activePaymentChannels": []}""")
+            .bodyValue(
+                """
+                {
+                  "name": "IAM Branch",
+                  "addressLine1": "IAM Branch Street 1",
+                  "city": "Berlin",
+                  "postalCode": "10115",
+                  "country": "DE",
+                  "latitude": 52.52,
+                  "longitude": 13.405,
+                  "geofenceRadiusMeters": 150,
+                  "activePaymentChannels": []
+                }
+                """.trimIndent()
+            )
             .exchange()
             .expectStatus().isCreated
             .expectBody()

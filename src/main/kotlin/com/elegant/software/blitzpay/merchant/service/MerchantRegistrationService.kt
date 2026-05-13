@@ -64,6 +64,9 @@ class MerchantRegistrationService(
 
         val application = MerchantApplication(
             applicationReference = applicationReference,
+            merchantName = request.businessProfile.legalBusinessName,
+            publicEmail = request.primaryContact.email,
+            publicPhoneNumber = request.primaryContact.phoneNumber,
             businessProfile = BusinessProfile(
                 legalBusinessName = request.businessProfile.legalBusinessName,
                 businessType = request.businessProfile.businessType,

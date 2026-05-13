@@ -1,0 +1,10 @@
+{
+  "merchantCode": "MRC-202600000001",
+  "merchantName": "Acme Merchant",
+  "merchantStatus": "ACTIVE",
+  "website": "https://acme.example.com",
+  "publicEmail": "hello@acme.example.com",
+  "publicPhoneNumber": "+49123456789",
+  "branchCode": "BR-202600000001",
+  "branchWebsite": "https://acme.example.com/mitte"
+}

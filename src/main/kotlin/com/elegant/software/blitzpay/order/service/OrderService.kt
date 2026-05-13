@@ -2,8 +2,15 @@ package com.elegant.software.blitzpay.order.application
 
 import com.elegant.software.blitzpay.config.LogContext
 import com.elegant.software.blitzpay.merchant.api.MerchantGateway
+import com.elegant.software.blitzpay.merchant.domain.MerchantOperationalStatus
+import com.elegant.software.blitzpay.merchant.domain.MerchantBranch
+import com.elegant.software.blitzpay.merchant.domain.MerchantLocation
+import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
+import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
+import com.elegant.software.blitzpay.merchant.repository.MerchantOfferingAssignmentRepository
 import com.elegant.software.blitzpay.order.api.CreateMerchantOrderRequest
 import com.elegant.software.blitzpay.order.api.CreateOrderRequest
+import com.elegant.software.blitzpay.order.api.OrderCustomerLocationRequest
 import com.elegant.software.blitzpay.order.api.MerchantOrderResponse
 import com.elegant.software.blitzpay.order.api.OrderResponse
 import com.elegant.software.blitzpay.order.api.OrderSummaryResponse
@@ -25,12 +32,18 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
+import kotlin.math.acos
+import kotlin.math.cos
+import kotlin.math.sin
 import java.util.UUID
 
 @Service
 @Transactional
 class OrderService(
     private val merchantGateway: MerchantGateway,
+    private val merchantApplicationRepository: MerchantApplicationRepository,
+    private val merchantBranchRepository: MerchantBranchRepository,
+    private val merchantOfferingAssignmentRepository: MerchantOfferingAssignmentRepository,
     private val orderRepository: OrderRepository,
     private val orderItemRepository: OrderItemRepository,
     private val paymentAttemptRepository: PaymentAttemptRepository,
@@ -38,17 +51,24 @@ class OrderService(
     private val log = LoggerFactory.getLogger(OrderService::class.java)
 
     fun createShopperOrder(request: CreateOrderRequest, shopperId: String): OrderResponse {
+        requireNotNull(request.branchId) { "branchId is required" }
         require(request.items.isNotEmpty()) { "Order must contain at least one item" }
         request.items.forEach { require(it.quantity > 0) { "quantity must be > 0 for product ${it.productId}" } }
 
         val products = merchantGateway.findOrderableProducts(request.items.map { it.productId }.distinct())
         val productsById = products.associateBy { it.productId }
         validateProducts(request, productsById)
+        val merchantId = products.map { it.merchantApplicationId }.distinct().single()
+        val branch = requireActiveBranch(merchantId, request.branchId)
+        validateOfferingRules(merchantId, request.orderType, request.usesDeferredPayment)
+        validateWalkInLocationIfNeeded(branch, request.orderType, request.customerLocation)
 
         val order = Order(
             orderId = Order.nextOrderId(),
-            merchantApplicationId = products.map { it.merchantApplicationId }.distinct().single(),
-            merchantBranchId = products.mapNotNull { it.branchId }.distinct().singleOrNull(),
+            merchantApplicationId = merchantId,
+            merchantBranchId = request.branchId,
+            orderType = request.orderType,
+            usesDeferredPayment = request.usesDeferredPayment,
             creatorType = CreatorType.SHOPPER,
             createdById = shopperId,
             currency = DEFAULT_CURRENCY,
@@ -70,17 +90,22 @@ class OrderService(
     }
 
     fun createMerchantOrder(request: CreateMerchantOrderRequest, merchantUserId: String): MerchantOrderResponse {
+        requireNotNull(request.branchId) { "branchId is required" }
         require(request.items.isNotEmpty()) { "Order must contain at least one item" }
         request.items.forEach { require(it.quantity > 0) { "quantity must be > 0 for product ${it.productId}" } }
 
         val products = merchantGateway.findOrderableProducts(request.items.map { it.productId }.distinct())
         val productsById = products.associateBy { it.productId }
         validateProductsForMerchant(request, productsById)
+        requireActiveBranch(request.merchantId, request.branchId)
+        validateOfferingRules(request.merchantId, request.orderType, request.usesDeferredPayment)
 
         val order = Order(
             orderId = Order.nextOrderId(),
             merchantApplicationId = request.merchantId,
             merchantBranchId = request.branchId,
+            orderType = request.orderType,
+            usesDeferredPayment = request.usesDeferredPayment,
             creatorType = CreatorType.MERCHANT,
             createdById = merchantUserId,
             currency = DEFAULT_CURRENCY,
@@ -150,6 +175,11 @@ class OrderService(
 
         val merchantIds = productsById.values.map { it.merchantApplicationId }.distinct()
         if (merchantIds.size != 1) throw OrderCreationConflictException("All ordered products must belong to the same merchant")
+        val branchIds = productsById.values.mapNotNull { it.branchId }.distinct()
+        if (branchIds.size != 1) throw OrderCreationConflictException("All ordered products must belong to the same branch")
+        if (branchIds.single() != request.branchId) {
+            throw OrderCreationConflictException("Ordered products do not belong to branch ${request.branchId}")
+        }
     }
 
     private fun validateProductsForMerchant(
@@ -165,6 +195,77 @@ class OrderService(
 
         val wrongMerchant = productsById.values.filter { it.merchantApplicationId != request.merchantId }.map { it.productId }
         if (wrongMerchant.isNotEmpty()) throw OrderCreationConflictException("Products do not belong to merchant: ${wrongMerchant.joinToString(",")}")
+        val wrongBranch = productsById.values.filter { it.branchId != request.branchId }.map { it.productId }
+        if (wrongBranch.isNotEmpty()) throw OrderCreationConflictException("Products do not belong to branch: ${wrongBranch.joinToString(",")}")
+    }
+
+    private fun requireActiveBranch(merchantId: UUID, branchId: UUID): MerchantBranch {
+        val merchant = merchantApplicationRepository.findById(merchantId)
+            .orElseThrow { NoSuchElementException("Merchant not found: $merchantId") }
+        if (merchant.merchantStatus != MerchantOperationalStatus.ACTIVE) {
+            throw OrderCreationConflictException("Merchant is inactive: $merchantId")
+        }
+        val branch = merchantBranchRepository.findById(branchId)
+            .orElseThrow { NoSuchElementException("Branch not found: $branchId") }
+        if (branch.merchantApplicationId != merchantId) {
+            throw OrderCreationConflictException("Branch does not belong to merchant: $branchId")
+        }
+        if (!branch.active) {
+            throw OrderCreationConflictException("Branch is inactive: $branchId")
+        }
+        return branch
+    }
+
+    private fun validateOfferingRules(merchantId: UUID, orderType: com.elegant.software.blitzpay.order.domain.OrderType, usesDeferredPayment: Boolean) {
+        val enabled = merchantOfferingAssignmentRepository.findAllByMerchantApplicationId(merchantId)
+            .map { it.offeringCode }
+            .toSet()
+        val requiredOffering = when (orderType) {
+            com.elegant.software.blitzpay.order.domain.OrderType.PRE_ORDER -> "PRE_ORDER"
+            com.elegant.software.blitzpay.order.domain.OrderType.WALK_IN_ORDERING -> "WALK_IN_ORDERING"
+        }
+        if (requiredOffering !in enabled) {
+            throw OrderCreationConflictException("Merchant does not support $requiredOffering")
+        }
+        if (usesDeferredPayment && "DEFERRED_PAYMENT" !in enabled) {
+            throw OrderCreationConflictException("Merchant does not support DEFERRED_PAYMENT")
+        }
+    }
+
+    private fun validateWalkInLocationIfNeeded(
+        branch: MerchantBranch,
+        orderType: com.elegant.software.blitzpay.order.domain.OrderType,
+        customerLocation: OrderCustomerLocationRequest?,
+    ) {
+        if (orderType != com.elegant.software.blitzpay.order.domain.OrderType.WALK_IN_ORDERING) {
+            return
+        }
+        requireNotNull(customerLocation) { "customerLocation is required for WALK_IN_ORDERING" }
+        require(customerLocation.accuracyMeters in 0.0..MAX_WALK_IN_ACCURACY_METERS) {
+            "customerLocation accuracy is insufficient for WALK_IN_ORDERING"
+        }
+        require(customerLocation.capturedAt.isAfter(Instant.now().minus(MAX_WALK_IN_LOCATION_AGE))) {
+            "customerLocation is too old for WALK_IN_ORDERING"
+        }
+        val location = requireNotNull(branch.location) { "Branch location is required for WALK_IN_ORDERING" }
+        val distanceMeters = haversineMeters(
+            customerLocation.latitude,
+            customerLocation.longitude,
+            location.latitude,
+            location.longitude,
+        )
+        if (distanceMeters > location.geofenceRadiusMeters) {
+            throw OrderCreationConflictException("Customer is outside the branch geofence")
+        }
+    }
+
+    private fun haversineMeters(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double {
+        val r = 6_371_000.0
+        return r * acos(
+            cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2))
+                * cos(Math.toRadians(lng2) - Math.toRadians(lng1))
+                + sin(Math.toRadians(lat1)) * sin(Math.toRadians(lat2))
+        )
     }
 
     private fun buildQrPaymentUrl(orderId: String, amountMinorUnits: Long, currency: String): String =
@@ -172,6 +273,8 @@ class OrderService(
 
     companion object {
         private const val DEFAULT_CURRENCY = "EUR"
+        private val MAX_WALK_IN_LOCATION_AGE = ChronoUnit.MINUTES.duration.multipliedBy(5)
+        private const val MAX_WALK_IN_ACCURACY_METERS = 100.0
     }
 }
 

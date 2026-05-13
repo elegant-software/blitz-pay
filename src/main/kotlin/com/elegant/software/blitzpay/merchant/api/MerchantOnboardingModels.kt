@@ -1,6 +1,7 @@
 package com.elegant.software.blitzpay.merchant.api
 
 import com.elegant.software.blitzpay.merchant.domain.MerchantOnboardingStatus
+import com.elegant.software.blitzpay.merchant.domain.MerchantOperationalStatus
 import com.elegant.software.blitzpay.merchant.domain.MerchantPaymentChannel
 import com.elegant.software.blitzpay.merchant.domain.PersonRole
 import com.elegant.software.blitzpay.merchant.domain.SupportingMaterialType
@@ -43,13 +44,20 @@ data class MerchantPrimaryContactRequest(
 )
 
 data class UpdateMerchantRequest(
-    val legalBusinessName: String,
-    val primaryBusinessAddress: String,
-    val contactFullName: String,
-    val contactEmail: String,
-    val contactPhoneNumber: String,
-    val activePaymentChannels: Set<MerchantPaymentChannel> = emptySet(),
-    val status: MerchantOnboardingStatus? = null
+    val merchantName: String? = null,
+    val merchantStatus: MerchantOperationalStatus? = null,
+    val contactInfo: MerchantContactInfo? = null,
+    val address: MerchantAddress? = null,
+    val location: MerchantLocationInfo? = null,
+    val offerings: Set<String>? = null,
+    val legalBusinessName: String? = null,
+    val primaryBusinessAddress: String? = null,
+    val website: String? = null,
+    val contactFullName: String? = null,
+    val contactEmail: String? = null,
+    val contactPhoneNumber: String? = null,
+    val activePaymentChannels: Set<MerchantPaymentChannel>? = null,
+    val status: MerchantOnboardingStatus? = null,
 )
 
 data class MerchantPersonRequest(
@@ -103,11 +111,15 @@ data class MerchantPrimaryContactResponse(
 data class MerchantDetailsResponse(
     val applicationId: UUID,
     val applicationReference: String,
+    val merchantCode: String = "",
+    val merchantName: String = "",
+    val merchantStatus: MerchantOperationalStatus = MerchantOperationalStatus.ACTIVE,
     val registrationNumber: String,
     val businessType: String,
     val operatingCountry: String,
     val legalBusinessName: String,
     val primaryBusinessAddress: String,
+    val website: String? = null,
     val contactFullName: String,
     val contactEmail: String,
     val contactPhoneNumber: String,
@@ -116,7 +128,11 @@ data class MerchantDetailsResponse(
     val submittedAt: Instant?,
     val lastUpdatedAt: Instant,
     val logoStorageKey: String? = null,
-    val logoUrl: String? = null
+    val logoUrl: String? = null,
+    val contactInfo: MerchantContactInfo = MerchantContactInfo(),
+    val address: MerchantAddress = MerchantAddress(),
+    val location: MerchantLocationInfo? = null,
+    val offerings: Set<String> = emptySet(),
 )
 
 data class MerchantVerticalResponse(

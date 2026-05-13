@@ -1463,6 +1463,8 @@ components:
         merchantId:
           type: string
           format: uuid
+        branchCode:
+          type: string
         name:
           type: string
         active:
@@ -1478,6 +1480,8 @@ components:
         country:
           type: string
         contactFullName:
+          type: string
+        website:
           type: string
         contactEmail:
           type: string
@@ -1529,6 +1533,7 @@ components:
       required:
       - active
       - activePaymentChannels
+      - branchCode
       - createdAt
       - id
       - merchantId
@@ -1553,6 +1558,8 @@ components:
         country:
           type: string
         contactFullName:
+          type: string
+        website:
           type: string
         contactEmail:
           type: string
@@ -1597,6 +1604,15 @@ components:
           format: uuid
         applicationReference:
           type: string
+        merchantCode:
+          type: string
+        merchantName:
+          type: string
+        merchantStatus:
+          type: string
+          enum:
+          - ACTIVE
+          - INACTIVE
         registrationNumber:
           type: string
         status:
@@ -1621,18 +1637,96 @@ components:
           format: date-time
         logoStorageKey:
           type: string
+        offerings:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
       required:
       - applicationId
       - applicationReference
       - lastUpdatedAt
+      - merchantCode
+      - merchantName
+      - merchantStatus
+      - offerings
       - registrationNumber
       - status
+    MerchantAddress:
+      type: object
+      properties:
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+        city:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+    MerchantContactInfo:
+      type: object
+      properties:
+        website:
+          type: string
+        email:
+          type: string
+        phoneNumber:
+          type: string
+    MerchantLocationInfo:
+      type: object
+      properties:
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        geofenceRadiusMeters:
+          type: integer
+          format: int32
+        googlePlaceId:
+          type: string
+        placeFormattedAddress:
+          type: string
+        placeRating:
+          type: number
+          format: double
+        placeReviewCount:
+          type: integer
+          format: int32
+        placeEnrichmentStatus:
+          type: string
+        placeEnrichedAt:
+          type: string
+          format: date-time
     UpdateMerchantRequest:
       type: object
       properties:
+        merchantName:
+          type: string
+        merchantStatus:
+          type: string
+          enum:
+          - ACTIVE
+          - INACTIVE
+        contactInfo:
+          $ref: "#/components/schemas/MerchantContactInfo"
+        address:
+          $ref: "#/components/schemas/MerchantAddress"
+        location:
+          $ref: "#/components/schemas/MerchantLocationInfo"
+        offerings:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
         legalBusinessName:
           type: string
         primaryBusinessAddress:
+          type: string
+        website:
           type: string
         contactFullName:
           type: string
@@ -1663,13 +1757,6 @@ components:
           - MONITORING
           - ACTION_REQUIRED
           - REJECTED
-      required:
-      - activePaymentChannels
-      - contactEmail
-      - contactFullName
-      - contactPhoneNumber
-      - legalBusinessName
-      - primaryBusinessAddress
     MerchantDetailsResponse:
       type: object
       properties:
@@ -1678,6 +1765,15 @@ components:
           format: uuid
         applicationReference:
           type: string
+        merchantCode:
+          type: string
+        merchantName:
+          type: string
+        merchantStatus:
+          type: string
+          enum:
+          - ACTIVE
+          - INACTIVE
         registrationNumber:
           type: string
         businessType:
@@ -1687,6 +1783,8 @@ components:
         legalBusinessName:
           type: string
         primaryBusinessAddress:
+          type: string
+        website:
           type: string
         contactFullName:
           type: string
@@ -1727,16 +1825,33 @@ components:
           type: string
         logoUrl:
           type: string
+        contactInfo:
+          $ref: "#/components/schemas/MerchantContactInfo"
+        address:
+          $ref: "#/components/schemas/MerchantAddress"
+        location:
+          $ref: "#/components/schemas/MerchantLocationInfo"
+        offerings:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
       required:
       - activePaymentChannels
+      - address
       - applicationId
       - applicationReference
       - businessType
       - contactEmail
       - contactFullName
+      - contactInfo
       - contactPhoneNumber
       - lastUpdatedAt
       - legalBusinessName
+      - merchantCode
+      - merchantName
+      - merchantStatus
+      - offerings
       - operatingCountry
       - primaryBusinessAddress
       - registrationNumber
@@ -2017,6 +2132,18 @@ components:
     CreateOrderRequest:
       type: object
       properties:
+        branchId:
+          type: string
+          format: uuid
+        orderType:
+          type: string
+          enum:
+          - PRE_ORDER
+          - WALK_IN_ORDERING
+        usesDeferredPayment:
+          type: boolean
+        customerLocation:
+          $ref: "#/components/schemas/OrderCustomerLocationRequest"
         items:
           type: array
           items:
@@ -2030,7 +2157,29 @@ components:
           - STRIPE
       required:
       - items
+      - orderType
       - paymentMethod
+      - usesDeferredPayment
+    OrderCustomerLocationRequest:
+      type: object
+      properties:
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        accuracyMeters:
+          type: number
+          format: double
+        capturedAt:
+          type: string
+          format: date-time
+      required:
+      - accuracyMeters
+      - capturedAt
+      - latitude
+      - longitude
     OrderItemResponse:
       type: object
       properties:
@@ -2065,6 +2214,13 @@ components:
         branchId:
           type: string
           format: uuid
+        orderType:
+          type: string
+          enum:
+          - PRE_ORDER
+          - WALK_IN_ORDERING
+        usesDeferredPayment:
+          type: boolean
         status:
           type: string
           enum:
@@ -2112,9 +2268,11 @@ components:
       - items
       - merchantId
       - orderId
+      - orderType
       - paymentRetryAllowed
       - status
       - totalAmountMinor
+      - usesDeferredPayment
     PaymentReferenceResponse:
       type: object
       properties:
@@ -2149,6 +2307,8 @@ components:
         country:
           type: string
         contactFullName:
+          type: string
+        website:
           type: string
         contactEmail:
           type: string
@@ -2201,6 +2361,19 @@ components:
     CreateMerchantRequest:
       type: object
       properties:
+        merchantName:
+          type: string
+        contactInfo:
+          $ref: "#/components/schemas/MerchantContactInfo"
+        address:
+          $ref: "#/components/schemas/MerchantAddress"
+        location:
+          $ref: "#/components/schemas/MerchantLocationInfo"
+        offerings:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
         legalBusinessName:
           type: string
         businessType:
@@ -2219,12 +2392,7 @@ components:
           type: string
       required:
       - businessType
-      - contactEmail
-      - contactFullName
-      - contactPhoneNumber
-      - legalBusinessName
       - operatingCountry
-      - primaryBusinessAddress
       - registrationNumber
     CreateMerchantOrderRequest:
       type: object
@@ -2235,6 +2403,15 @@ components:
         branchId:
           type: string
           format: uuid
+        orderType:
+          type: string
+          enum:
+          - PRE_ORDER
+          - WALK_IN_ORDERING
+        usesDeferredPayment:
+          type: boolean
+        customerLocation:
+          $ref: "#/components/schemas/OrderCustomerLocationRequest"
         items:
           type: array
           items:
@@ -2242,6 +2419,8 @@ components:
       required:
       - items
       - merchantId
+      - orderType
+      - usesDeferredPayment
     MerchantOrderResponse:
       type: object
       properties:
@@ -2253,6 +2432,13 @@ components:
         branchId:
           type: string
           format: uuid
+        orderType:
+          type: string
+          enum:
+          - PRE_ORDER
+          - WALK_IN_ORDERING
+        usesDeferredPayment:
+          type: boolean
         status:
           type: string
           enum:
@@ -2289,10 +2475,12 @@ components:
       - items
       - merchantId
       - orderId
+      - orderType
       - paymentRetryAllowed
       - qrCode
       - status
       - totalAmountMinor
+      - usesDeferredPayment
     QrCodeResponse:
       type: object
       properties:
@@ -2455,6 +2643,13 @@ components:
         branchId:
           type: string
           format: uuid
+        orderType:
+          type: string
+          enum:
+          - PRE_ORDER
+          - WALK_IN_ORDERING
+        usesDeferredPayment:
+          type: boolean
         status:
           type: string
           enum:
@@ -2478,9 +2673,11 @@ components:
       - currency
       - merchantId
       - orderId
+      - orderType
       - paymentRetryAllowed
       - status
       - totalAmountMinor
+      - usesDeferredPayment
     MerchantVerticalResponse:
       type: object
       properties:
