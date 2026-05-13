@@ -11,6 +11,7 @@ import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepo
 import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantProductCategoryRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantProductRepository
+import com.elegant.software.blitzpay.merchant.repository.MerchantVerticalRepository
 import com.elegant.software.blitzpay.merchant.repository.MonitoringRecordRepository
 import com.elegant.software.blitzpay.merchant.repository.ProximityEventRepository
 import com.elegant.software.blitzpay.payments.push.persistence.DeviceRegistrationRepository
@@ -79,6 +80,9 @@ abstract class ContractVerifierBase {
     protected lateinit var merchantApplicationRepository: MerchantApplicationRepository
 
     @MockitoBean
+    protected lateinit var merchantVerticalRepository: MerchantVerticalRepository
+
+    @MockitoBean
     protected lateinit var merchantBranchRepository: MerchantBranchRepository
 
     @MockitoBean
@@ -125,6 +129,7 @@ abstract class ContractVerifierBase {
 
     @BeforeEach
     fun setupRestAssured() {
+        whenever(merchantVerticalRepository.existsByCodeAndActiveTrue(any())).thenReturn(true)
         doNothing().whenever(paymentStatusInitializationGateway).initialize(any(), any(), any(), any(), any())
         doNothing().whenever(paymentStatusUpdateGateway).settle(any(), any(), any())
         doNothing().whenever(paymentStatusUpdateGateway).fail(any(), any(), any())

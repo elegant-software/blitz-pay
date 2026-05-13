@@ -119,6 +119,11 @@ data class MerchantDetailsResponse(
     val logoUrl: String? = null
 )
 
+data class MerchantVerticalResponse(
+    val code: String,
+    val displayName: String,
+)
+
 data class MerchantLogoUploadRequest(
     val contentType: String
 )

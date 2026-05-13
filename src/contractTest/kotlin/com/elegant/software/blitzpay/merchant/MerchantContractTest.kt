@@ -59,7 +59,7 @@ class MerchantContractTest : ContractVerifierBase() {
                 """
                 {
                   "legalBusinessName": "Acme GmbH",
-                  "businessType": "LLC",
+                  "businessType": "RETAIL",
                   "registrationNumber": "DE123456789",
                   "operatingCountry": "DE",
                   "primaryBusinessAddress": "Hauptstrasse 1, 10115 Berlin",
@@ -91,7 +91,7 @@ class MerchantContractTest : ContractVerifierBase() {
                 """
                 {
                   "legalBusinessName": "Duplicate GmbH",
-                  "businessType": "LLC",
+                  "businessType": "RETAIL",
                   "registrationNumber": "DE-DUPLICATE",
                   "operatingCountry": "DE",
                   "primaryBusinessAddress": "Somestrasse 1",
@@ -111,7 +111,7 @@ class MerchantContractTest : ContractVerifierBase() {
             applicationReference = "BLTZ-CONTRACT1",
             businessProfile = BusinessProfile(
                 legalBusinessName = "Test GmbH",
-                businessType = "LLC",
+                businessType = "RETAIL",
                 registrationNumber = "DE-CONTRACT-001",
                 operatingCountry = "DE",
                 primaryBusinessAddress = "Teststrasse 1, Berlin",
@@ -151,7 +151,7 @@ class MerchantContractTest : ContractVerifierBase() {
             applicationReference = "BLTZ-CONTRACT2",
             businessProfile = BusinessProfile(
                 legalBusinessName = "Before GmbH",
-                businessType = "LLC",
+                businessType = "RETAIL",
                 registrationNumber = "DE-CONTRACT-002",
                 operatingCountry = "DE",
                 primaryBusinessAddress = "Old Strasse 1"
@@ -195,7 +195,7 @@ class MerchantContractTest : ContractVerifierBase() {
             applicationReference = "BLTZ-CONTRACT-LOGO",
             businessProfile = BusinessProfile(
                 legalBusinessName = "Logo Merchant",
-                businessType = "LLC",
+                businessType = "RETAIL",
                 registrationNumber = "DE-CONTRACT-LOGO",
                 operatingCountry = "DE",
                 primaryBusinessAddress = "Teststrasse 2, Berlin"
@@ -223,7 +223,7 @@ class MerchantContractTest : ContractVerifierBase() {
             applicationReference = "BLTZ-CONTRACT-LOGO-SET",
             businessProfile = BusinessProfile(
                 legalBusinessName = "Logo Merchant",
-                businessType = "LLC",
+                businessType = "RETAIL",
                 registrationNumber = "DE-CONTRACT-LOGO-SET",
                 operatingCountry = "DE",
                 primaryBusinessAddress = "Teststrasse 3, Berlin"
@@ -255,7 +255,7 @@ class MerchantContractTest : ContractVerifierBase() {
                     applicationReference = "BLTZ-BRANCH-TEST",
                     businessProfile = BusinessProfile(
                         legalBusinessName = "Test Merchant",
-                        businessType = "LLC",
+                        businessType = "RETAIL",
                         registrationNumber = "DE-BRANCH-TEST",
                         operatingCountry = "DE",
                         primaryBusinessAddress = "Teststrasse 1"

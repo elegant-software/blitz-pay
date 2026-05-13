@@ -27,7 +27,7 @@ class MerchantLocationServiceTest {
             applicationReference = "BLTZ-LOC",
             businessProfile = BusinessProfile(
                 legalBusinessName = "Location GmbH",
-                businessType = "LLC",
+                businessType = "RETAIL",
                 registrationNumber = "DE-LOC",
                 operatingCountry = "DE",
                 primaryBusinessAddress = "Legal Strasse 1"
@@ -57,7 +57,7 @@ class MerchantLocationServiceTest {
             applicationReference = "BLTZ-NEARBY",
             businessProfile = BusinessProfile(
                 legalBusinessName = "Branch Nearby GmbH",
-                businessType = "LLC",
+                businessType = "RETAIL",
                 registrationNumber = "DE-NEARBY",
                 operatingCountry = "DE",
                 primaryBusinessAddress = "Legal Strasse 2"
@@ -92,7 +92,7 @@ class MerchantLocationServiceTest {
             applicationReference = "BLTZ-NEARBY-MERCHANT-ONLY",
             businessProfile = BusinessProfile(
                 legalBusinessName = "Merchant Only GmbH",
-                businessType = "LLC",
+                businessType = "RETAIL",
                 registrationNumber = "DE-NEARBY-MERCHANT",
                 operatingCountry = "DE",
                 primaryBusinessAddress = "Legal Strasse 3"

@@ -26,7 +26,7 @@ class MerchantLogoServiceTest {
             applicationReference = "BLTZ-LOGO",
             businessProfile = BusinessProfile(
                 legalBusinessName = "Logo GmbH",
-                businessType = "LLC",
+                businessType = "RETAIL",
                 registrationNumber = "DE-LOGO",
                 operatingCountry = "DE",
                 primaryBusinessAddress = "Logo Strasse 1"

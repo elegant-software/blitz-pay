@@ -28,12 +28,13 @@ class MerchantRegistrationServiceTest {
     private val auditTrail = mock<MerchantAuditTrail>()
     private val observabilitySupport = mock<MerchantObservabilitySupport>()
     private val eventPublisher = mock<ApplicationEventPublisher>()
-    private val service = MerchantRegistrationService(repository, auditTrail, observabilitySupport, eventPublisher)
+    private val merchantVerticalService = mock<MerchantVerticalService>()
+    private val service = MerchantRegistrationService(repository, auditTrail, observabilitySupport, eventPublisher, merchantVerticalService)
 
     private val validRequest = RegisterMerchantRequest(
         businessProfile = MerchantBusinessProfileRequest(
             legalBusinessName = "Acme GmbH",
-            businessType = "LLC",
+            businessType = "RETAIL",
             registrationNumber = "DE123456789",
             operatingCountry = "DE",
             primaryBusinessAddress = "Hauptstrasse 1, 10115 Berlin"
@@ -47,6 +48,7 @@ class MerchantRegistrationServiceTest {
 
     @Test
     fun `register creates an ACTIVE merchant when no duplicate exists`() {
+        whenever(merchantVerticalService.validate(any())).thenAnswer { }
         whenever(repository.existsByBusinessProfileRegistrationNumberAndStatusIn(any(), any()))
             .thenReturn(false)
         whenever(repository.save(any<com.elegant.software.blitzpay.merchant.domain.MerchantApplication>())).thenAnswer { it.arguments[0] }

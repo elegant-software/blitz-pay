@@ -22,6 +22,7 @@ class MerchantRegistrationService(
     private val merchantAuditTrail: MerchantAuditTrail,
     private val merchantObservabilitySupport: MerchantObservabilitySupport,
     private val eventPublisher: ApplicationEventPublisher,
+    private val merchantVerticalService: MerchantVerticalService,
 ) {
 
     private val log = LoggerFactory.getLogger(MerchantRegistrationService::class.java)
@@ -47,6 +48,8 @@ class MerchantRegistrationService(
         action: String,
         activateDirectly: Boolean
     ): MerchantApplication {
+        merchantVerticalService.validate(request.businessProfile.businessType)
+
         val registrationNumber = request.businessProfile.registrationNumber
         val duplicateExists = merchantApplicationRepository.existsByBusinessProfileRegistrationNumberAndStatusIn(
             registrationNumber,

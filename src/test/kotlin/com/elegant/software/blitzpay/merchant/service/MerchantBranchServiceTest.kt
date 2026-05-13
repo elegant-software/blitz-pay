@@ -36,7 +36,7 @@ class MerchantBranchServiceTest {
         applicationReference = "BLTZ-TEST",
         businessProfile = BusinessProfile(
             legalBusinessName = name,
-            businessType = "LLC",
+            businessType = "RETAIL",
             registrationNumber = "DE-TEST",
             operatingCountry = "DE",
             primaryBusinessAddress = "Test Street 1"

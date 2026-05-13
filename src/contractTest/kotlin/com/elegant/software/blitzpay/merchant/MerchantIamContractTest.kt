@@ -50,7 +50,7 @@ class MerchantIamContractTest : ContractVerifierBase() {
                 """
                 {
                   "legalBusinessName": "IAM Test GmbH",
-                  "businessType": "LLC",
+                  "businessType": "RETAIL",
                   "registrationNumber": "DE-IAM-001",
                   "operatingCountry": "DE",
                   "primaryBusinessAddress": "IAM Strasse 1, Berlin",
@@ -77,7 +77,7 @@ class MerchantIamContractTest : ContractVerifierBase() {
             applicationReference = "BLTZ-IAM",
             businessProfile = BusinessProfile(
                 legalBusinessName = "Branch IAM GmbH",
-                businessType = "LLC",
+                businessType = "RETAIL",
                 registrationNumber = "DE-IAM-002",
                 operatingCountry = "DE",
                 primaryBusinessAddress = "Branch Street 1"
