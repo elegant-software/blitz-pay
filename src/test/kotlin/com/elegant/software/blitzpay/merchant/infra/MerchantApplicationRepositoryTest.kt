@@ -58,7 +58,7 @@ class MerchantApplicationRepositoryTest(
             applicationReference = "MO-987654",
             businessProfile = BusinessProfile(
                 legalBusinessName = "Northwind GmbH",
-                businessType = "LIMITED_COMPANY",
+                businessType = "RETAIL",
                 registrationNumber = "HRB999999",
                 operatingCountry = "DE",
                 primaryBusinessAddress = "Unter den Linden 7, Berlin"

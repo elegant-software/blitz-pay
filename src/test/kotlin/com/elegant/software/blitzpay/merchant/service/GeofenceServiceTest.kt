@@ -29,7 +29,7 @@ class GeofenceServiceTest {
         applicationReference = "REF-${UUID.randomUUID()}",
         businessProfile = BusinessProfile(
             legalBusinessName = "Test Merchant",
-            businessType = "LLC",
+            businessType = "RETAIL",
             registrationNumber = "REG001",
             operatingCountry = "DE",
             primaryBusinessAddress = "Berlin"

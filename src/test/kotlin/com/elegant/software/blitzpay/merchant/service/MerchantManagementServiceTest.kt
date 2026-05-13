@@ -40,7 +40,7 @@ class MerchantManagementServiceTest {
             applicationReference = "BLTZ-123",
             businessProfile = BusinessProfile(
                 legalBusinessName = "Old Name GmbH",
-                businessType = "LLC",
+                businessType = "RETAIL",
                 registrationNumber = "DE-123",
                 operatingCountry = "DE",
                 primaryBusinessAddress = "Old Address 1"
@@ -82,7 +82,7 @@ class MerchantManagementServiceTest {
             applicationReference = "BLTZ-EVT",
             businessProfile = BusinessProfile(
                 legalBusinessName = "Old Name GmbH",
-                businessType = "LLC",
+                businessType = "RETAIL",
                 registrationNumber = "DE-EVT",
                 operatingCountry = "DE",
                 primaryBusinessAddress = "Event Street 1"
@@ -120,7 +120,7 @@ class MerchantManagementServiceTest {
             applicationReference = "BLTZ-SAME",
             businessProfile = BusinessProfile(
                 legalBusinessName = "Same Name GmbH",
-                businessType = "LLC",
+                businessType = "RETAIL",
                 registrationNumber = "DE-SAME",
                 operatingCountry = "DE",
                 primaryBusinessAddress = "Same Street 1"
@@ -156,7 +156,7 @@ class MerchantManagementServiceTest {
             applicationReference = "BLTZ-DEL",
             businessProfile = BusinessProfile(
                 legalBusinessName = "To Delete GmbH",
-                businessType = "LLC",
+                businessType = "RETAIL",
                 registrationNumber = "DE-999",
                 operatingCountry = "DE",
                 primaryBusinessAddress = "Delete Street 1"
@@ -185,7 +185,7 @@ class MerchantManagementServiceTest {
             applicationReference = "BLTZ-MON",
             businessProfile = BusinessProfile(
                 legalBusinessName = "Monitored GmbH",
-                businessType = "LLC",
+                businessType = "RETAIL",
                 registrationNumber = "DE-888",
                 operatingCountry = "DE",
                 primaryBusinessAddress = "Monitor Street 1"

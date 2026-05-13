@@ -28,7 +28,7 @@ class GeofenceProximityContractTest : ContractVerifierBase() {
         applicationReference = "BLTZ-GEO-001",
         businessProfile = BusinessProfile(
             legalBusinessName = "Geo Merchant GmbH",
-            businessType = "LLC",
+            businessType = "RETAIL",
             registrationNumber = "GEO001",
             operatingCountry = "DE",
             primaryBusinessAddress = "Berlin"
@@ -254,7 +254,7 @@ class GeofenceProximityContractTest : ContractVerifierBase() {
             applicationReference = "BLTZ-GEO-002",
             businessProfile = BusinessProfile(
                 legalBusinessName = "Branch Only Merchant GmbH",
-                businessType = "LLC",
+                businessType = "RETAIL",
                 registrationNumber = "GEO002",
                 operatingCountry = "DE",
                 primaryBusinessAddress = "Berlin"

@@ -8,6 +8,8 @@ servers:
 tags:
 - name: Merchant Orders
   description: Create and list orders for authenticated merchant branches
+- name: Merchant Verticals
+  description: Platform-managed industry verticals available for merchant registration
 - name: Voice
   description: Voice query processing for authenticated mobile clients
 - name: Merchant Product Categories
@@ -1077,6 +1079,21 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/OrderResponse"
+  /{version}/merchants/verticals:
+    get:
+      tags:
+      - Merchant Verticals
+      summary: List all active merchant verticals
+      operationId: list_5
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MerchantVerticalResponse"
   /{version}/merchants/nearby:
     get:
       tags:
@@ -2464,6 +2481,16 @@ components:
       - paymentRetryAllowed
       - status
       - totalAmountMinor
+    MerchantVerticalResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        displayName:
+          type: string
+      required:
+      - code
+      - displayName
     NearbyBranchResponse:
       type: object
       properties:

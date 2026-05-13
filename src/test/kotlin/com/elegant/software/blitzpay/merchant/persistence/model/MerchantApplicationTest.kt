@@ -75,7 +75,7 @@ class MerchantApplicationTest {
         applicationReference = "MO-123456",
         businessProfile = BusinessProfile(
             legalBusinessName = "Acme GmbH",
-            businessType = "LIMITED_COMPANY",
+            businessType = "RETAIL",
             registrationNumber = "HRB123456",
             operatingCountry = "DE",
             primaryBusinessAddress = "Alexanderplatz 1, Berlin"
