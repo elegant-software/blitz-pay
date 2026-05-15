@@ -67,3 +67,7 @@ databaseChangeLog:
       file: db/changelog/20260513-001-merchant-verticals.sql
   - include:
       file: db/changelog/20260514-001-merchant-refactor.sql
+  - include:
+      file: db/changelog/20260515-001-order-payment-source.sql
+  - include:
+      file: db/changelog/20260515-002-order-item-price-override.sql

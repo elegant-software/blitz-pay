@@ -8,12 +8,16 @@ import com.elegant.software.blitzpay.merchant.domain.MerchantLocation
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantOfferingAssignmentRepository
+import com.elegant.software.blitzpay.order.api.AddOrderItemRequest
 import com.elegant.software.blitzpay.order.api.CreateMerchantOrderRequest
 import com.elegant.software.blitzpay.order.api.CreateOrderRequest
+import com.elegant.software.blitzpay.order.api.MerchantItemPriceOverrideRequest
 import com.elegant.software.blitzpay.order.api.OrderCustomerLocationRequest
 import com.elegant.software.blitzpay.order.api.MerchantOrderResponse
 import com.elegant.software.blitzpay.order.api.OrderResponse
 import com.elegant.software.blitzpay.order.api.OrderSummaryResponse
+import com.elegant.software.blitzpay.order.api.SettleOrderRequest
+import com.elegant.software.blitzpay.order.api.UpdateOrderItemRequest
 import com.elegant.software.blitzpay.order.api.toMerchantResponse
 import com.elegant.software.blitzpay.order.api.toResponse
 import com.elegant.software.blitzpay.order.api.toSummaryResponse
@@ -153,6 +157,119 @@ class OrderService(
         }
     }
 
+    fun addItem(orderId: String, request: AddOrderItemRequest, actorId: String): OrderResponse {
+        require(request.quantity > 0) { "quantity must be > 0" }
+        val order = requireMutableOrder(orderId)
+        val products = merchantGateway.findOrderableProducts(listOf(request.productId))
+        val product = products.firstOrNull { it.productId == request.productId }
+            ?: throw NoSuchElementException("Product not found: ${request.productId}")
+        if (!product.active) throw OrderMutationConflictException("Product is not orderable: ${request.productId}")
+        if (product.merchantApplicationId != order.merchantApplicationId) {
+            throw OrderMutationConflictException("Product does not belong to the order's merchant")
+        }
+        val newItem = OrderItem.fromProduct(order.id, product, request.quantity)
+        orderItemRepository.save(newItem)
+        val items = orderItemRepository.findAllByOrderIdFk(order.id)
+        order.recalculateTotals(items)
+        orderRepository.save(order)
+        return order.toResponse(items)
+    }
+
+    fun updateItemQuantity(orderId: String, itemId: UUID, request: UpdateOrderItemRequest, actorId: String): OrderResponse {
+        require(request.quantity > 0) { "quantity must be > 0" }
+        val order = requireMutableOrder(orderId)
+        val item = requireOrderItem(order.id, itemId)
+        item.updateQuantity(request.quantity)
+        orderItemRepository.save(item)
+        val items = orderItemRepository.findAllByOrderIdFk(order.id)
+        order.recalculateTotals(items)
+        orderRepository.save(order)
+        return order.toResponse(items)
+    }
+
+    fun removeItem(orderId: String, itemId: UUID, actorId: String): OrderResponse {
+        val order = requireMutableOrder(orderId)
+        requireOrderItem(order.id, itemId)
+        val allItems = orderItemRepository.findAllByOrderIdFk(order.id)
+        return if (allItems.size <= 1) {
+            order.status = com.elegant.software.blitzpay.order.domain.OrderStatus.CANCELLED
+            order.updatedAt = java.time.Instant.now()
+            orderRepository.save(order)
+            order.toResponse(allItems)
+        } else {
+            orderItemRepository.deleteById(itemId)
+            val remaining = allItems.filter { it.id != itemId }
+            order.recalculateTotals(remaining)
+            orderRepository.save(order)
+            order.toResponse(remaining)
+        }
+    }
+
+    fun cancelOrder(orderId: String, actorId: String): OrderResponse {
+        val order = requireMutableOrder(orderId)
+        order.status = com.elegant.software.blitzpay.order.domain.OrderStatus.CANCELLED
+        order.updatedAt = java.time.Instant.now()
+        orderRepository.save(order)
+        val items = orderItemRepository.findAllByOrderIdFk(order.id)
+        return order.toResponse(items)
+    }
+
+    fun applyMerchantPriceOverride(
+        orderId: String,
+        itemId: UUID,
+        request: MerchantItemPriceOverrideRequest,
+        merchantUserId: String,
+    ): OrderResponse {
+        val order = requireMutableOrder(orderId)
+        val item = requireOrderItem(order.id, itemId)
+        item.applyPriceOverride(request.unitPriceMinor, merchantUserId)
+        orderItemRepository.save(item)
+        val items = orderItemRepository.findAllByOrderIdFk(order.id)
+        order.recalculateTotals(items)
+        orderRepository.save(order)
+        return order.toResponse(items)
+    }
+
+    fun manualSettle(orderId: String, request: SettleOrderRequest, merchantUserId: String): OrderResponse {
+        val order = orderRepository.findByOrderId(orderId)
+            ?: throw NoSuchElementException("Order not found: $orderId")
+        if (order.status == com.elegant.software.blitzpay.order.domain.OrderStatus.PAID) {
+            throw OrderMutationConflictException("Order is already paid: $orderId")
+        }
+        if (order.status == com.elegant.software.blitzpay.order.domain.OrderStatus.CANCELLED) {
+            throw OrderMutationConflictException("Order is cancelled and cannot be settled: $orderId")
+        }
+        order.manualSettle(request.note, merchantUserId)
+        orderRepository.save(order)
+        val items = orderItemRepository.findAllByOrderIdFk(order.id)
+        return order.toResponse(items)
+    }
+
+    @Transactional(readOnly = true)
+    fun getMerchantOrder(orderId: String): OrderResponse {
+        val order = orderRepository.findByOrderId(orderId)
+            ?: throw NoSuchElementException("Order not found: $orderId")
+        val items = orderItemRepository.findAllByOrderIdFk(order.id)
+        return order.toResponse(items)
+    }
+
+    private fun requireMutableOrder(orderId: String): com.elegant.software.blitzpay.order.domain.Order {
+        val order = orderRepository.findByOrderId(orderId)
+            ?: throw NoSuchElementException("Order not found: $orderId")
+        if (order.status != com.elegant.software.blitzpay.order.domain.OrderStatus.CREATED) {
+            throw OrderMutationConflictException(
+                "Order cannot be mutated in status: ${order.status}"
+            )
+        }
+        return order
+    }
+
+    private fun requireOrderItem(orderIdFk: UUID, itemId: UUID): com.elegant.software.blitzpay.order.domain.OrderItem {
+        val items = orderItemRepository.findAllByOrderIdFk(orderIdFk)
+        return items.firstOrNull { it.id == itemId }
+            ?: throw NoSuchElementException("Order item not found: $itemId")
+    }
+
     fun deleteOrder(orderId: UUID) {
         val order = orderRepository.findById(orderId)
             .orElseThrow { NoSuchElementException("Order not found: $orderId") }
@@ -279,3 +396,4 @@ class OrderService(
 }
 
 class OrderCreationConflictException(message: String) : IllegalStateException(message)
+class OrderMutationConflictException(message: String) : IllegalStateException(message)

@@ -46,10 +46,10 @@ class Order(
     val currency: String,
 
     @Column(name = "total_amount_minor", nullable = false)
-    val totalAmountMinor: Long,
+    var totalAmountMinor: Long,
 
     @Column(name = "item_count", nullable = false)
-    val itemCount: Int,
+    var itemCount: Int,
 
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant = Instant.now(),
@@ -65,6 +65,12 @@ class Order(
 
     @Column(name = "last_payment_provider", length = 32)
     var lastPaymentProvider: String? = null,
+
+    @Column(name = "payment_source", length = 32)
+    var paymentSource: String? = null,
+
+    @Column(name = "settlement_note", length = 2000)
+    var settlementNote: String? = null,
 ) {
     fun markPaymentInProgress(paymentRequestId: UUID, provider: String, at: Instant = Instant.now()) {
         require(status != OrderStatus.PAID) { "Order is already paid: $orderId" }
@@ -94,9 +100,29 @@ class Order(
         status = nextStatus
         lastPaymentRequestId = paymentRequestId
         lastPaymentProvider = provider ?: lastPaymentProvider
-        if (nextStatus == OrderStatus.PAID) paidAt = at
+        if (nextStatus == OrderStatus.PAID) {
+            paidAt = at
+            paymentSource = "APP_PAYMENT"
+        }
         updatedAt = at
         return true
+    }
+
+    fun manualSettle(note: String?, by: String, at: Instant = Instant.now()) {
+        require(status == OrderStatus.CREATED || status == OrderStatus.FAILED) {
+            "Order cannot be manually settled in status: $status"
+        }
+        status = OrderStatus.PAID
+        paymentSource = "MANUAL_SETTLEMENT"
+        settlementNote = note
+        paidAt = at
+        updatedAt = at
+    }
+
+    fun recalculateTotals(activeItems: List<OrderItem>) {
+        totalAmountMinor = activeItems.sumOf { it.effectiveUnitPriceMinor * it.quantity }
+        itemCount = activeItems.sumOf { it.quantity }
+        updatedAt = Instant.now()
     }
 
     companion object {

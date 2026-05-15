@@ -36,6 +36,7 @@ data class MerchantContext(
     val name: String,
     val logoUrl: String? = null,
     val activePaymentChannels: Set<MerchantPaymentChannel> = emptySet(),
+    val deferredPaymentAvailable: Boolean = false,
     val branches: List<BranchContext> = emptyList(),
 )
 

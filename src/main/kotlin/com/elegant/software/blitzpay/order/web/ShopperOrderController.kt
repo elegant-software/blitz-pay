@@ -1,18 +1,23 @@
 package com.elegant.software.blitzpay.order.web
 
 import com.elegant.software.blitzpay.config.LogContext
+import com.elegant.software.blitzpay.order.api.AddOrderItemRequest
 import com.elegant.software.blitzpay.order.api.CreateOrderRequest
 import com.elegant.software.blitzpay.order.api.OrderResponse
 import com.elegant.software.blitzpay.order.api.OrderSummaryResponse
+import com.elegant.software.blitzpay.order.api.UpdateOrderItemRequest
 import com.elegant.software.blitzpay.order.application.OrderCreationConflictException
+import com.elegant.software.blitzpay.order.application.OrderMutationConflictException
 import com.elegant.software.blitzpay.order.application.OrderService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -22,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import java.util.Base64
+import java.util.UUID
 
 @Tag(name = "Orders", description = "Create and inspect orders for shoppers")
 @RestController
@@ -75,6 +81,58 @@ class ShopperOrderController(
             .subscribeOn(Schedulers.boundedElastic())
             .map { ResponseEntity.ok(it) }
 
+    @Operation(summary = "Add an item to an unpaid order")
+    @PostMapping("/{orderId}/items")
+    fun addItem(
+        @PathVariable orderId: String,
+        @RequestBody request: AddOrderItemRequest,
+        @RequestHeader(name = "Authorization", required = false) authorization: String?,
+    ): Mono<ResponseEntity<OrderResponse>> {
+        val shopperId = extractSubject(authorization) ?: "anonymous"
+        return Mono.fromCallable { orderService.addItem(orderId, request, shopperId) }
+            .subscribeOn(Schedulers.boundedElastic())
+            .map { ResponseEntity.ok(it) }
+    }
+
+    @Operation(summary = "Update quantity of an item in an unpaid order")
+    @PatchMapping("/{orderId}/items/{itemId}")
+    fun updateItem(
+        @PathVariable orderId: String,
+        @PathVariable itemId: UUID,
+        @RequestBody request: UpdateOrderItemRequest,
+        @RequestHeader(name = "Authorization", required = false) authorization: String?,
+    ): Mono<ResponseEntity<OrderResponse>> {
+        val shopperId = extractSubject(authorization) ?: "anonymous"
+        return Mono.fromCallable { orderService.updateItemQuantity(orderId, itemId, request, shopperId) }
+            .subscribeOn(Schedulers.boundedElastic())
+            .map { ResponseEntity.ok(it) }
+    }
+
+    @Operation(summary = "Remove an item from an unpaid order (auto-cancels if last item)")
+    @DeleteMapping("/{orderId}/items/{itemId}")
+    fun removeItem(
+        @PathVariable orderId: String,
+        @PathVariable itemId: UUID,
+        @RequestHeader(name = "Authorization", required = false) authorization: String?,
+    ): Mono<ResponseEntity<OrderResponse>> {
+        val shopperId = extractSubject(authorization) ?: "anonymous"
+        return Mono.fromCallable { orderService.removeItem(orderId, itemId, shopperId) }
+            .subscribeOn(Schedulers.boundedElastic())
+            .map { ResponseEntity.ok(it) }
+    }
+
+    @Operation(summary = "Cancel an unpaid order")
+    @PostMapping("/{orderId}/cancel")
+    fun cancel(
+        @PathVariable orderId: String,
+        @RequestHeader(name = "Authorization", required = false) authorization: String?,
+    ): Mono<ResponseEntity<OrderResponse>> {
+        val shopperId = extractSubject(authorization) ?: "anonymous"
+        return Mono.fromCallable { orderService.cancelOrder(orderId, shopperId) }
+            .subscribeOn(Schedulers.boundedElastic())
+            .map { ResponseEntity.ok(it) }
+    }
+
     @ExceptionHandler(IllegalArgumentException::class)
     fun badRequest(ex: IllegalArgumentException): ResponseEntity<OrderErrorResponse> =
         ResponseEntity.badRequest().body(OrderErrorResponse(ex.message ?: "Invalid order request"))
@@ -86,6 +144,10 @@ class ShopperOrderController(
     @ExceptionHandler(OrderCreationConflictException::class)
     fun unprocessable(ex: OrderCreationConflictException): ResponseEntity<OrderErrorResponse> =
         ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(OrderErrorResponse(ex.message ?: "Order cannot be created"))
+
+    @ExceptionHandler(OrderMutationConflictException::class)
+    fun mutationConflict(ex: OrderMutationConflictException): ResponseEntity<OrderErrorResponse> =
+        ResponseEntity.status(HttpStatus.CONFLICT).body(OrderErrorResponse(ex.message ?: "Order mutation not allowed"))
 
     private fun extractSubject(authorization: String?): String? {
         val token = authorization

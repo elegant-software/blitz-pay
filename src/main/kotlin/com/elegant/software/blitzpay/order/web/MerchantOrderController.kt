@@ -1,9 +1,12 @@
 package com.elegant.software.blitzpay.order.web
 
 import com.elegant.software.blitzpay.order.api.CreateMerchantOrderRequest
+import com.elegant.software.blitzpay.order.api.MerchantItemPriceOverrideRequest
 import com.elegant.software.blitzpay.order.api.MerchantOrderResponse
 import com.elegant.software.blitzpay.order.api.OrderResponse
+import com.elegant.software.blitzpay.order.api.SettleOrderRequest
 import com.elegant.software.blitzpay.order.application.OrderCreationConflictException
+import com.elegant.software.blitzpay.order.application.OrderMutationConflictException
 import com.elegant.software.blitzpay.order.application.OrderService
 import com.elegant.software.blitzpay.order.domain.OrderStatus
 import io.swagger.v3.oas.annotations.Operation
@@ -12,6 +15,8 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
@@ -55,6 +60,40 @@ class MerchantOrderController(
             .map { ResponseEntity.ok(it) }
     }
 
+    @Operation(summary = "Apply a merchant price override to a specific order item")
+    @PatchMapping("/{orderId}/items/{itemId}/price")
+    fun overrideItemPrice(
+        @PathVariable orderId: String,
+        @PathVariable itemId: UUID,
+        @RequestBody request: MerchantItemPriceOverrideRequest,
+        @RequestHeader(name = "Authorization", required = false) authorization: String?,
+    ): Mono<ResponseEntity<OrderResponse>> {
+        val merchantUserId = extractSubject(authorization) ?: "anonymous"
+        return Mono.fromCallable { orderService.applyMerchantPriceOverride(orderId, itemId, request, merchantUserId) }
+            .subscribeOn(Schedulers.boundedElastic())
+            .map { ResponseEntity.ok(it) }
+    }
+
+    @Operation(summary = "Manually settle an unpaid or failed order")
+    @PostMapping("/{orderId}/settle")
+    fun settle(
+        @PathVariable orderId: String,
+        @RequestBody request: SettleOrderRequest,
+        @RequestHeader(name = "Authorization", required = false) authorization: String?,
+    ): Mono<ResponseEntity<OrderResponse>> {
+        val merchantUserId = extractSubject(authorization) ?: "anonymous"
+        return Mono.fromCallable { orderService.manualSettle(orderId, request, merchantUserId) }
+            .subscribeOn(Schedulers.boundedElastic())
+            .map { ResponseEntity.ok(it) }
+    }
+
+    @Operation(summary = "Get a specific order by orderId for the merchant")
+    @GetMapping("/{orderId}")
+    fun getOrder(@PathVariable orderId: String): Mono<ResponseEntity<OrderResponse>> =
+        Mono.fromCallable { orderService.getMerchantOrder(orderId) }
+            .subscribeOn(Schedulers.boundedElastic())
+            .map { ResponseEntity.ok(it) }
+
     @ExceptionHandler(IllegalArgumentException::class)
     fun badRequest(ex: IllegalArgumentException): ResponseEntity<OrderErrorResponse> =
         ResponseEntity.badRequest().body(OrderErrorResponse(ex.message ?: "Invalid order request"))
@@ -66,6 +105,10 @@ class MerchantOrderController(
     @ExceptionHandler(OrderCreationConflictException::class)
     fun unprocessable(ex: OrderCreationConflictException): ResponseEntity<OrderErrorResponse> =
         ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(OrderErrorResponse(ex.message ?: "Order cannot be created"))
+
+    @ExceptionHandler(OrderMutationConflictException::class)
+    fun mutationConflict(ex: OrderMutationConflictException): ResponseEntity<OrderErrorResponse> =
+        ResponseEntity.status(HttpStatus.CONFLICT).body(OrderErrorResponse(ex.message ?: "Order mutation not allowed"))
 
     private fun extractSubject(authorization: String?): String? {
         val token = authorization

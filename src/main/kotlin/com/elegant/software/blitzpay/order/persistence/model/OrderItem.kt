@@ -34,17 +34,42 @@ class OrderItem(
     val productDescription: String? = null,
 
     @Column(nullable = false)
-    val quantity: Int,
+    var quantity: Int,
 
     @Column(name = "unit_price_minor", nullable = false)
     val unitPriceMinor: Long,
 
     @Column(name = "line_total_minor", nullable = false)
-    val lineTotalMinor: Long,
+    var lineTotalMinor: Long,
+
+    @Column(name = "merchant_price_override_minor")
+    var merchantPriceOverrideMinor: Long? = null,
+
+    @Column(name = "overridden_by", length = 255)
+    var overriddenBy: String? = null,
+
+    @Column(name = "overridden_at")
+    var overriddenAt: Instant? = null,
 
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: Instant = Instant.now(),
 ) {
+    val effectiveUnitPriceMinor: Long
+        get() = merchantPriceOverrideMinor ?: unitPriceMinor
+
+    fun applyPriceOverride(priceMinor: Long, by: String, at: Instant = Instant.now()) {
+        require(priceMinor > 0) { "Override price must be positive" }
+        merchantPriceOverrideMinor = priceMinor
+        lineTotalMinor = priceMinor * quantity
+        overriddenBy = by
+        overriddenAt = at
+    }
+
+    fun updateQuantity(newQuantity: Int) {
+        require(newQuantity > 0) { "quantity must be > 0" }
+        quantity = newQuantity
+        lineTotalMinor = effectiveUnitPriceMinor * newQuantity
+    }
     companion object {
         fun fromProduct(orderIdFk: UUID, product: OrderableMerchantProduct, quantity: Int): OrderItem {
             val unitPriceMinor = product.unitPriceMinor()

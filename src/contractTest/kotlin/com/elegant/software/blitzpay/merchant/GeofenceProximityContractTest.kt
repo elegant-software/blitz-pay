@@ -5,6 +5,7 @@ import com.elegant.software.blitzpay.merchant.domain.BusinessProfile
 import com.elegant.software.blitzpay.merchant.domain.MerchantApplication
 import com.elegant.software.blitzpay.merchant.domain.MerchantBranch
 import com.elegant.software.blitzpay.merchant.domain.MerchantLocation
+import com.elegant.software.blitzpay.merchant.domain.MerchantOfferingAssignment
 import com.elegant.software.blitzpay.merchant.domain.MerchantOnboardingStatus
 import com.elegant.software.blitzpay.merchant.domain.MerchantPaymentChannel
 import com.elegant.software.blitzpay.merchant.domain.PrimaryContact
@@ -207,6 +208,52 @@ class GeofenceProximityContractTest : ContractVerifierBase() {
             .expectBody()
             .jsonPath("$.action").isEqualTo("none")
             .jsonPath("$.merchant").doesNotExist()
+    }
+
+    @Test
+    fun `POST proximity returns deferredPaymentAvailable true when merchant has DEFERRED_PAYMENT offering`() {
+        whenever(merchantOfferingAssignmentRepository.findAllByMerchantApplicationId(merchantId))
+            .thenReturn(listOf(MerchantOfferingAssignment(merchantId, "DEFERRED_PAYMENT")))
+
+        webTestClient.post()
+            .uri("/v1/proximity")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue("""
+                {
+                  "regionId": "merchant:$merchantId",
+                  "event": "enter",
+                  "location": { "latitude": 48.8566, "longitude": 2.3522 },
+                  "timestamp": "2026-05-15T10:00:00Z",
+                  "deviceId": "device-deferred-1"
+                }
+            """.trimIndent())
+            .exchange()
+            .expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.merchant.deferredPaymentAvailable").isEqualTo(true)
+    }
+
+    @Test
+    fun `POST proximity returns deferredPaymentAvailable false when merchant has no DEFERRED_PAYMENT offering`() {
+        whenever(merchantOfferingAssignmentRepository.findAllByMerchantApplicationId(merchantId))
+            .thenReturn(listOf(MerchantOfferingAssignment(merchantId, "PRE_ORDER")))
+
+        webTestClient.post()
+            .uri("/v1/proximity")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue("""
+                {
+                  "regionId": "merchant:$merchantId",
+                  "event": "enter",
+                  "location": { "latitude": 48.8566, "longitude": 2.3522 },
+                  "timestamp": "2026-05-15T10:01:00Z",
+                  "deviceId": "device-deferred-2"
+                }
+            """.trimIndent())
+            .exchange()
+            .expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.merchant.deferredPaymentAvailable").isEqualTo(false)
     }
 
     @Test

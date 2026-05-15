@@ -9,6 +9,7 @@ import com.elegant.software.blitzpay.merchant.domain.MerchantApplication
 import com.elegant.software.blitzpay.merchant.domain.ProximityEvent
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
+import com.elegant.software.blitzpay.merchant.repository.MerchantOfferingAssignmentRepository
 import com.elegant.software.blitzpay.merchant.repository.ProximityEventRepository
 import com.elegant.software.blitzpay.storage.StorageService
 import org.slf4j.LoggerFactory
@@ -25,6 +26,7 @@ class ProximityService(
     private val proximityEventRepository: ProximityEventRepository,
     private val merchantApplicationRepository: MerchantApplicationRepository,
     private val merchantBranchRepository: MerchantBranchRepository,
+    private val merchantOfferingAssignmentRepository: MerchantOfferingAssignmentRepository,
     private val storageService: StorageService,
     private val geofenceProperties: GeofenceProperties,
 ) {
@@ -112,6 +114,12 @@ class ProximityService(
             runCatching { storageService.presignDownload(it) }.getOrNull()
         }
 
+        val enabledOfferingCodes = merchantOfferingAssignmentRepository
+            .findAllByMerchantApplicationId(merchant.id)
+            .map { it.offeringCode }
+            .toSet()
+        val deferredPaymentAvailable = "DEFERRED_PAYMENT" in enabledOfferingCodes
+
         val action = if (merchant.activePaymentChannels.isNotEmpty()) "notify" else "none"
 
         log.info("Proximity event recorded: regionId={} event={} merchant={}", regionId, eventType, merchant.id)
@@ -124,6 +132,7 @@ class ProximityService(
                 name = merchant.businessProfile.legalBusinessName,
                 logoUrl = logoUrl,
                 activePaymentChannels = merchant.activePaymentChannels.toSet(),
+                deferredPaymentAvailable = deferredPaymentAvailable,
                 branches = branches,
             ),
         )

@@ -96,6 +96,7 @@ Semantic commits: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`. Summaries: sh
 - No new tables; existing `event_publication` Modulith table for at-least-once delivery (014-keycloak-merchant-groups)
 - Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith 2.1.0-M3, Spring AI (`@McpTool`), Hibernate/JPA (feat/014-keycloak-merchant-groups)
 - PostgreSQL 16 (`blitzpay` schema) — no new tables or columns (feat/014-keycloak-merchant-groups)
+- Kotlin 2.3.20 on Java 25 + Spring Boot 4.0.4, Spring WebFlux (reactive), Spring Modulith 2.1.0-M3, Hibernate/JPA, Liquibase (018-deferred-payment-order-apis)
 
 ## Recent Changes
 - 006-push-notifications: Added Kotlin 2.3.20 on Java 25 (unchanged) + Spring Boot 4.0.4, Spring WebFlux, Spring Modulith, Hibernate/JPA on PostgreSQL 16, TrueLayer Java SDK (unchanged). New: Reactor `WebClient` against the Expo Push HTTPS API (`https://exp.host/--/api/v2/push/send`) — no additional SDK; a thin in-repo client keeps the dependency surface minimal.

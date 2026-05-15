@@ -609,6 +609,60 @@ paths:
                 oneOf:
                 - $ref: "#/components/schemas/CheckoutSuccessResponse"
                 - $ref: "#/components/schemas/CheckoutFailureResponse"
+  /{version}/orders/{orderId}/items:
+    post:
+      tags:
+      - Orders
+      summary: Add an item to an unpaid order
+      operationId: addItem
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddOrderItemRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+  /{version}/orders/{orderId}/cancel:
+    post:
+      tags:
+      - Orders
+      summary: Cancel an unpaid order
+      operationId: cancel
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
   /{version}/orders:
     get:
       tags:
@@ -894,6 +948,36 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/MerchantSummary"
+  /{version}/merchant/orders/{orderId}/settle:
+    post:
+      tags:
+      - Merchant Orders
+      summary: Manually settle an unpaid or failed order
+      operationId: settle
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettleOrderRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
   /{version}/merchant/orders:
     get:
       tags:
@@ -1020,6 +1104,107 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/DeviceRegistrationResponse"
+  /{version}/orders/{orderId}/items/{itemId}:
+    delete:
+      tags:
+      - Orders
+      summary: Remove an item from an unpaid order (auto-cancels if last item)
+      operationId: removeItem
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+    patch:
+      tags:
+      - Orders
+      summary: Update quantity of an item in an unpaid order
+      operationId: updateItem
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrderItemRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+  /{version}/merchant/orders/{orderId}/items/{itemId}/price:
+    patch:
+      tags:
+      - Merchant Orders
+      summary: Apply a merchant price override to a specific order item
+      operationId: overrideItemPrice
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: Authorization
+        in: header
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MerchantItemPriceOverrideRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
   /{version}/qr-payments/{paymentRequestId}/events:
     get:
       tags:
@@ -1131,6 +1316,25 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/NearbyMerchantsResponse"
+  /{version}/merchant/orders/{orderId}:
+    get:
+      tags:
+      - Merchant Orders
+      summary: Get a specific order by orderId for the merchant
+      operationId: getOrder
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
   /{version}/geofence/regions:
     get:
       tags:
@@ -1953,6 +2157,8 @@ components:
             - STRIPE
             - TRUELAYER
           uniqueItems: true
+        deferredPaymentAvailable:
+          type: boolean
         branches:
           type: array
           items:
@@ -1960,6 +2166,7 @@ components:
       required:
       - activePaymentChannels
       - branches
+      - deferredPaymentAvailable
       - merchantId
       - name
     ProximityResponse:
@@ -2117,7 +2324,7 @@ components:
       required:
       - message
       - status
-    CreateOrderItemRequest:
+    AddOrderItemRequest:
       type: object
       properties:
         productId:
@@ -2129,57 +2336,6 @@ components:
       required:
       - productId
       - quantity
-    CreateOrderRequest:
-      type: object
-      properties:
-        branchId:
-          type: string
-          format: uuid
-        orderType:
-          type: string
-          enum:
-          - PRE_ORDER
-          - WALK_IN_ORDERING
-        usesDeferredPayment:
-          type: boolean
-        customerLocation:
-          $ref: "#/components/schemas/OrderCustomerLocationRequest"
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/CreateOrderItemRequest"
-        paymentMethod:
-          type: string
-          enum:
-          - TRUELAYER
-          - QRPAY
-          - BRAINTREE
-          - STRIPE
-      required:
-      - items
-      - orderType
-      - paymentMethod
-      - usesDeferredPayment
-    OrderCustomerLocationRequest:
-      type: object
-      properties:
-        latitude:
-          type: number
-          format: double
-        longitude:
-          type: number
-          format: double
-        accuracyMeters:
-          type: number
-          format: double
-        capturedAt:
-          type: string
-          format: date-time
-      required:
-      - accuracyMeters
-      - capturedAt
-      - latitude
-      - longitude
     OrderItemResponse:
       type: object
       properties:
@@ -2243,6 +2399,11 @@ components:
           format: int64
         paymentRetryAllowed:
           type: boolean
+        paymentSource:
+          type: string
+          enum:
+          - APP_PAYMENT
+          - MANUAL_SETTLEMENT
         items:
           type: array
           items:
@@ -2284,6 +2445,68 @@ components:
       required:
       - paymentRequestId
       - provider
+    CreateOrderItemRequest:
+      type: object
+      properties:
+        productId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          format: int32
+      required:
+      - productId
+      - quantity
+    CreateOrderRequest:
+      type: object
+      properties:
+        branchId:
+          type: string
+          format: uuid
+        orderType:
+          type: string
+          enum:
+          - PRE_ORDER
+          - WALK_IN_ORDERING
+        usesDeferredPayment:
+          type: boolean
+        customerLocation:
+          $ref: "#/components/schemas/OrderCustomerLocationRequest"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateOrderItemRequest"
+        paymentMethod:
+          type: string
+          enum:
+          - TRUELAYER
+          - QRPAY
+          - BRAINTREE
+          - STRIPE
+      required:
+      - items
+      - orderType
+      - usesDeferredPayment
+    OrderCustomerLocationRequest:
+      type: object
+      properties:
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+        accuracyMeters:
+          type: number
+          format: double
+        capturedAt:
+          type: string
+          format: date-time
+      required:
+      - accuracyMeters
+      - capturedAt
+      - latitude
+      - longitude
     CreateProductCategoryRequest:
       type: object
       properties:
@@ -2394,6 +2617,11 @@ components:
       - businessType
       - operatingCountry
       - registrationNumber
+    SettleOrderRequest:
+      type: object
+      properties:
+        note:
+          type: string
     CreateMerchantOrderRequest:
       type: object
       properties:
@@ -2608,6 +2836,22 @@ components:
       - expoPushToken
       - id
       - orderId
+    UpdateOrderItemRequest:
+      type: object
+      properties:
+        quantity:
+          type: integer
+          format: int32
+      required:
+      - quantity
+    MerchantItemPriceOverrideRequest:
+      type: object
+      properties:
+        unitPriceMinor:
+          type: integer
+          format: int64
+      required:
+      - unitPriceMinor
     ServerSentEventPaymentResult: {}
     PaymentStatusResponse:
       type: object
@@ -2665,6 +2909,11 @@ components:
           format: int64
         paymentRetryAllowed:
           type: boolean
+        paymentSource:
+          type: string
+          enum:
+          - APP_PAYMENT
+          - MANUAL_SETTLEMENT
         createdAt:
           type: string
           format: date-time

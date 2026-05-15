@@ -11,6 +11,29 @@ import java.util.UUID
 
 enum class PaymentMethod { TRUELAYER, QRPAY, BRAINTREE, STRIPE }
 
+enum class PaymentSource { APP_PAYMENT, MANUAL_SETTLEMENT }
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class AddOrderItemRequest(
+    val productId: UUID,
+    val quantity: Int,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class UpdateOrderItemRequest(
+    val quantity: Int,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class MerchantItemPriceOverrideRequest(
+    val unitPriceMinor: Long,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SettleOrderRequest(
+    val note: String? = null,
+)
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class OrderCustomerLocationRequest(
     val latitude: Double,
@@ -26,7 +49,7 @@ data class CreateOrderRequest(
     val usesDeferredPayment: Boolean = false,
     val customerLocation: OrderCustomerLocationRequest? = null,
     val items: List<CreateOrderItemRequest> = emptyList(),
-    val paymentMethod: PaymentMethod = PaymentMethod.TRUELAYER,
+    val paymentMethod: PaymentMethod? = null,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -74,6 +97,7 @@ data class OrderResponse(
     val currency: String,
     val totalAmountMinor: Long,
     val paymentRetryAllowed: Boolean,
+    val paymentSource: PaymentSource? = null,
     val items: List<OrderItemResponse>,
     val createdAt: Instant,
     val lastPaymentRequestId: UUID? = null,
@@ -108,6 +132,7 @@ data class OrderSummaryResponse(
     val currency: String,
     val totalAmountMinor: Long,
     val paymentRetryAllowed: Boolean,
+    val paymentSource: PaymentSource? = null,
     val createdAt: Instant,
 )
 
@@ -134,12 +159,13 @@ internal fun Order.toResponse(items: List<OrderItem>, paymentReference: PaymentR
     currency = currency,
     totalAmountMinor = totalAmountMinor,
     paymentRetryAllowed = status.paymentRetryAllowed,
+    paymentSource = paymentSource?.let { runCatching { PaymentSource.valueOf(it) }.getOrNull() },
     items = items.sortedBy { it.createdAt }.map {
         OrderItemResponse(
             productId = it.merchantProductId,
             name = it.productName,
             quantity = it.quantity,
-            unitPriceMinor = it.unitPriceMinor,
+            unitPriceMinor = it.effectiveUnitPriceMinor,
             lineTotalMinor = it.lineTotalMinor,
         )
     },
@@ -160,6 +186,7 @@ internal fun Order.toSummaryResponse() = OrderSummaryResponse(
     currency = currency,
     totalAmountMinor = totalAmountMinor,
     paymentRetryAllowed = status.paymentRetryAllowed,
+    paymentSource = paymentSource?.let { runCatching { PaymentSource.valueOf(it) }.getOrNull() },
     createdAt = createdAt,
 )
 
