@@ -29,6 +29,7 @@ import com.elegant.software.blitzpay.voice.api.VoiceGateway
 import jakarta.persistence.EntityManager
 import org.springframework.context.annotation.Import
 import com.elegant.software.blitzpay.payments.truelayer.api.PaymentRequested
+import java.util.Base64 as JavaBase64
 import com.elegant.software.blitzpay.payments.truelayer.api.PaymentResult
 import com.elegant.software.blitzpay.payments.truelayer.outbound.PaymentService
 import com.elegant.software.blitzpay.payments.truelayer.support.JwksService
@@ -52,6 +53,15 @@ import java.net.URI
 @ActiveProfiles("contract-test")
 @Import(ContractTestConfig::class)
 abstract class ContractVerifierBase {
+
+    companion object {
+        /** A minimal unsigned JWT whose payload decodes to {"sub":"test-user"}. */
+        val fakeJwt: String = run {
+            val payload = JavaBase64.getUrlEncoder().withoutPadding()
+                .encodeToString("""{"sub":"test-user"}""".toByteArray())
+            "fakeheader.$payload.fakesig"
+        }
+    }
 
     @LocalServerPort
     private var port: Int = 0

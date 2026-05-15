@@ -397,3 +397,4 @@ class OrderService(
 
 class OrderCreationConflictException(message: String) : IllegalStateException(message)
 class OrderMutationConflictException(message: String) : IllegalStateException(message)
+class UnauthenticatedException(message: String = "Valid authentication is required") : IllegalStateException(message)

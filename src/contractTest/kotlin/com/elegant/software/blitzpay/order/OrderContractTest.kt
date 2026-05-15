@@ -1,6 +1,7 @@
 package com.elegant.software.blitzpay.order
 
 import com.elegant.software.blitzpay.contract.ContractVerifierBase
+import com.elegant.software.blitzpay.contract.ContractVerifierBase.Companion.fakeJwt
 import com.elegant.software.blitzpay.order.api.MerchantOrderResponse
 import com.elegant.software.blitzpay.order.api.OrderItemResponse
 import com.elegant.software.blitzpay.order.api.OrderResponse
@@ -57,6 +58,7 @@ class OrderContractTest : ContractVerifierBase() {
         webTestClient.post()
             .uri("/v1/orders")
             .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer $fakeJwt")
             .bodyValue(
                 """
                 {
@@ -114,6 +116,7 @@ class OrderContractTest : ContractVerifierBase() {
         webTestClient.post()
             .uri("/v1/merchant/orders")
             .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer $fakeJwt")
             .bodyValue(
                 """
                 {
@@ -232,6 +235,7 @@ class OrderContractTest : ContractVerifierBase() {
         webTestClient.post()
             .uri("/v1/orders")
             .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer $fakeJwt")
             .bodyValue(
                 """
                 {
@@ -276,6 +280,7 @@ class OrderContractTest : ContractVerifierBase() {
 
         webTestClient.get()
             .uri("/v1/orders")
+            .header("Authorization", "Bearer $fakeJwt")
             .exchange()
             .expectStatus().isOk
             .expectBody()
@@ -312,6 +317,7 @@ class OrderContractTest : ContractVerifierBase() {
         webTestClient.post()
             .uri("/v1/orders/ORD-DEFERRED00001/items")
             .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer $fakeJwt")
             .bodyValue("""{"productId": "22222222-2222-2222-2222-222222222221", "quantity": 1}""")
             .exchange()
             .expectStatus().isOk
@@ -347,6 +353,7 @@ class OrderContractTest : ContractVerifierBase() {
         webTestClient.patch()
             .uri("/v1/orders/ORD-DEFERRED00001/items/$itemId")
             .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer $fakeJwt")
             .bodyValue("""{"quantity": 3}""")
             .exchange()
             .expectStatus().isOk
@@ -378,6 +385,7 @@ class OrderContractTest : ContractVerifierBase() {
 
         webTestClient.delete()
             .uri("/v1/orders/ORD-DEFERRED00001/items/$itemId")
+            .header("Authorization", "Bearer $fakeJwt")
             .exchange()
             .expectStatus().isOk
             .expectBody()
@@ -407,6 +415,7 @@ class OrderContractTest : ContractVerifierBase() {
 
         webTestClient.post()
             .uri("/v1/orders/ORD-DEFERRED00001/cancel")
+            .header("Authorization", "Bearer $fakeJwt")
             .exchange()
             .expectStatus().isOk
             .expectBody()
@@ -420,6 +429,7 @@ class OrderContractTest : ContractVerifierBase() {
 
         webTestClient.post()
             .uri("/v1/orders/ORD-PAYNOW00001/cancel")
+            .header("Authorization", "Bearer $fakeJwt")
             .exchange()
             .expectStatus().isEqualTo(409)
     }
@@ -452,6 +462,7 @@ class OrderContractTest : ContractVerifierBase() {
         webTestClient.patch()
             .uri("/v1/merchant/orders/ORD-DEFERRED00001/items/$itemId/price")
             .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer $fakeJwt")
             .bodyValue("""{"unitPriceMinor": 900}""")
             .exchange()
             .expectStatus().isOk
@@ -489,6 +500,7 @@ class OrderContractTest : ContractVerifierBase() {
         webTestClient.post()
             .uri("/v1/merchant/orders/ORD-DEFERRED00001/settle")
             .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer $fakeJwt")
             .bodyValue("""{"note": "Customer paid cash at counter"}""")
             .exchange()
             .expectStatus().isOk
@@ -506,6 +518,7 @@ class OrderContractTest : ContractVerifierBase() {
         webTestClient.post()
             .uri("/v1/merchant/orders/ORD-PAYNOW00001/settle")
             .contentType(MediaType.APPLICATION_JSON)
+            .header("Authorization", "Bearer $fakeJwt")
             .bodyValue("""{}""")
             .exchange()
             .expectStatus().isEqualTo(409)

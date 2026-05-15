@@ -7,6 +7,7 @@ import com.elegant.software.blitzpay.order.api.OrderResponse
 import com.elegant.software.blitzpay.order.api.SettleOrderRequest
 import com.elegant.software.blitzpay.order.application.OrderCreationConflictException
 import com.elegant.software.blitzpay.order.application.OrderMutationConflictException
+import com.elegant.software.blitzpay.order.application.UnauthenticatedException
 import com.elegant.software.blitzpay.order.application.OrderService
 import com.elegant.software.blitzpay.order.domain.OrderStatus
 import io.swagger.v3.oas.annotations.Operation
@@ -41,7 +42,7 @@ class MerchantOrderController(
         @RequestBody request: CreateMerchantOrderRequest,
         @RequestHeader(name = "Authorization", required = false) authorization: String?,
     ): Mono<ResponseEntity<MerchantOrderResponse>> {
-        val merchantUserId = extractSubject(authorization) ?: "anonymous"
+        val merchantUserId = requireSubject(authorization)
         return Mono.fromCallable { orderService.createMerchantOrder(request, merchantUserId) }
             .subscribeOn(Schedulers.boundedElastic())
             .map { ResponseEntity.status(HttpStatus.CREATED).body(it) }
@@ -68,7 +69,7 @@ class MerchantOrderController(
         @RequestBody request: MerchantItemPriceOverrideRequest,
         @RequestHeader(name = "Authorization", required = false) authorization: String?,
     ): Mono<ResponseEntity<OrderResponse>> {
-        val merchantUserId = extractSubject(authorization) ?: "anonymous"
+        val merchantUserId = requireSubject(authorization)
         return Mono.fromCallable { orderService.applyMerchantPriceOverride(orderId, itemId, request, merchantUserId) }
             .subscribeOn(Schedulers.boundedElastic())
             .map { ResponseEntity.ok(it) }
@@ -81,7 +82,7 @@ class MerchantOrderController(
         @RequestBody request: SettleOrderRequest,
         @RequestHeader(name = "Authorization", required = false) authorization: String?,
     ): Mono<ResponseEntity<OrderResponse>> {
-        val merchantUserId = extractSubject(authorization) ?: "anonymous"
+        val merchantUserId = requireSubject(authorization)
         return Mono.fromCallable { orderService.manualSettle(orderId, request, merchantUserId) }
             .subscribeOn(Schedulers.boundedElastic())
             .map { ResponseEntity.ok(it) }
@@ -109,6 +110,13 @@ class MerchantOrderController(
     @ExceptionHandler(OrderMutationConflictException::class)
     fun mutationConflict(ex: OrderMutationConflictException): ResponseEntity<OrderErrorResponse> =
         ResponseEntity.status(HttpStatus.CONFLICT).body(OrderErrorResponse(ex.message ?: "Order mutation not allowed"))
+
+    @ExceptionHandler(UnauthenticatedException::class)
+    fun unauthenticated(ex: UnauthenticatedException): ResponseEntity<OrderErrorResponse> =
+        ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(OrderErrorResponse(ex.message ?: "Valid authentication is required"))
+
+    private fun requireSubject(authorization: String?): String =
+        extractSubject(authorization) ?: throw UnauthenticatedException()
 
     private fun extractSubject(authorization: String?): String? {
         val token = authorization

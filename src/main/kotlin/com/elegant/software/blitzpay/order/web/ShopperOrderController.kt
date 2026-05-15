@@ -8,6 +8,7 @@ import com.elegant.software.blitzpay.order.api.OrderSummaryResponse
 import com.elegant.software.blitzpay.order.api.UpdateOrderItemRequest
 import com.elegant.software.blitzpay.order.application.OrderCreationConflictException
 import com.elegant.software.blitzpay.order.application.OrderMutationConflictException
+import com.elegant.software.blitzpay.order.application.UnauthenticatedException
 import com.elegant.software.blitzpay.order.application.OrderService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -43,7 +44,7 @@ class ShopperOrderController(
         @RequestBody request: CreateOrderRequest,
         @RequestHeader(name = "Authorization", required = false) authorization: String?,
     ): Mono<ResponseEntity<OrderResponse>> {
-        val shopperId = extractSubject(authorization) ?: "anonymous"
+        val shopperId = requireSubject(authorization)
         return Mono.fromCallable {
             log.info(
                 "order create request shopperId={} itemCount={} productIds={}",
@@ -68,7 +69,7 @@ class ShopperOrderController(
     fun list(
         @RequestHeader(name = "Authorization", required = false) authorization: String?,
     ): Mono<ResponseEntity<List<OrderSummaryResponse>>> {
-        val shopperId = extractSubject(authorization) ?: "anonymous"
+        val shopperId = requireSubject(authorization)
         return Mono.fromCallable { orderService.listShopperOrders(shopperId) }
             .subscribeOn(Schedulers.boundedElastic())
             .map { ResponseEntity.ok(it) }
@@ -88,7 +89,7 @@ class ShopperOrderController(
         @RequestBody request: AddOrderItemRequest,
         @RequestHeader(name = "Authorization", required = false) authorization: String?,
     ): Mono<ResponseEntity<OrderResponse>> {
-        val shopperId = extractSubject(authorization) ?: "anonymous"
+        val shopperId = requireSubject(authorization)
         return Mono.fromCallable { orderService.addItem(orderId, request, shopperId) }
             .subscribeOn(Schedulers.boundedElastic())
             .map { ResponseEntity.ok(it) }
@@ -102,7 +103,7 @@ class ShopperOrderController(
         @RequestBody request: UpdateOrderItemRequest,
         @RequestHeader(name = "Authorization", required = false) authorization: String?,
     ): Mono<ResponseEntity<OrderResponse>> {
-        val shopperId = extractSubject(authorization) ?: "anonymous"
+        val shopperId = requireSubject(authorization)
         return Mono.fromCallable { orderService.updateItemQuantity(orderId, itemId, request, shopperId) }
             .subscribeOn(Schedulers.boundedElastic())
             .map { ResponseEntity.ok(it) }
@@ -115,7 +116,7 @@ class ShopperOrderController(
         @PathVariable itemId: UUID,
         @RequestHeader(name = "Authorization", required = false) authorization: String?,
     ): Mono<ResponseEntity<OrderResponse>> {
-        val shopperId = extractSubject(authorization) ?: "anonymous"
+        val shopperId = requireSubject(authorization)
         return Mono.fromCallable { orderService.removeItem(orderId, itemId, shopperId) }
             .subscribeOn(Schedulers.boundedElastic())
             .map { ResponseEntity.ok(it) }
@@ -127,7 +128,7 @@ class ShopperOrderController(
         @PathVariable orderId: String,
         @RequestHeader(name = "Authorization", required = false) authorization: String?,
     ): Mono<ResponseEntity<OrderResponse>> {
-        val shopperId = extractSubject(authorization) ?: "anonymous"
+        val shopperId = requireSubject(authorization)
         return Mono.fromCallable { orderService.cancelOrder(orderId, shopperId) }
             .subscribeOn(Schedulers.boundedElastic())
             .map { ResponseEntity.ok(it) }
@@ -148,6 +149,13 @@ class ShopperOrderController(
     @ExceptionHandler(OrderMutationConflictException::class)
     fun mutationConflict(ex: OrderMutationConflictException): ResponseEntity<OrderErrorResponse> =
         ResponseEntity.status(HttpStatus.CONFLICT).body(OrderErrorResponse(ex.message ?: "Order mutation not allowed"))
+
+    @ExceptionHandler(UnauthenticatedException::class)
+    fun unauthenticated(ex: UnauthenticatedException): ResponseEntity<OrderErrorResponse> =
+        ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(OrderErrorResponse(ex.message ?: "Valid authentication is required"))
+
+    private fun requireSubject(authorization: String?): String =
+        extractSubject(authorization) ?: throw UnauthenticatedException()
 
     private fun extractSubject(authorization: String?): String? {
         val token = authorization
