@@ -45,3 +45,62 @@ jobs:
           cat <<'EOF'
           ${{ needs.notes.outputs.release_notes_markdown }}
           EOF
+
+  publish:
+    needs: notes
+    if: needs.notes.outputs.release_required == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create release tag and GitHub Release
+        uses: actions/github-script@v8
+        env:
+          NEXT_VERSION: ${{ needs.notes.outputs.next_version }}
+          RELEASE_NOTES_MARKDOWN: ${{ needs.notes.outputs.release_notes_markdown }}
+        with:
+          github-token: ${{ secrets.MONO_REPO_DISPATCH_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const nextVersion = (process.env.NEXT_VERSION || "").trim();
+            const releaseNotesMarkdown = process.env.RELEASE_NOTES_MARKDOWN || "";
+
+            if (!nextVersion) {
+              throw new Error("NEXT_VERSION output is empty while release_required=true.");
+            }
+
+            const tagName = `v${nextVersion}`;
+
+            let tagExists = false;
+            try {
+              await github.rest.git.getRef({ owner, repo, ref: `tags/${tagName}` });
+              tagExists = true;
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+
+            if (!tagExists) {
+              await github.rest.git.createRef({
+                owner,
+                repo,
+                ref: `refs/tags/${tagName}`,
+                sha: context.sha,
+              });
+            }
+
+            try {
+              await github.rest.repos.createRelease({
+                owner,
+                repo,
+                tag_name: tagName,
+                name: tagName,
+                body: releaseNotesMarkdown || "No release notes generated.",
+                generate_release_notes: false,
+              });
+              core.info(`Created release ${tagName}.`);
+            } catch (error) {
+              if (error.status === 422) {
+                core.info(`Release ${tagName} already exists. Skipping creation.`);
+              } else {
+                throw error;
+              }
+            }
