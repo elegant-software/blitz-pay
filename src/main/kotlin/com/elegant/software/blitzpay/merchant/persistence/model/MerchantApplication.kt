@@ -188,13 +188,15 @@ class MerchantApplication(
         legalBusinessName: String,
         primaryBusinessAddress: String,
         primaryContact: PrimaryContact,
+        businessType: String? = null,
         activePaymentChannels: Set<MerchantPaymentChannel> = this.activePaymentChannels,
         nextStatus: MerchantOnboardingStatus? = null,
         changedAt: Instant = Instant.now()
     ) {
         businessProfile = businessProfile.copy(
             legalBusinessName = legalBusinessName,
-            primaryBusinessAddress = primaryBusinessAddress
+            primaryBusinessAddress = primaryBusinessAddress,
+            businessType = businessType ?: businessProfile.businessType,
         )
         merchantName = legalBusinessName
         publicEmail = primaryContact.email

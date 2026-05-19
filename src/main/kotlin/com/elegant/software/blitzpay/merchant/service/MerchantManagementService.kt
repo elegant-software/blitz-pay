@@ -68,6 +68,7 @@ class MerchantManagementService(
         application.updateProfile(
             legalBusinessName = resolvedMerchantName,
             primaryBusinessAddress = flattenAddress(resolvedAddress),
+            businessType = request.businessType,
             primaryContact = PrimaryContact(
                 fullName = resolvedContactFullName,
                 email = resolvedContactInfo.email.orEmpty(),

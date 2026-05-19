@@ -45,6 +45,7 @@ data class MerchantPrimaryContactRequest(
 
 data class UpdateMerchantRequest(
     val merchantName: String? = null,
+    val businessType: String? = null,
     val merchantStatus: MerchantOperationalStatus? = null,
     val contactInfo: MerchantContactInfo? = null,
     val address: MerchantAddress? = null,

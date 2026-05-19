@@ -86,7 +86,7 @@ class MerchantMcpTools(
     fun upsertMerchant(
         merchantName: String,
         registrationNumber: String? = null,
-        businessType: String = "RETAIL",
+        businessType: String? = null,
         operatingCountry: String = "US",
         primaryBusinessAddress: String? = null,
         contactFullName: String? = null,
@@ -109,7 +109,7 @@ class MerchantMcpTools(
                 RegisterMerchantRequest(
                     businessProfile = MerchantBusinessProfileRequest(
                         legalBusinessName = merchantName,
-                        businessType = businessType,
+                        businessType = businessType ?: "RETAIL",
                         registrationNumber = normalizedRegistrationNumber,
                         operatingCountry = operatingCountry,
                         primaryBusinessAddress = primaryBusinessAddress ?: "Unknown"
@@ -129,6 +129,7 @@ class MerchantMcpTools(
                 merchantId,
                 UpdateMerchantRequest(
                     legalBusinessName = merchantName,
+                    businessType = businessType,
                     primaryBusinessAddress = primaryBusinessAddress ?: current.primaryBusinessAddress,
                     contactFullName = contactFullName ?: current.contactFullName,
                     contactEmail = contactEmail ?: current.contactEmail,
