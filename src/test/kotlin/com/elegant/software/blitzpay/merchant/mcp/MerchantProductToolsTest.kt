@@ -44,14 +44,21 @@ class MerchantProductToolsTest {
     private val merchantProductCategoryService = mock<MerchantProductCategoryService>()
     private val storageService = mock<StorageService>()
 
-    private val tools = MerchantProductTools(
-        merchantProductService = merchantProductService,
-        merchantBranchService = merchantBranchService,
+    private val merchantTools = MerchantMcpTools(
         merchantRegistrationService = merchantRegistrationService,
         merchantManagementService = merchantManagementService,
         merchantLogoService = merchantLogoService,
-        merchantProductCategoryService = merchantProductCategoryService,
+        merchantBranchService = merchantBranchService,
         storageService = storageService,
+    )
+
+    private val categoryTools = CategoryMcpTools(
+        merchantProductCategoryService = merchantProductCategoryService,
+    )
+
+    private val productTools = ProductMcpTools(
+        merchantProductService = merchantProductService,
+        merchantProductCategoryService = merchantProductCategoryService,
     )
 
     @Test
@@ -65,7 +72,7 @@ class MerchantProductToolsTest {
         whenever(merchantBranchService.findByNameIncludingInactive(merchantId, "Main Branch")).thenReturn(null)
         whenever(merchantBranchService.create(eq(merchantId), any<CreateBranchRequest>(), eq(false))).thenReturn(branchResponse(merchantId))
 
-        val result = tools.upsertMerchant(merchantName = "Cafe Blue")
+        val result = merchantTools.upsertMerchant(merchantName = "Cafe Blue")
 
         assertEquals(merchantId, result.applicationId)
         verify(merchantRegistrationService, never()).registerDraft(any())
@@ -82,7 +89,7 @@ class MerchantProductToolsTest {
         whenever(merchantBranchService.create(eq(merchantId), any<CreateBranchRequest>(), eq(false))).thenReturn(branchResponse(merchantId))
         whenever(merchantManagementService.get(merchantId)).thenReturn(merchantDetailsResponse(merchantId, "Fresh Mart"))
 
-        val result = tools.upsertMerchant(merchantName = "Fresh Mart")
+        val result = merchantTools.upsertMerchant(merchantName = "Fresh Mart")
 
         assertEquals(merchantId, result.applicationId)
         val registerCaptor = argumentCaptor<com.elegant.software.blitzpay.merchant.api.RegisterMerchantRequest>()
@@ -111,7 +118,7 @@ class MerchantProductToolsTest {
             )
         )
 
-        tools.getOrCreateProductId(
+        productTools.getOrCreateProductId(
             merchantId = merchantId.toString(),
             branchId = branchId.toString(),
             productName = "Latte",
@@ -132,7 +139,7 @@ class MerchantProductToolsTest {
             ProductCategoryResponse(categoryId, "Drinks", Instant.now(), Instant.now())
         )
 
-        val result = tools.getCategoryIdByName(merchantId.toString(), "Drinks")
+        val result = categoryTools.getCategoryIdByName(merchantId.toString(), "Drinks")
 
         assertEquals(categoryId.toString(), result)
     }
@@ -143,7 +150,7 @@ class MerchantProductToolsTest {
         whenever(merchantProductCategoryService.findByName(merchantId, "Missing")).thenReturn(null)
 
         kotlin.test.assertFailsWith<IllegalArgumentException> {
-            tools.getCategoryIdByName(merchantId.toString(), "Missing")
+            categoryTools.getCategoryIdByName(merchantId.toString(), "Missing")
         }
     }
 
@@ -155,7 +162,7 @@ class MerchantProductToolsTest {
             ProductCategoryResponse(categoryId, "Drinks", Instant.now(), Instant.now())
         )
 
-        val result = tools.getOrCreateCategoryId(merchantId.toString(), "Drinks")
+        val result = categoryTools.getOrCreateCategoryId(merchantId.toString(), "Drinks")
 
         assertEquals(categoryId.toString(), result)
     }
@@ -169,7 +176,7 @@ class MerchantProductToolsTest {
             merchantProductCategoryService.create(eq(merchantId), any<CreateProductCategoryRequest>())
         ).thenReturn(ProductCategoryResponse(categoryId, "Wine", Instant.now(), Instant.now()))
 
-        val result = tools.getOrCreateCategoryId(merchantId.toString(), "Wine")
+        val result = categoryTools.getOrCreateCategoryId(merchantId.toString(), "Wine")
 
         assertEquals(categoryId.toString(), result)
         verify(merchantProductCategoryService).create(eq(merchantId), any<CreateProductCategoryRequest>())
@@ -181,7 +188,7 @@ class MerchantProductToolsTest {
         val categories = listOf(ProductCategoryResponse(UUID.randomUUID(), "Snacks", Instant.now(), Instant.now()))
         whenever(merchantProductCategoryService.list(merchantId)).thenReturn(categories)
 
-        val result = tools.listProductCategories(merchantId.toString())
+        val result = categoryTools.listProductCategories(merchantId.toString())
 
         assertEquals(categories, result)
     }
@@ -208,7 +215,7 @@ class MerchantProductToolsTest {
                 updatedAt = Instant.now()
             )
         )
-        tools.updateProduct(
+        productTools.updateProduct(
             merchantId = merchantId.toString(),
             productId = productId.toString(),
             branchId = branchId.toString(),
@@ -244,7 +251,7 @@ class MerchantProductToolsTest {
             )
         )
 
-        tools.updateProduct(
+        productTools.updateProduct(
             merchantId = merchantId.toString(),
             productId = productId.toString(),
             branchId = branchId.toString(),
@@ -279,7 +286,7 @@ class MerchantProductToolsTest {
             )
         )
 
-        tools.getOrCreateProductId(
+        productTools.getOrCreateProductId(
             merchantId = merchantId.toString(),
             branchId = branchId.toString(),
             productName = "Latte",
@@ -313,7 +320,7 @@ class MerchantProductToolsTest {
             )
         )
 
-        tools.getOrCreateProductId(
+        productTools.getOrCreateProductId(
             merchantId = merchantId.toString(),
             branchId = branchId.toString(),
             productName = "Latte",
@@ -344,7 +351,7 @@ class MerchantProductToolsTest {
                 productResponse(branchId = branchId, name = request.name, unitPrice = request.unitPrice)
             }
 
-        val result = tools.bulkUpsertProducts(merchantId.toString(), branchId.toString(), products)
+        val result = productTools.bulkUpsertProducts(merchantId.toString(), branchId.toString(), products)
 
         assertEquals(3, result.created.size)
         assertEquals(emptyList<Any>(), result.skipped)
@@ -365,7 +372,7 @@ class MerchantProductToolsTest {
         whenever(merchantProductService.create(eq(merchantId), any<CreateProductRequest>(), isNull(), eq(false)))
             .thenReturn(productResponse(branchId = branchId, name = "Mocha", unitPrice = BigDecimal("4.20")))
 
-        val result = tools.bulkUpsertProducts(
+        val result = productTools.bulkUpsertProducts(
             merchantId = merchantId.toString(),
             branchId = branchId.toString(),
             products = listOf(
@@ -388,7 +395,7 @@ class MerchantProductToolsTest {
         whenever(merchantProductService.create(eq(merchantId), any<CreateProductRequest>(), isNull(), eq(false)))
             .thenReturn(productResponse(branchId = branchId, name = "Latte", unitPrice = BigDecimal("3.50")))
 
-        val result = tools.bulkUpsertProducts(
+        val result = productTools.bulkUpsertProducts(
             merchantId = merchantId.toString(),
             branchId = branchId.toString(),
             products = listOf(
@@ -410,7 +417,7 @@ class MerchantProductToolsTest {
         val branchId = UUID.randomUUID()
 
         kotlin.test.assertFailsWith<IllegalArgumentException> {
-            tools.bulkUpsertProducts(
+            productTools.bulkUpsertProducts(
                 merchantId = merchantId.toString(),
                 branchId = branchId.toString(),
                 products = (1..201).map { BulkProductInput(productName = "Product $it", unitPrice = "1.00") }
@@ -436,7 +443,7 @@ class MerchantProductToolsTest {
                 productResponse(branchId = branchId, name = request.name, unitPrice = request.unitPrice)
             }
 
-        val result = tools.bulkUpsertProducts(
+        val result = productTools.bulkUpsertProducts(
             merchantId = merchantId.toString(),
             branchId = branchId.toString(),
             products = listOf(
@@ -467,7 +474,7 @@ class MerchantProductToolsTest {
                 )
             )
 
-        tools.bulkUpsertProducts(
+        productTools.bulkUpsertProducts(
             merchantId = merchantId.toString(),
             branchId = branchId.toString(),
             products = listOf(BulkProductInput(productName = "Latte", unitPrice = "3.50", categoryId = categoryId.toString()))
@@ -495,7 +502,7 @@ class MerchantProductToolsTest {
                 categoryResponse(name = request.name)
             }
 
-        val result = tools.bulkCreateCategories(merchantId.toString(), categories)
+        val result = categoryTools.bulkCreateCategories(merchantId.toString(), categories)
 
         assertEquals(3, result.created.size)
         assertEquals(emptyList<Any>(), result.skipped)
@@ -512,7 +519,7 @@ class MerchantProductToolsTest {
         whenever(merchantProductCategoryService.create(eq(merchantId), any<CreateProductCategoryRequest>()))
             .thenReturn(categoryResponse(name = "Mains"))
 
-        val result = tools.bulkCreateCategories(
+        val result = categoryTools.bulkCreateCategories(
             merchantId = merchantId.toString(),
             categories = listOf(BulkCategoryInput("Starters"), BulkCategoryInput("Mains"))
         )
@@ -530,7 +537,7 @@ class MerchantProductToolsTest {
         whenever(merchantProductCategoryService.create(eq(merchantId), any<CreateProductCategoryRequest>()))
             .thenReturn(categoryResponse(name = "Starters"))
 
-        val result = tools.bulkCreateCategories(
+        val result = categoryTools.bulkCreateCategories(
             merchantId = merchantId.toString(),
             categories = listOf(BulkCategoryInput("Starters"), BulkCategoryInput("starters"))
         )
@@ -546,7 +553,7 @@ class MerchantProductToolsTest {
         val merchantId = UUID.randomUUID()
 
         kotlin.test.assertFailsWith<IllegalArgumentException> {
-            tools.bulkCreateCategories(
+            categoryTools.bulkCreateCategories(
                 merchantId = merchantId.toString(),
                 categories = (1..201).map { BulkCategoryInput("Category $it") }
             )
@@ -570,7 +577,7 @@ class MerchantProductToolsTest {
                 categoryResponse(name = request.name)
             }
 
-        val result = tools.bulkCreateCategories(
+        val result = categoryTools.bulkCreateCategories(
             merchantId = merchantId.toString(),
             categories = listOf(BulkCategoryInput("Broken"), BulkCategoryInput("Mains"))
         )

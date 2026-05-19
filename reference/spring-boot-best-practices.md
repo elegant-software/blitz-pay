@@ -82,7 +82,7 @@ and makes the class testable without a Spring context.
 @Configuration
 class WebFluxVersioningConfig(
     private val apiVersionProperties: ApiVersionProperties
-) : WebFluxConfigurer { ... }
+) : WebFluxConfigurer { /* ... */ }
 
 // Wrong — field injection
 @Configuration
@@ -207,6 +207,61 @@ This project is fully reactive (Spring WebFlux / Netty). Do not mix in servlet-s
 - Use `Mono`/`Flux` return types in reactive chains
 - Avoid blocking I/O on the reactive thread pool (`block()`, `Thread.sleep()`, JDBC calls
   outside a scheduler)
+
+---
+
+## 8. Suppress "Unused" Warnings on Framework-Driven Classes
+
+**Pattern:** Add `@Suppress("unused")` at the **class level** on any Spring-managed class whose methods are invoked by the framework via reflection rather than by user code.
+
+**Why:** The IDE has no direct call site to trace for these methods and flags them as unused. The suppression is legitimate — the framework is the caller. Applying it at the class level covers all methods in one place.
+
+**Applies to:**
+
+| Spring stereotype | Example method annotations |
+|---|---|
+| REST controllers | `@GetMapping`, `@PostMapping`, `@PatchMapping`, … |
+| MCP tool classes | `@McpTool` |
+| Event listeners | `@EventListener`, `@ApplicationModuleListener` |
+| Scheduled tasks | `@Scheduled` |
+
+**Do this (class-level, one annotation):**
+
+```kotlin
+@Suppress("unused")
+@RestController
+@RequestMapping("/v{version}/merchants")
+class MerchantController(private val merchantService: MerchantService) {
+
+    @GetMapping("/{id}")
+    fun get(@PathVariable id: UUID): MerchantDetailsResponse = ...
+
+    @PostMapping
+    fun create(@RequestBody request: CreateMerchantRequest): MerchantDetailsResponse = ...
+}
+```
+
+```kotlin
+@Suppress("unused")
+@Component
+class BranchMcpTools(private val merchantBranchService: MerchantBranchService) {
+
+    @McpTool(name = "branch_id_by_name", ...)
+    fun getBranchIdByName(...): String = ...
+}
+```
+
+**Not this (per-method, repetitive):**
+
+```kotlin
+@RestController
+class MerchantController(...) {
+
+    @Suppress("unused") // ← don't repeat on every method
+    @GetMapping("/{id}")
+    fun get(@PathVariable id: UUID): MerchantDetailsResponse = ...
+}
+```
 
 ---
 

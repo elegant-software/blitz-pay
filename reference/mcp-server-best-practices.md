@@ -320,3 +320,25 @@ The merchant MCP module exposes:
 
 Bulk tool contracts, validation rules, and example payloads live in
 `specs/015-mcp-bulk-operations/contracts/mcp-tools.md`.
+
+---
+
+## 14. Kotlin Implementation Conventions
+
+### 14.1 One Class Per Domain (SRP)
+
+Split MCP tool methods into one `@Component` class per domain entity. Each class should inject only the services it needs.
+
+```
+merchant/mcp/
+├── MerchantMcpTools.kt   — merchant_api_guide, merchant_id_by_name, merchant_upsert
+├── BranchMcpTools.kt     — branch_id_by_name, branch_id_by_name_or_create, branches_bulk_upsert
+├── CategoryMcpTools.kt   — category_id_by_name*, categories_bulk_create, list
+└── ProductMcpTools.kt    — product_id_by_name*, products_bulk_upsert, merchant_product_update
+```
+
+Do not add a new domain's tools to an existing class. Create a new file.
+
+### 14.2 Suppress "Unused" IDE Warnings
+
+MCP tool classes follow the same rule as REST controllers and event listeners — see **§8** of [`reference/spring-boot-best-practices.md`](spring-boot-best-practices.md) for the full pattern and rationale.

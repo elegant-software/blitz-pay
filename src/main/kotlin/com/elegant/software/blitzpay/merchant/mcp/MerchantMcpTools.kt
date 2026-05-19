@@ -1,0 +1,189 @@
+package com.elegant.software.blitzpay.merchant.mcp
+
+import com.elegant.software.blitzpay.merchant.api.CreateBranchRequest
+import com.elegant.software.blitzpay.merchant.api.MerchantBusinessProfileRequest
+import com.elegant.software.blitzpay.merchant.api.MerchantDetailsResponse
+import com.elegant.software.blitzpay.merchant.api.MerchantPrimaryContactRequest
+import com.elegant.software.blitzpay.merchant.api.RegisterMerchantRequest
+import com.elegant.software.blitzpay.merchant.api.UpdateMerchantRequest
+import com.elegant.software.blitzpay.merchant.application.MerchantBranchService
+import com.elegant.software.blitzpay.merchant.application.MerchantLogoPolicy
+import com.elegant.software.blitzpay.merchant.application.MerchantLogoService
+import com.elegant.software.blitzpay.merchant.application.MerchantManagementService
+import com.elegant.software.blitzpay.merchant.application.MerchantRegistrationService
+import com.elegant.software.blitzpay.storage.StorageService
+import org.springframework.ai.mcp.annotation.McpTool
+import org.springframework.stereotype.Component
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.Base64
+import java.util.UUID
+
+@Suppress("unused")
+@Component
+class MerchantMcpTools(
+    private val merchantRegistrationService: MerchantRegistrationService,
+    private val merchantManagementService: MerchantManagementService,
+    private val merchantLogoService: MerchantLogoService,
+    private val merchantBranchService: MerchantBranchService,
+    private val storageService: StorageService,
+) {
+
+    @McpTool(
+        name = "merchant_api_guide",
+        description = "Call this before starting any merchant, category, or product workflow. " +
+            "Returns tool-selection rules and the recommended operation order."
+    )
+    fun merchantApiGuide(): String = """
+        TOOL SELECTION
+        ══════════════
+        Merchant
+          always upsert  → merchant_upsert  (creates or updates, including logo)
+
+        Branches
+          1 branch   → branch_id_by_name_or_create
+          2+ branches → branches_bulk_upsert  (never loop the single-branch tool; supports all attributes)
+
+        Products
+          1 product  → product_id_by_name_or_create
+          2+ products → products_bulk_upsert  (never loop the single-product tool)
+
+        Categories
+          1 category  → category_id_by_name_or_create
+          2+ categories → categories_bulk_create  (never loop the single-category tool)
+
+        RECOMMENDED WORKFLOW ORDER
+        ══════════════════════════
+        1. merchant_upsert             — create or update the merchant (returns applicationId)
+        2. branches_bulk_upsert        — create or update all branches with full attributes
+        3. categories_bulk_create      — (optional) pre-create all categories in one call
+        4. products_bulk_upsert        — create all products, referencing categoryName
+
+        IDEMPOTENCY & RESPONSES
+        ═══════════════════════
+        • merchant_upsert is idempotent by merchantName — re-running updates the merchant safely.
+        • branches_bulk_upsert is idempotent by branchName — re-running updates branches safely.
+        • productCode is the idempotency key for products — re-running the same payload is safe.
+        • Bulk responses include IDs in all buckets (created / updated / skipped / failed).
+        • categoryName is resolved or created automatically; no separate category lookup required.
+    """.trimIndent()
+
+    @McpTool(
+        name = "merchant_id_by_name",
+        description = "Get merchant ID by merchant name"
+    )
+    fun getMerchantIdByName(merchantName: String): String {
+        return merchantRegistrationService.findByName(merchantName)?.id?.toString()
+            ?: throw IllegalArgumentException("Merchant not found with name: $merchantName")
+    }
+
+    @McpTool(
+        name = "merchant_upsert",
+        description = "Create or update a merchant by name. Always upserts — creates when not found, updates profile when found. " +
+            "Optionally uploads a logo via logoBase64 or logoFilePath. " +
+            "Returns full merchant details; use the returned applicationId as merchantId in subsequent branch and product calls."
+    )
+    fun upsertMerchant(
+        merchantName: String,
+        registrationNumber: String? = null,
+        businessType: String = "RETAIL",
+        operatingCountry: String = "US",
+        primaryBusinessAddress: String? = null,
+        contactFullName: String? = null,
+        contactEmail: String? = null,
+        contactPhoneNumber: String? = null,
+        defaultBranchName: String = "Main Branch",
+        logoBase64: String? = null,
+        logoFilePath: String? = null,
+        logoContentType: String? = null,
+    ): MerchantDetailsResponse {
+        val existing = merchantRegistrationService.findByName(merchantName)
+        val merchantId: UUID
+
+        if (existing == null) {
+            val normalizedRegistrationNumber = registrationNumber?.trim()?.takeIf { it.isNotEmpty() }
+                ?: "MCP-${UUID.randomUUID().toString().replace("-", "").take(12).uppercase()}"
+            val resolvedEmail = contactEmail?.trim()?.takeIf { it.isNotEmpty() }
+                ?: "${merchantName.lowercase().replace(Regex("[^a-z0-9]+"), ".").trim('.')}.merchant@example.com"
+            val created = merchantRegistrationService.registerDraft(
+                RegisterMerchantRequest(
+                    businessProfile = MerchantBusinessProfileRequest(
+                        legalBusinessName = merchantName,
+                        businessType = businessType,
+                        registrationNumber = normalizedRegistrationNumber,
+                        operatingCountry = operatingCountry,
+                        primaryBusinessAddress = primaryBusinessAddress ?: "Unknown"
+                    ),
+                    primaryContact = MerchantPrimaryContactRequest(
+                        fullName = contactFullName ?: "Merchant Owner",
+                        email = resolvedEmail,
+                        phoneNumber = contactPhoneNumber ?: "0000000000"
+                    )
+                )
+            )
+            merchantId = created.id
+        } else {
+            merchantId = existing.id
+            val current = merchantManagementService.get(merchantId)
+            merchantManagementService.update(
+                merchantId,
+                UpdateMerchantRequest(
+                    legalBusinessName = merchantName,
+                    primaryBusinessAddress = primaryBusinessAddress ?: current.primaryBusinessAddress,
+                    contactFullName = contactFullName ?: current.contactFullName,
+                    contactEmail = contactEmail ?: current.contactEmail,
+                    contactPhoneNumber = contactPhoneNumber ?: current.contactPhoneNumber,
+                    activePaymentChannels = current.activePaymentChannels
+                )
+            )
+        }
+
+        ensureBranchExists(merchantId, defaultBranchName)
+
+        val logo = merchantLogoOrNull(logoBase64, logoFilePath, logoContentType)
+        if (logo != null) {
+            val key = MerchantLogoPolicy.storageKeyFor(merchantId, logo.first)
+            storageService.upload(key, logo.first, logo.second)
+            merchantLogoService.attachLogo(merchantId, key)
+        }
+
+        return merchantManagementService.get(merchantId)
+    }
+
+    private fun merchantLogoOrNull(
+        logoBase64: String?,
+        logoFilePath: String?,
+        logoContentType: String?
+    ): Pair<String, ByteArray>? {
+        val normalizedBase64 = logoBase64?.trim()?.takeIf { it.isNotEmpty() }
+        val normalizedFilePath = logoFilePath?.trim()?.takeIf { it.isNotEmpty() }
+        val normalizedContentType = logoContentType?.trim()?.takeIf { it.isNotEmpty() }
+        require(normalizedBase64 == null || normalizedFilePath == null) {
+            "Provide either logoBase64 or logoFilePath, not both"
+        }
+        if (normalizedBase64 == null && normalizedFilePath == null) return null
+        val imagePath = normalizedFilePath?.let { Path.of(it).normalize() }
+        val contentType = normalizedContentType
+            ?: imagePath?.let { Files.probeContentType(it) }
+            ?: throw IllegalArgumentException("logoContentType is required when it cannot be inferred from logoFilePath")
+        MerchantLogoPolicy.extensionFor(contentType)
+        val bytes = when {
+            normalizedBase64 != null -> Base64.getDecoder().decode(normalizedBase64.substringAfter("base64,", normalizedBase64))
+            imagePath != null -> Files.readAllBytes(imagePath)
+            else -> error("No logo source provided")
+        }
+        return contentType to bytes
+    }
+
+    private fun ensureBranchExists(merchantId: UUID, defaultBranchName: String) {
+        require(defaultBranchName.isNotBlank()) { "defaultBranchName must not be blank" }
+        val existingBranch = merchantBranchService.findByNameIncludingInactive(merchantId, defaultBranchName)
+        if (existingBranch == null) {
+            merchantBranchService.create(
+                merchantId,
+                CreateBranchRequest(name = defaultBranchName),
+                active = false
+            )
+        }
+    }
+}
