@@ -72,7 +72,11 @@
       "Bash(./gradlew :compileKotlin --quiet)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(grep -v \"^--$\")",
+      "Bash(xargs sed -i '' 's/businessType = \"LLC\"/businessType = \"RETAIL\"/g')",
+      "Bash(xargs sed -i '' 's/businessType = \"LIMITED_COMPANY\"/businessType = \"RETAIL\"/g')",
+      "Bash(xargs sed -i '' 's/\"businessType\": \"LLC\"/\"businessType\": \"RETAIL\"/g')"
     ]
   },
   "hooks": {

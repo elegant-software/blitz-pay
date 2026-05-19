@@ -147,6 +147,7 @@ blitzpay:
     batch-size: ${GOOGLE_MAPS_BATCH_SIZE:50}
   geofence:
     proximity-cooldown-seconds: ${GEOFENCE_PROXIMITY_COOLDOWN_SECONDS:30}
+    default-radius-meters: ${GEOFENCE_DEFAULT_RADIUS_METERS:500}
   expo:
     access-token: ${EXPO_ACCESS_TOKEN:}
     base-url: ${EXPO_PUSH_URL:https://exp.host/--/api/v2/push/send}

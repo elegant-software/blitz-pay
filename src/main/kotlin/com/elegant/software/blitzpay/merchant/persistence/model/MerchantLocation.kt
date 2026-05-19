@@ -7,7 +7,6 @@ import jakarta.persistence.Embeddable
 data class MerchantLocation(
     @Column(nullable = false)
     val latitude: Double,
-
     @Column(nullable = false)
     val longitude: Double,
 

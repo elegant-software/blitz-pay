@@ -4,5 +4,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties(prefix = "blitzpay.geofence")
 data class GeofenceProperties(
-    val proximityCooldownSeconds: Long = 30
+    val proximityCooldownSeconds: Long = 30,
+    val defaultRadiusMeters: Int = 500,
 )

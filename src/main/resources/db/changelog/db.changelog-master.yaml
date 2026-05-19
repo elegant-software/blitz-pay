@@ -71,3 +71,5 @@ databaseChangeLog:
       file: db/changelog/20260515-001-order-payment-source.sql
   - include:
       file: db/changelog/20260515-002-order-item-price-override.sql
+  - include:
+      file: db/changelog/20260519-001-backfill-geofence-radius.sql

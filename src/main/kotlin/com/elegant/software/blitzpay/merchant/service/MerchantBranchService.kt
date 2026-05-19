@@ -9,6 +9,7 @@ import com.elegant.software.blitzpay.merchant.domain.MerchantBranch
 import com.elegant.software.blitzpay.merchant.domain.MerchantEntityStatus
 import com.elegant.software.blitzpay.merchant.domain.MerchantLocation
 import com.elegant.software.blitzpay.merchant.domain.MerchantPaymentChannel
+import com.elegant.software.blitzpay.merchant.config.GeofenceProperties
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
 import com.elegant.software.blitzpay.storage.StorageService
@@ -25,6 +26,7 @@ class MerchantBranchService(
     private val merchantApplicationRepository: MerchantApplicationRepository,
     private val storageService: StorageService,
     private val eventPublisher: ApplicationEventPublisher,
+    private val geofenceProperties: GeofenceProperties,
 ) {
 
     fun create(merchantId: UUID, request: CreateBranchRequest, active: Boolean = true): BranchResponse {
@@ -351,7 +353,7 @@ class MerchantBranchService(
         return MerchantLocation(
             latitude = requireNotNull(latitude),
             longitude = requireNotNull(longitude),
-            geofenceRadiusMeters = geofenceRadiusMeters ?: 500,
+            geofenceRadiusMeters = geofenceRadiusMeters ?: geofenceProperties.defaultRadiusMeters,
             googlePlaceId = googlePlaceId,
             addressLine1 = addressLine1,
             addressLine2 = addressLine2,
@@ -399,7 +401,7 @@ class MerchantBranchService(
             hasCoordinateUpdate -> MerchantLocation(
                 latitude = requireNotNull(latitude),
                 longitude = requireNotNull(longitude),
-                geofenceRadiusMeters = geofenceRadiusMeters ?: currentLocation?.geofenceRadiusMeters ?: 500,
+                geofenceRadiusMeters = geofenceRadiusMeters ?: currentLocation?.geofenceRadiusMeters ?: geofenceProperties.defaultRadiusMeters,
                 googlePlaceId = googlePlaceId ?: currentLocation?.googlePlaceId,
                 addressLine1 = this.addressLine1,
                 addressLine2 = this.addressLine2,
