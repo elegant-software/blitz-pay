@@ -1,0 +1,38 @@
+{
+  "scenarioId": "pricecomparison-monitoring-slowdown",
+  "description": "Sony headphones request that completes with a provider slowdown bottleneck",
+  "domain": "pricecomparison",
+  "tags": ["canonical", "monitoring", "slow-path"],
+  "inputData": {
+    "inputPrice": 329.99,
+    "currency": "USD",
+    "productTitle": "Sony WH-1000XM5 Wireless Noise Canceling Headphones",
+    "brandName": "Sony",
+    "modelName": "WH-1000XM5",
+    "sku": "SONY-WH1000XM5-BLK",
+    "additionalAttributes": {
+      "monitoringMode": "lookup_slowdown"
+    }
+  },
+  "providerOffers": [
+    {
+      "normalizedTitle": "Sony WH-1000XM5 Wireless Noise Canceling Headphones",
+      "brandName": "Sony",
+      "modelName": "WH-1000XM5",
+      "sku": "SONY-WH1000XM5-BLK",
+      "sellerName": "TechHub",
+      "offerPrice": 279.99,
+      "currency": "USD",
+      "productUrl": "https://example.test/offers/sony-wh1000xm5-techhub",
+      "available": true
+    }
+  ],
+  "expectations": {
+    "status": "better_price_found",
+    "bestSellerName": "TechHub",
+    "bestOfferPrice": 279.99,
+    "savingsAmount": 50.00,
+    "savingsPercentage": 15.15,
+    "explanationCode": "better_price_available"
+  }
+}

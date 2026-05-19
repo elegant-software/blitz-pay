@@ -1,0 +1,49 @@
+{
+  "scenarioId": "pricecomparison-no-better-price",
+  "description": "Dyson airwrap where no cheaper qualifying offer exists",
+  "domain": "pricecomparison",
+  "tags": ["canonical", "negative", "no-better-price"],
+  "inputData": {
+    "inputPrice": 549.99,
+    "currency": "USD",
+    "productTitle": "Dyson Airwrap Multi-Styler Complete Long",
+    "brandName": "Dyson",
+    "modelName": "Airwrap Complete Long",
+    "sku": "DYS-AIRWRAP-COMPLETE-LONG",
+    "additionalAttributes": {
+      "color": "nickel-copper"
+    }
+  },
+  "providerOffers": [
+    {
+      "normalizedTitle": "Dyson Airwrap Multi-Styler Complete Long",
+      "brandName": "Dyson",
+      "modelName": "Airwrap Complete Long",
+      "sku": "DYS-AIRWRAP-COMPLETE-LONG",
+      "sellerName": "BeautyWorld",
+      "offerPrice": 599.99,
+      "currency": "USD",
+      "productUrl": "https://example.test/offers/dyson-airwrap-beautyworld",
+      "available": true
+    },
+    {
+      "normalizedTitle": "Dyson Airwrap Multi-Styler Complete Long",
+      "brandName": "Dyson",
+      "modelName": "Airwrap Complete Long",
+      "sku": "DYS-AIRWRAP-COMPLETE-LONG",
+      "sellerName": "StyleMarket",
+      "offerPrice": 629.99,
+      "currency": "USD",
+      "productUrl": "https://example.test/offers/dyson-airwrap-stylemarket",
+      "available": true
+    }
+  ],
+  "expectations": {
+    "status": "no_better_price_found",
+    "bestSellerName": null,
+    "bestOfferPrice": null,
+    "savingsAmount": 0.00,
+    "savingsPercentage": 0.00,
+    "explanationCode": "no_cheaper_qualifying_offer"
+  }
+}

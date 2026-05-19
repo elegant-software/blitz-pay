@@ -1,0 +1,47 @@
+{
+  "scenarioId": "pricecomparison-comparison-unavailable",
+  "description": "Ambiguous wireless earbuds request with no reliable product match",
+  "domain": "pricecomparison",
+  "tags": ["canonical", "edge-case", "comparison-unavailable"],
+  "inputData": {
+    "inputPrice": 89.99,
+    "currency": "USD",
+    "productTitle": "Wireless Earbuds",
+    "brandName": null,
+    "modelName": null,
+    "sku": null,
+    "additionalAttributes": {}
+  },
+  "providerOffers": [
+    {
+      "normalizedTitle": "Generic Wireless Earbuds",
+      "brandName": null,
+      "modelName": null,
+      "sku": null,
+      "sellerName": "MarketplaceA",
+      "offerPrice": 59.99,
+      "currency": "USD",
+      "productUrl": "https://example.test/offers/generic-earbuds-a",
+      "available": true
+    },
+    {
+      "normalizedTitle": "Budget Bluetooth Earbuds",
+      "brandName": null,
+      "modelName": null,
+      "sku": null,
+      "sellerName": "MarketplaceB",
+      "offerPrice": 49.99,
+      "currency": "USD",
+      "productUrl": "https://example.test/offers/generic-earbuds-b",
+      "available": true
+    }
+  ],
+  "expectations": {
+    "status": "comparison_unavailable",
+    "bestSellerName": null,
+    "bestOfferPrice": null,
+    "savingsAmount": 0.00,
+    "savingsPercentage": null,
+    "explanationCode": "low_match_confidence"
+  }
+}

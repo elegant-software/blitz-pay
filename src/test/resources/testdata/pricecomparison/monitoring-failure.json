@@ -1,0 +1,26 @@
+{
+  "scenarioId": "pricecomparison-monitoring-failure",
+  "description": "Sony headphones request where provider lookup fails within the active request",
+  "domain": "pricecomparison",
+  "tags": ["canonical", "monitoring", "failure"],
+  "inputData": {
+    "inputPrice": 329.99,
+    "currency": "USD",
+    "productTitle": "Sony WH-1000XM5 Wireless Noise Canceling Headphones",
+    "brandName": "Sony",
+    "modelName": "WH-1000XM5",
+    "sku": "SONY-WH1000XM5-BLK",
+    "additionalAttributes": {
+      "monitoringMode": "lookup_failure"
+    }
+  },
+  "providerOffers": [],
+  "expectations": {
+    "status": "comparison_unavailable",
+    "bestSellerName": null,
+    "bestOfferPrice": null,
+    "savingsAmount": 0.00,
+    "savingsPercentage": null,
+    "explanationCode": "provider_lookup_failed"
+  }
+}
