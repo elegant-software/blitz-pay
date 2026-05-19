@@ -45,20 +45,8 @@ class MerchantBranch(
     @Column(nullable = false, length = 32)
     var status: String = MerchantEntityStatus.INACTIVE,
 
-    @Column(name = "address_line1")
-    var addressLine1: String? = null,
-
-    @Column(name = "address_line2")
-    var addressLine2: String? = null,
-
-    @Column(name = "city")
-    var city: String? = null,
-
-    @Column(name = "postal_code")
-    var postalCode: String? = null,
-
-    @Column(name = "country")
-    var country: String? = null,
+    @Embedded
+    var address: PostalAddress? = null,
 
     @Column(name = "contact_full_name")
     var contactFullName: String? = null,
@@ -118,11 +106,13 @@ class MerchantBranch(
         this.name = name
         this.active = active
         this.status = if (active) MerchantEntityStatus.ACTIVE else MerchantEntityStatus.INACTIVE
-        this.addressLine1 = addressLine1
-        this.addressLine2 = addressLine2
-        this.city = city
-        this.postalCode = postalCode
-        this.country = country
+        this.address = PostalAddress(
+            addressLine1 = addressLine1,
+            addressLine2 = addressLine2,
+            city = city,
+            postalCode = postalCode,
+            country = country,
+        )
         this.contactFullName = contactFullName
         this.websiteOverride = websiteOverride
         this.contactEmail = contactEmail

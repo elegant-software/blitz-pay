@@ -8,6 +8,7 @@ import com.elegant.software.blitzpay.merchant.api.UpdateBranchRequest
 import com.elegant.software.blitzpay.merchant.domain.MerchantBranch
 import com.elegant.software.blitzpay.merchant.domain.MerchantEntityStatus
 import com.elegant.software.blitzpay.merchant.domain.MerchantLocation
+import com.elegant.software.blitzpay.merchant.domain.PostalAddress
 import com.elegant.software.blitzpay.merchant.domain.MerchantPaymentChannel
 import com.elegant.software.blitzpay.merchant.config.GeofenceProperties
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
@@ -49,11 +50,13 @@ class MerchantBranchService(
             name = request.name,
             active = active,
             status = if (active) MerchantEntityStatus.ACTIVE else MerchantEntityStatus.INACTIVE,
-            addressLine1 = request.addressLine1,
-            addressLine2 = request.addressLine2,
-            city = request.city,
-            postalCode = request.postalCode,
-            country = request.country,
+            address = PostalAddress(
+                addressLine1 = request.addressLine1,
+                addressLine2 = request.addressLine2,
+                city = request.city,
+                postalCode = request.postalCode,
+                country = request.country,
+            ),
             contactFullName = request.contactFullName,
             websiteOverride = request.website,
             contactEmail = request.contactEmail,
@@ -284,11 +287,11 @@ class MerchantBranchService(
         branchCode = branchCode,
         name = name,
         active = active,
-        addressLine1 = addressLine1,
-        addressLine2 = addressLine2,
-        city = city,
-        postalCode = postalCode,
-        country = country,
+        addressLine1 = address?.addressLine1,
+        addressLine2 = address?.addressLine2,
+        city = address?.city,
+        postalCode = address?.postalCode,
+        country = address?.country,
         contactFullName = contactFullName,
         website = websiteOverride,
         contactEmail = contactEmail,
@@ -309,57 +312,24 @@ class MerchantBranchService(
         updatedAt = updatedAt,
     )
 
-    private fun CreateBranchRequest.toLocation(): MerchantLocation? {
-        return toLocation(
-            addressLine1 = addressLine1,
-            addressLine2 = addressLine2,
-            city = city,
-            postalCode = postalCode,
-            country = country,
-            latitude = latitude,
-            longitude = longitude,
-            geofenceRadiusMeters = geofenceRadiusMeters,
-            googlePlaceId = googlePlaceId,
-        )
-    }
+    private fun CreateBranchRequest.toLocation(): MerchantLocation? =
+        toLocation(latitude, longitude, geofenceRadiusMeters, googlePlaceId)
 
-    private fun UpdateBranchRequest.toLocation(): MerchantLocation? {
-        return toLocation(
-            addressLine1 = addressLine1,
-            addressLine2 = addressLine2,
-            city = city,
-            postalCode = postalCode,
-            country = country,
-            latitude = latitude,
-            longitude = longitude,
-            geofenceRadiusMeters = geofenceRadiusMeters,
-            googlePlaceId = googlePlaceId,
-        )
-    }
+    private fun UpdateBranchRequest.toLocation(): MerchantLocation? =
+        toLocation(latitude, longitude, geofenceRadiusMeters, googlePlaceId)
 
     private fun toLocation(
-        addressLine1: String?,
-        addressLine2: String?,
-        city: String?,
-        postalCode: String?,
-        country: String?,
         latitude: Double?,
         longitude: Double?,
         geofenceRadiusMeters: Int?,
         googlePlaceId: String?,
     ): MerchantLocation? {
-        val hasCoordinates = latitude != null && longitude != null
-        if (!hasCoordinates) return null
+        if (latitude == null || longitude == null) return null
         return MerchantLocation(
-            latitude = requireNotNull(latitude),
-            longitude = requireNotNull(longitude),
+            latitude = latitude,
+            longitude = longitude,
             geofenceRadiusMeters = geofenceRadiusMeters ?: geofenceProperties.defaultRadiusMeters,
             googlePlaceId = googlePlaceId,
-            addressLine1 = addressLine1,
-            addressLine2 = addressLine2,
-            city = city,
-            postalCode = postalCode,
-            country = country,
             placeEnrichmentStatus = googlePlaceId?.let { "PENDING" }
         )
     }
@@ -379,11 +349,14 @@ class MerchantBranchService(
         geofenceRadiusMeters: Int?,
         googlePlaceId: String?
     ): MerchantBranch {
-        addressLine1?.let { this.addressLine1 = it }
-        addressLine2?.let { this.addressLine2 = it }
-        city?.let { this.city = it }
-        postalCode?.let { this.postalCode = it }
-        country?.let { this.country = it }
+        val currentAddress = this.address
+        this.address = PostalAddress(
+            addressLine1 = addressLine1 ?: currentAddress?.addressLine1,
+            addressLine2 = addressLine2 ?: currentAddress?.addressLine2,
+            city = city ?: currentAddress?.city,
+            postalCode = postalCode ?: currentAddress?.postalCode,
+            country = country ?: currentAddress?.country,
+        )
         contactFullName?.let { this.contactFullName = it }
         contactEmail?.let { this.contactEmail = it }
         contactPhoneNumber?.let { this.contactPhoneNumber = it }
@@ -403,22 +376,12 @@ class MerchantBranchService(
                 longitude = requireNotNull(longitude),
                 geofenceRadiusMeters = geofenceRadiusMeters ?: currentLocation?.geofenceRadiusMeters ?: geofenceProperties.defaultRadiusMeters,
                 googlePlaceId = googlePlaceId ?: currentLocation?.googlePlaceId,
-                addressLine1 = this.addressLine1,
-                addressLine2 = this.addressLine2,
-                city = this.city,
-                postalCode = this.postalCode,
-                country = this.country,
                 placeEnrichmentStatus = enrichmentStatusFor(googlePlaceId, currentLocation)
             )
 
             currentLocation != null -> currentLocation.copy(
                 geofenceRadiusMeters = geofenceRadiusMeters ?: currentLocation.geofenceRadiusMeters,
                 googlePlaceId = googlePlaceId ?: currentLocation.googlePlaceId,
-                addressLine1 = this.addressLine1,
-                addressLine2 = this.addressLine2,
-                city = this.city,
-                postalCode = this.postalCode,
-                country = this.country,
                 placeEnrichmentStatus = enrichmentStatusFor(googlePlaceId, currentLocation)
             )
 
@@ -430,10 +393,10 @@ class MerchantBranchService(
 
     private fun validateActiveBranch(branch: MerchantBranch) {
         if (!branch.active) return
-        require(branch.addressLine1?.isNotBlank() == true) { "addressLine1 must not be blank for active branches" }
-        require(branch.city?.isNotBlank() == true) { "city must not be blank for active branches" }
-        require(branch.postalCode?.isNotBlank() == true) { "postalCode must not be blank for active branches" }
-        require(branch.country?.isNotBlank() == true) { "country must not be blank for active branches" }
+        require(branch.address?.addressLine1?.isNotBlank() == true) { "addressLine1 must not be blank for active branches" }
+        require(branch.address?.city?.isNotBlank() == true) { "city must not be blank for active branches" }
+        require(branch.address?.postalCode?.isNotBlank() == true) { "postalCode must not be blank for active branches" }
+        require(branch.address?.country?.isNotBlank() == true) { "country must not be blank for active branches" }
         val location = requireNotNull(branch.location) { "location is required for active branches" }
         require(location.geofenceRadiusMeters > 0) { "geofenceRadiusMeters must be positive for active branches" }
     }

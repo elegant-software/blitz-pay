@@ -40,6 +40,9 @@ class MerchantApplication(
     @Column(name = "website")
     var website: String? = null,
 
+    @Embedded
+    var address: PostalAddress? = null,
+
     @Column(name = "contact_email_public")
     var publicEmail: String? = null,
 

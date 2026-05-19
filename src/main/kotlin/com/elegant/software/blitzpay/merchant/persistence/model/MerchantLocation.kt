@@ -16,21 +16,6 @@ data class MerchantLocation(
     @Column(name = "google_place_id")
     val googlePlaceId: String? = null,
 
-    @Column(name = "address_line1", insertable = false, updatable = false)
-    val addressLine1: String? = null,
-
-    @Column(name = "address_line2", insertable = false, updatable = false)
-    val addressLine2: String? = null,
-
-    @Column(name = "city", insertable = false, updatable = false)
-    val city: String? = null,
-
-    @Column(name = "postal_code", insertable = false, updatable = false)
-    val postalCode: String? = null,
-
-    @Column(name = "country", insertable = false, updatable = false)
-    val country: String? = null,
-
     @Column(name = "place_formatted_address", length = 1024)
     val placeFormattedAddress: String? = null,
 

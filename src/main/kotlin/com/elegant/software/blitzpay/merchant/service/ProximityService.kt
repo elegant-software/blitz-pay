@@ -97,11 +97,11 @@ class ProximityService(
                     distanceMeters = branch.location?.let {
                         haversineMeters(request.location.latitude, request.location.longitude, it.latitude, it.longitude)
                     },
-                    addressLine1 = branch.addressLine1,
-                    addressLine2 = branch.addressLine2,
-                    city = branch.city,
-                    postalCode = branch.postalCode,
-                    country = branch.country,
+                    addressLine1 = branch.address?.addressLine1,
+                    addressLine2 = branch.address?.addressLine2,
+                    city = branch.address?.city,
+                    postalCode = branch.address?.postalCode,
+                    country = branch.address?.country,
                     contactFullName = branch.contactFullName,
                     contactEmail = branch.contactEmail,
                     contactPhoneNumber = branch.contactPhoneNumber,

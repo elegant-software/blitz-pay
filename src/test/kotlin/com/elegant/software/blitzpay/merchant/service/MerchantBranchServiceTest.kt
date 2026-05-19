@@ -30,7 +30,10 @@ class MerchantBranchServiceTest {
     private val merchantRepository = mock<MerchantApplicationRepository>()
     private val storageService = mock<StorageService>()
     private val eventPublisher = mock<ApplicationEventPublisher>()
-    private val service = MerchantBranchService(branchRepository, merchantRepository, storageService, eventPublisher)
+    private val geofenceProperties = mock<com.elegant.software.blitzpay.merchant.config.GeofenceProperties>().also {
+        whenever(it.defaultRadiusMeters).thenReturn(500)
+    }
+    private val service = MerchantBranchService(branchRepository, merchantRepository, storageService, eventPublisher, geofenceProperties)
 
     private fun merchantApplication(name: String = "Test Merchant GmbH") = MerchantApplication(
         applicationReference = "BLTZ-TEST",
@@ -164,10 +167,12 @@ class MerchantBranchServiceTest {
         val branch = MerchantBranch(
             merchantApplicationId = merchantId,
             name = "Bremen Mitte",
-            addressLine1 = "Old Strasse 1",
-            city = "Bremen",
-            postalCode = "28195",
-            country = "DE"
+            address = com.elegant.software.blitzpay.merchant.domain.PostalAddress(
+                addressLine1 = "Old Strasse 1",
+                city = "Bremen",
+                postalCode = "28195",
+                country = "DE",
+            ),
         ).also {
             it.location = com.elegant.software.blitzpay.merchant.domain.MerchantLocation(
                 latitude = 53.0758,
@@ -228,10 +233,12 @@ class MerchantBranchServiceTest {
         val branch = MerchantBranch(
             merchantApplicationId = merchantId,
             name = "Same Name",
-            addressLine1 = "Same Street 1",
-            city = "Hamburg",
-            postalCode = "20095",
-            country = "DE"
+            address = com.elegant.software.blitzpay.merchant.domain.PostalAddress(
+                addressLine1 = "Same Street 1",
+                city = "Hamburg",
+                postalCode = "20095",
+                country = "DE",
+            ),
         ).also {
             it.location = com.elegant.software.blitzpay.merchant.domain.MerchantLocation(
                 latitude = 53.5511,

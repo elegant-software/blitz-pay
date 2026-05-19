@@ -8,6 +8,7 @@ import com.elegant.software.blitzpay.merchant.api.MerchantNameUpdated
 import com.elegant.software.blitzpay.merchant.api.UpdateMerchantRequest
 import com.elegant.software.blitzpay.merchant.domain.MerchantApplication
 import com.elegant.software.blitzpay.merchant.domain.MerchantLocation
+import com.elegant.software.blitzpay.merchant.domain.PostalAddress
 import com.elegant.software.blitzpay.merchant.domain.MerchantOfferingAssignment
 import com.elegant.software.blitzpay.merchant.domain.PrimaryContact
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
@@ -49,11 +50,11 @@ class MerchantManagementService(
         require(resolvedMerchantName.isNotBlank()) { "merchantName must not be blank" }
 
         val resolvedAddress = request.address ?: MerchantAddress(
-            addressLine1 = request.primaryBusinessAddress ?: application.location?.addressLine1 ?: application.businessProfile.primaryBusinessAddress,
-            addressLine2 = application.location?.addressLine2,
-            city = application.location?.city,
-            postalCode = application.location?.postalCode,
-            country = application.location?.country,
+            addressLine1 = request.primaryBusinessAddress ?: application.address?.addressLine1 ?: application.businessProfile.primaryBusinessAddress,
+            addressLine2 = application.address?.addressLine2,
+            city = application.address?.city,
+            postalCode = application.address?.postalCode,
+            country = application.address?.country,
         )
 
         val resolvedContactInfo = request.contactInfo ?: MerchantContactInfo(
@@ -79,7 +80,16 @@ class MerchantManagementService(
         application.website = resolvedContactInfo.website
         application.publicEmail = resolvedContactInfo.email
         application.publicPhoneNumber = resolvedContactInfo.phoneNumber
-        request.location?.let { application.updateLocation(it.toDomainLocation(resolvedAddress)) }
+        request.location?.let {
+            application.updateLocation(it.toDomainLocation())
+            application.address = PostalAddress(
+                addressLine1 = resolvedAddress.addressLine1,
+                addressLine2 = resolvedAddress.addressLine2,
+                city = resolvedAddress.city,
+                postalCode = resolvedAddress.postalCode,
+                country = resolvedAddress.country,
+            )
+        }
         request.offerings?.let { syncOfferings(application.id, it) }
 
         val saved = repository.save(application)
@@ -126,11 +136,11 @@ class MerchantManagementService(
             phoneNumber = publicPhoneNumber ?: primaryContact.phoneNumber,
         ),
         address = MerchantAddress(
-            addressLine1 = location?.addressLine1 ?: businessProfile.primaryBusinessAddress.takeIf { it.isNotBlank() },
-            addressLine2 = location?.addressLine2,
-            city = location?.city,
-            postalCode = location?.postalCode,
-            country = location?.country,
+            addressLine1 = address?.addressLine1 ?: businessProfile.primaryBusinessAddress.takeIf { it.isNotBlank() },
+            addressLine2 = address?.addressLine2,
+            city = address?.city,
+            postalCode = address?.postalCode,
+            country = address?.country,
         ),
         location = location?.let {
             MerchantLocationInfo(
@@ -162,7 +172,7 @@ class MerchantManagementService(
             address.country?.takeIf { it.isNotBlank() },
         ).joinToString(", ")
 
-    private fun MerchantLocationInfo.toDomainLocation(address: MerchantAddress): MerchantLocation {
+    private fun MerchantLocationInfo.toDomainLocation(): MerchantLocation {
         require(latitude != null) { "location.latitude must not be null" }
         require(longitude != null) { "location.longitude must not be null" }
         requireNotNull(geofenceRadiusMeters) { "location.geofenceRadiusMeters must not be null" }
@@ -172,11 +182,6 @@ class MerchantManagementService(
             longitude = longitude,
             geofenceRadiusMeters = geofenceRadiusMeters,
             googlePlaceId = googlePlaceId,
-            addressLine1 = address.addressLine1,
-            addressLine2 = address.addressLine2,
-            city = address.city,
-            postalCode = address.postalCode,
-            country = address.country,
             placeEnrichmentStatus = googlePlaceId?.let { "PENDING" } ?: placeEnrichmentStatus,
         )
     }

@@ -6,6 +6,7 @@ import com.elegant.software.blitzpay.merchant.api.NearbyMerchantResponse
 import com.elegant.software.blitzpay.merchant.api.NearbyMerchantsResponse
 import com.elegant.software.blitzpay.merchant.api.SetMerchantLocationRequest
 import com.elegant.software.blitzpay.merchant.domain.MerchantLocation
+import com.elegant.software.blitzpay.merchant.domain.PostalAddress
 import com.elegant.software.blitzpay.merchant.repository.MerchantApplicationRepository
 import com.elegant.software.blitzpay.merchant.repository.MerchantBranchRepository
 import org.slf4j.LoggerFactory
@@ -40,17 +41,19 @@ class MerchantLocationService(
                 longitude = request.longitude,
                 geofenceRadiusMeters = request.geofenceRadiusMeters,
                 googlePlaceId = request.googlePlaceId,
-                addressLine1 = request.addressLine1,
-                addressLine2 = request.addressLine2,
-                city = request.city,
-                postalCode = request.postalCode,
-                country = request.country,
                 placeEnrichmentStatus = request.googlePlaceId?.let { "PENDING" }
             )
         )
+        merchant.address = PostalAddress(
+            addressLine1 = request.addressLine1,
+            addressLine2 = request.addressLine2,
+            city = request.city,
+            postalCode = request.postalCode,
+            country = request.country,
+        )
         repository.save(merchant)
         log.info("Location set for merchant {}", merchantId)
-        return merchant.location!!.toResponse(merchantId)
+        return merchant.location!!.toResponse(merchantId, merchant.address)
     }
 
     @Transactional(readOnly = true)
@@ -59,7 +62,7 @@ class MerchantLocationService(
             .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Merchant not found") }
         val location = merchant.location
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "No location set for merchant")
-        return location.toResponse(merchantId)
+        return location.toResponse(merchantId, merchant.address)
     }
 
     @Transactional
@@ -114,10 +117,10 @@ class MerchantLocationService(
                                 distanceMeters = branchDistance.distanceMeters,
                                 latitude = branchLocation.latitude,
                                 longitude = branchLocation.longitude,
-                                addressLine1 = branch.addressLine1,
-                                city = branch.city,
-                                postalCode = branch.postalCode,
-                                country = branch.country,
+                                addressLine1 = branch.address?.addressLine1,
+                                city = branch.address?.city,
+                                postalCode = branch.address?.postalCode,
+                                country = branch.address?.country,
                                 contactFullName = branch.contactFullName,
                                 contactEmail = branch.contactEmail,
                                 contactPhoneNumber = branch.contactPhoneNumber,
@@ -129,17 +132,17 @@ class MerchantLocationService(
         )
     }
 
-    private fun MerchantLocation.toResponse(merchantId: UUID) = MerchantLocationResponse(
+    private fun MerchantLocation.toResponse(merchantId: UUID, address: PostalAddress?) = MerchantLocationResponse(
         merchantId = merchantId,
         latitude = latitude,
         longitude = longitude,
         geofenceRadiusMeters = geofenceRadiusMeters,
         googlePlaceId = googlePlaceId,
-        addressLine1 = addressLine1,
-        addressLine2 = addressLine2,
-        city = city,
-        postalCode = postalCode,
-        country = country,
+        addressLine1 = address?.addressLine1,
+        addressLine2 = address?.addressLine2,
+        city = address?.city,
+        postalCode = address?.postalCode,
+        country = address?.country,
         placeFormattedAddress = placeFormattedAddress,
         placeRating = placeRating,
         placeReviewCount = placeReviewCount,

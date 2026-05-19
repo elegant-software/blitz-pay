@@ -69,10 +69,12 @@ class OrderServiceTest {
         id = branchId,
         merchantApplicationId = merchantId,
         name = "Main Branch",
-        addressLine1 = "Branch Street 1",
-        city = "Berlin",
-        postalCode = "10115",
-        country = "DE"
+        address = com.elegant.software.blitzpay.merchant.domain.PostalAddress(
+            addressLine1 = "Branch Street 1",
+            city = "Berlin",
+            postalCode = "10115",
+            country = "DE",
+        ),
     ).also {
         it.location = com.elegant.software.blitzpay.merchant.domain.MerchantLocation(
             latitude = 52.52,
@@ -254,10 +256,12 @@ class OrderServiceTest {
             merchantApplicationId = merchantId,
             name = "Inactive Branch",
             active = false,
-            addressLine1 = "Branch Street 1",
-            city = "Berlin",
-            postalCode = "10115",
-            country = "DE"
+            address = com.elegant.software.blitzpay.merchant.domain.PostalAddress(
+                addressLine1 = "Branch Street 1",
+                city = "Berlin",
+                postalCode = "10115",
+                country = "DE",
+            ),
         )
         whenever(merchantApplicationRepository.findById(merchantId)).thenReturn(Optional.of(merchant))
         whenever(merchantBranchRepository.findById(branchId)).thenReturn(Optional.of(inactiveBranch))
