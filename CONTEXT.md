@@ -84,6 +84,14 @@ _Avoid_: standalone payment type
 The ability for a customer to reserve a time slot with the merchant.
 _Avoid_: visit, booking slot only
 
+**Service Category**:
+A merchant-defined classification for services that can be ordered or scheduled, such as haircut, shave, or color treatment.
+_Avoid_: product category, service type, offering type
+
+**Estimated Service Duration**:
+The expected duration in minutes for completing a service within a Service Category, used for appointment scheduling and capacity planning.
+_Avoid_: appointment duration, slot duration, time required
+
 **Order**:
 A customer order always placed against a specific Branch of a Merchant.
 _Avoid_: merchant-only order
@@ -121,6 +129,13 @@ _Avoid_: inferring order kind from channel, actor, or payment state
 - **Merchant Offering** is configured at the **Merchant** level only; branch-level overrides are out of scope in this context
 - Customer actions such as order creation and appointment booking are allowed only when the corresponding **Merchant Offering** is enabled
 - **Merchant Status** acts as a global gate; an inactive merchant disables branch-facing flows even if a branch itself is active
+- A **Merchant** owns zero or more **Service Category** entries
+- A **Service Category** belongs to exactly one **Merchant**
+- A **Service Category** may have zero or one **Estimated Service Duration**
+- **Estimated Service Duration** is stored in minutes and must be positive when present
+- **Estimated Service Duration** is capped at 480 minutes (8 hours) for operational sanity
+- **Estimated Service Duration** may only be written (on create or update) when the **Merchant** has **Appointment Booking** enabled; writing it without that offering is rejected
+- Disabling **Appointment Booking** does not clear existing **Estimated Service Duration** values; they are inert and preserved for if the offering is re-enabled
 - **Walk-In Ordering** is decided by the backend using the customer's geolocation relative to the branch
 - **Pre-Order** may be used regardless of the customer's proximity to the branch
 - The customer requests an **Order Type**, and the backend validates it against merchant offerings and geolocation rules
@@ -232,6 +247,21 @@ _Avoid_: inferring order kind from channel, actor, or payment state
 >
 > **Dev:** "If a merchant is inactive but a branch is active, can that branch still serve traffic?"
 > **Domain expert:** "No. An inactive **Merchant** disables branch-facing flows globally."
+>
+> **Dev:** "What is a **Service Category**?"
+> **Domain expert:** "A merchant-defined classification for services like haircut, shave, or color treatment. They belong to the **Merchant**, not individual branches."
+>
+> **Dev:** "Does every **Service Category** need an **Estimated Service Duration**?"
+> **Domain expert:** "No. Duration is optional, but when provided it must be positive and capped at 8 hours for sanity."
+>
+> **Dev:** "Is duration the appointment slot size or the service time?"
+> **Domain expert:** "It's the expected service time. Appointment slot sizing and staff availability are separate concerns."
+>
+> **Dev:** "Can a merchant that doesn't offer **Appointment Booking** still set an **Estimated Service Duration** on a category?"
+> **Domain expert:** "No. Duration is only meaningful for appointment scheduling, so writing it without **Appointment Booking** enabled is rejected. Storing it silently would create invisible, unusable data."
+>
+> **Dev:** "If a merchant disables **Appointment Booking**, do we clear all the durations they've set?"
+> **Domain expert:** "No. We leave them in place — they're inert without the offering, and clearing them on toggle would be a destructive, irreversible side-effect. If the offering is re-enabled, the durations are still there."
 
 ## Flagged ambiguities
 
@@ -271,3 +301,10 @@ _Avoid_: inferring order kind from channel, actor, or payment state
 - Merchant and branch could have shared the same optionality rules. Resolved: **Merchant** address/location are optional, while **Branch** address/location are mandatory.
 - Branch location could have meant only postal address. Resolved: every **Branch** requires both a structured postal address and geospatial location data.
 - Branch validity could have depended on an external place provider. Resolved: `googlePlaceId` and other **Place Enrichment** data are optional for both **Merchant** and **Branch**.
+- "Product category" could have been used for inventory, services, or menu items. Resolved: use **Service Category** for merchant-defined service classifications relevant to ordering and appointments.
+- Estimated duration could have been mandatory for all service categories. Resolved: **Estimated Service Duration** is optional; services without duration can exist but cannot be scheduled.
+- Service duration could have been conflated with appointment slot size or staff availability. Resolved: **Estimated Service Duration** models only the expected service time; slot sizing and staff schedules are separate concerns.
+- Service categories could have been branch-specific. Resolved: **Service Category** belongs to **Merchant** and applies uniformly across all branches.
+- Estimated service duration could have been accepted for any merchant regardless of their offerings. Resolved: **Estimated Service Duration** may only be written when **Appointment Booking** is enabled; the write is rejected otherwise.
+- Disabling **Appointment Booking** could have triggered a cascade-clear of all stored durations. Resolved: existing durations are left in place and treated as inert; clearing on toggle is destructive and non-reversible.
+- Duration update could have had its own dedicated endpoint (`PATCH /product-categories/{id}/duration`). Resolved: duration is maintained through the standard category update endpoint (`PUT /product-categories/{id}`) alongside name; a dedicated endpoint was a smell that duplicated the create path's optionality.

@@ -3,7 +3,7 @@ package com.elegant.software.blitzpay.merchant
 import com.elegant.software.blitzpay.contract.ContractVerifierBase
 import com.elegant.software.blitzpay.merchant.api.CreateProductCategoryRequest
 import com.elegant.software.blitzpay.merchant.api.ProductCategoryResponse
-import com.elegant.software.blitzpay.merchant.api.RenameProductCategoryRequest
+import com.elegant.software.blitzpay.merchant.api.UpdateProductCategoryRequest
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
@@ -53,10 +53,10 @@ class MerchantProductCategoryContractTest : ContractVerifierBase() {
         val merchantId = UUID.randomUUID()
         val categoryId = UUID.randomUUID()
         whenever(
-            merchantProductCategoryService.rename(
+            merchantProductCategoryService.update(
                 eq(merchantId),
                 eq(categoryId),
-                any<RenameProductCategoryRequest>()
+                any<UpdateProductCategoryRequest>()
             )
         ).thenReturn(categoryResponse(id = categoryId, name = "Soft Drinks"))
 
@@ -68,6 +68,28 @@ class MerchantProductCategoryContractTest : ContractVerifierBase() {
             .expectStatus().isOk
             .expectBody()
             .jsonPath("$.name").isEqualTo("Soft Drinks")
+    }
+
+    @Test
+    fun `PUT product category with duration returns 200`() {
+        val merchantId = UUID.randomUUID()
+        val categoryId = UUID.randomUUID()
+        whenever(
+            merchantProductCategoryService.update(
+                eq(merchantId),
+                eq(categoryId),
+                any<UpdateProductCategoryRequest>()
+            )
+        ).thenReturn(categoryResponse(id = categoryId, name = "Haircut", estimatedDurationMinutes = 30))
+
+        webTestClient.put()
+            .uri("/v1/merchants/$merchantId/product-categories/$categoryId")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue("""{"name":"Haircut","estimatedDurationMinutes":30}""")
+            .exchange()
+            .expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.estimatedDurationMinutes").isEqualTo(30)
     }
 
     @Test
@@ -129,10 +151,12 @@ class MerchantProductCategoryContractTest : ContractVerifierBase() {
 
     private fun categoryResponse(
         id: UUID = UUID.randomUUID(),
-        name: String
+        name: String,
+        estimatedDurationMinutes: Int? = null
     ) = ProductCategoryResponse(
         id = id,
         name = name,
+        estimatedDurationMinutes = estimatedDurationMinutes,
         createdAt = Instant.parse("2026-04-29T10:00:00Z"),
         updatedAt = Instant.parse("2026-04-29T10:00:00Z")
     )

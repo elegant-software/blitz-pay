@@ -2,7 +2,7 @@ package com.elegant.software.blitzpay.merchant.web
 
 import com.elegant.software.blitzpay.merchant.api.CreateProductCategoryRequest
 import com.elegant.software.blitzpay.merchant.api.ProductCategoryResponse
-import com.elegant.software.blitzpay.merchant.api.RenameProductCategoryRequest
+import com.elegant.software.blitzpay.merchant.api.UpdateProductCategoryRequest
 import com.elegant.software.blitzpay.merchant.application.MerchantProductCategoryService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -46,14 +46,14 @@ class MerchantProductCategoryController(
             .subscribeOn(Schedulers.boundedElastic())
             .map { ResponseEntity.ok(it) }
 
-    @Operation(summary = "Rename a product category")
+    @Operation(summary = "Update a product category")
     @PutMapping("/{categoryId}")
-    fun rename(
+    fun update(
         @PathVariable merchantId: UUID,
         @PathVariable categoryId: UUID,
-        @RequestBody request: RenameProductCategoryRequest,
+        @RequestBody request: UpdateProductCategoryRequest,
     ): Mono<ResponseEntity<ProductCategoryResponse>> =
-        Mono.fromCallable { merchantProductCategoryService.rename(merchantId, categoryId, request) }
+        Mono.fromCallable { merchantProductCategoryService.update(merchantId, categoryId, request) }
             .subscribeOn(Schedulers.boundedElastic())
             .map { ResponseEntity.ok(it) }
 
